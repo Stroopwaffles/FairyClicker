@@ -19,6 +19,7 @@
     <div class="title-sky" aria-hidden="true"></div>
     <div class="title-moon" aria-hidden="true"></div>
     <div class="title-card">
+      <div id="title-fairy" class="title-fairy" aria-hidden="true"></div>
       <h1 class="logo">Fairy Clicker</h1>
       <p class="tagline">Gather the gifts of a moonlit realm</p>
       <div id="title-moons" class="title-moons" hidden></div>
@@ -27,7 +28,7 @@
         <button id="btn-continue" class="btn primary big" hidden>Continue</button>
         <button id="btn-new" class="btn big">Begin</button>
       </div>
-      <p class="title-foot">Version 3.6 · progress saves automatically on this device</p>
+      <p class="title-foot">Version 3.7 · progress saves automatically on this device</p>
     </div>
   </section>
 
@@ -35,6 +36,7 @@
   <section id="screen-game" class="screen" aria-label="Game">
     <header class="topbar">
       <button id="btn-home" class="icon-btn" aria-label="Back to title">⌂</button>
+      <button id="btn-avatar" class="avatar-btn" aria-label="Wardrobe"></button>
       <div id="res-bar" class="res-bar"></div>
       <button id="btn-moon" class="moon-btn" aria-label="Moon Shrine"></button>
       <button id="btn-mute" class="icon-btn" aria-label="Mute sound">🔊</button>
@@ -52,6 +54,7 @@
         <div id="tap-hint" class="tap-hint"></div>
         <div id="event-layer" class="event-layer"></div>
         <div id="hands" class="hands" aria-hidden="true"></div>
+        <button id="my-fairy" class="my-fairy" aria-label="Your fairy: open the wardrobe" hidden></button>
         <div id="streak" class="streak" hidden><span class="streak-label"></span><div class="streak-bar"><i></i></div></div>
         <button id="fairy" class="fairy" aria-label="Wandering fairy" hidden><span>🧚</span></button>
         <div id="event-banner" class="event-banner" aria-live="polite"></div>
@@ -83,6 +86,28 @@
     <div class="shrine-body">
       <div id="prestige-card" class="prestige-card"></div>
       <div id="shrine-paths" class="shrine-paths"></div>
+    </div>
+  </section>
+
+  <!-- Wardrobe: customise your fairy -->
+  <section id="wardrobe" class="wardrobe" aria-label="Wardrobe" hidden>
+    <div class="shrine-sky" aria-hidden="true"></div>
+    <header class="shrine-head">
+      <div><h2 id="wd-title">Wardrobe</h2><p id="wd-sub" class="wd-sub"></p></div>
+      <button id="btn-wd-done" class="btn primary">Done</button>
+    </header>
+    <div class="wd-body">
+      <div class="wd-preview">
+        <div id="wd-fairy" class="wd-fairy"></div>
+        <button id="btn-wd-random" class="btn">🎲 Surprise me</button>
+      </div>
+      <div class="wd-options">
+        <div class="seg wd-tabs" role="tablist">
+          <button data-wtab="body" class="on">🧚 Body</button>
+          <button data-wtab="clothes">👗 Clothes</button>
+        </div>
+        <div id="wd-list" class="wd-list"></div>
+      </div>
     </div>
   </section>
 

@@ -110,6 +110,17 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 - The Vampire's Chalice gives +20% value per level (was +50%); its extra drops per tap are unchanged
 - The exchange shows each total and how much gathering time it equals
 
+### Version 3.7: your fairy
+
+- **You're a fairy now.** A new game starts with *Create your fairy*; older saves get *Meet your fairy* on the next Continue
+- **Body:** 9 skin tones, 6 hairstyles in 11 colours, 4 eye styles in 6 colours, 5 wing types in 8 colours, pointy or round ears, rosy cheeks and freckles
+- **Clothes** (purely cosmetic) in four slots (headwear, outfit, shoes, in hand), 37 items in all
+  - Each place gives its own costume on your first visit (Pond, Mushroom Ring, Oak, Grotto, Meadow, and the Crimson Castle)
+  - Others unlock with achievements (10 and 25 achieved, Golden Lotuses, the Enchanted Hand) and prestige (first night, and the finale)
+- **Wardrobe:** open it from your portrait in the top bar or by tapping your fairy in a scene; change anything at any time. *Surprise me* picks a random look from what you own
+- Your fairy hovers in each scene and flicks her wand when you tap, and greets you on the title screen. You can hide her from scenes in Settings → Display
+- Your look and wardrobe stay through prestiges and travel with save codes
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:
@@ -129,6 +140,7 @@ POLICY=double node tools/sim.mjs 10 3   # 10 days, 3 taps per second
 | `js/game.js` | State, formulas, saving and loading (no DOM) |
 | `js/scenes.js` | SVG artwork for each location and the Crimson Courtyard |
 | `js/sprites.js` | Helper drawings, where they live and how they move |
+| `js/avatar.js` | The player's fairy: body options and clothing drawings |
 | `js/audio.js` | Generated sound effects, ambience, castle theme and finale music |
 | `tools/sim.mjs` | Pacing simulator for balancing |
 | `js/main.js` | UI, input and the game loop |

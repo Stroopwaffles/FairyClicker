@@ -6,8 +6,9 @@ import {
   RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
   SHRINE, SHRINE_BY_ID, BLOOD_SECONDS, BLOOD_EXP, BLOOD_TAP_EQUIV, CHALICE_VALUE_PER_LEVEL,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
-  GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
+  GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
 } from './data.js';
+import { DEFAULT_LOOK } from './avatar.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
 // ---------- state ----------
@@ -36,6 +37,8 @@ export function freshState() {
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
     workshop: {},             // id -> level (resets on prestige)
     gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
+    // The player's fairy (permanent): how she looks, which clothes she owns, which are new.
+    avatar: { look: { ...DEFAULT_LOOK }, owned: Object.fromEntries(COSTUMES.filter((c) => c.from === 'starter').map((c) => [c.id, true])), fresh: {}, created: false },
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1, steward: true, stewardMode: 'cheapest' },
     stats2: { crits: 0, lotuses: 0, handTaps: 0 },
@@ -678,7 +681,7 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates,
+    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar,
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };
@@ -718,6 +721,50 @@ export function buyShrine(id) {
   P.shrine[id] = true;
   invalidate();
   return true;
+}
+
+// ---------- wardrobe ----------
+
+function grant(list) {
+  const A = state.avatar;
+  const got = [];
+  for (const c of list) {
+    if (A.owned[c.id]) continue;
+    A.owned[c.id] = true;
+    A.fresh[c.id] = true;
+    got.push(c);
+  }
+  return got;
+}
+
+// A place's costume, granted on the first visit. Returns newly unlocked items.
+export function grantPlaceCostume(place) {
+  return grant(COSTUMES.filter((c) => c.from?.place === place));
+}
+
+// Items unlocked by achievements and prestige. Returns newly unlocked items.
+export function checkCostumeUnlocks() {
+  const n = achievementCount();
+  return grant(COSTUMES.filter((c) => {
+    const f = c.from;
+    if (!f || f === 'starter') return false;
+    if (f.ach) return !!state.achievements[f.ach];
+    if (f.achCount) return n >= f.achCount;
+    if (f.prestige) return state.prestige.count >= f.prestige;
+    return false;
+  }));
+}
+
+export function wearItem(id) {
+  const c = COSTUME_BY_ID[id];
+  if (!c || !state.avatar.owned[id]) return false;
+  state.avatar.look[c.slot] = id;
+  delete state.avatar.fresh[id];
+  return true;
+}
+
+export function setLook(key, value) {
+  state.avatar.look[key] = value;
 }
 
 // ---------- achievements ----------

@@ -4,15 +4,19 @@ import {
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
+  COSTUMES, COSTUME_SLOTS, costumeHint,
 } from './data.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
 import { SCENES, CASTLE_WINDOWS } from './scenes.js';
+import {
+  avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
+} from './avatar.js';
 import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
-const display = { lessBusy: false };
+const display = { lessBusy: false, hideFairy: false };
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
@@ -75,6 +79,7 @@ function showScreen(id) {
 
 function renderTitle() {
   const has = G.hasSave();
+  $('#title-fairy').innerHTML = avatarSVG(G.state.avatar.look, { cls: 'idle' });
   const tm = $('#title-moons');
   const count = has ? G.state.prestige.count : 0;
   tm.hidden = count === 0;
@@ -102,8 +107,15 @@ function startGame() {
   started = true;
   bloodView = G.visitActive();
   gateView = false;
+  // Older saves: give the costumes of places already visited.
+  const got = [];
+  for (const l of LOCATIONS) if (G.state.locs[l.id].unlocked && l.id !== G.state.active) got.push(...G.grantPlaceCostume(l.id));
+  if (G.state.gates.visits.castle) got.push(...G.grantPlaceCostume('castle'));
+  got.push(...G.checkCostumeUnlocks());
   renderAll();
-  if (G.state.blood.pending > 0) setTimeout(showBloodExchange, 400);
+  if (got.length) onCostumes(got, true);
+  if (!G.state.avatar.created) setTimeout(() => openWardrobe(true), 300);
+  else if (G.state.blood.pending > 0) setTimeout(showBloodExchange, 400);
 }
 
 function goHome() {
@@ -203,6 +215,10 @@ function renderScene() {
   updateSceneFeatures();
   updateSprites(true);
   requestAnimationFrame(placeHandsAtRest);
+  if (ls.unlocked) {
+    const got = G.grantPlaceCostume(id);
+    if (got.length && G.state.avatar.created) onCostumes(got);
+  }
 
   const hint = $('#tap-hint');
   hint.textContent = l.tapVerb;
@@ -331,7 +347,7 @@ function onTap(e) {
 
 function doTap(id, target, clientX, clientY, byHand = false) {
   const blood = id === 'courtyard';
-  if (!byHand) buildStreak();
+  if (!byHand) { buildStreak(); fairyCast(); }
   const { value: v, echo, crit } = blood ? G.tapBlood() : G.tap(id, streakMult());
   // Hand taps are quieter so a fast hand doesn't drown everything out.
   if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else A.tap(id, echo); }
@@ -612,6 +628,8 @@ function renderSettings(body) {
           <button data-busy="calm" class="${display.lessBusy ? 'on' : ''}">🍃 Less busy</button>
         </div></div>
       <p class="style-note">Lively shows up to ${MAX_VISIBLE_PER_HELPER} of each helper; Less busy shows up to ${CALM_VISIBLE_PER_HELPER}. Helpers off screen still gather.</p>
+      <div class="style-row"><span>Show my fairy in places</span>
+        <button class="toggle ${display.hideFairy ? '' : 'on'}" data-act="fairy">${display.hideFairy ? 'Off' : 'On'}</button></div>
     </div>
     <div class="settings-group">
       <h3>Sound</h3>
@@ -661,6 +679,13 @@ function renderSettings(body) {
         <button class="btn danger" id="btn-reset">Reset all progress</button>
       </div>
     </div>`;
+  $('[data-act="fairy"]', body).addEventListener('click', (e) => {
+    display.hideFairy = !display.hideFairy;
+    saveDisplay();
+    e.target.classList.toggle('on', !display.hideFairy);
+    e.target.textContent = display.hideFairy ? 'Off' : 'On';
+    renderAvatarUI();
+  });
   for (const b of $$('[data-busy]', body)) {
     b.addEventListener('click', () => {
       display.lessBusy = b.dataset.busy === 'calm';
@@ -1285,12 +1310,135 @@ function portalFlash(color) {
   setTimeout(() => f.remove(), 1200);
 }
 
+// ---------- Your fairy & the wardrobe ----------
+
+function renderAvatarUI() {
+  const look = G.state.avatar.look;
+  const btn = $('#btn-avatar');
+  btn.innerHTML = avatarSVG(look, { viewBox: CROPS.face }) + (Object.keys(G.state.avatar.fresh).length ? '<span class="dot"></span>' : '');
+  const f = $('#my-fairy');
+  f.hidden = !started || display.hideFairy;
+  if (!f.hidden) f.innerHTML = avatarSVG(look, { cls: 'idle' });
+  $('#title-fairy').innerHTML = avatarSVG(look, { cls: 'idle' });
+}
+
+let castAt = 0;
+function fairyCast() {
+  const f = $('#my-fairy');
+  if (f.hidden) return;
+  const now = performance.now();
+  if (now - castAt < 400) return;
+  castAt = now;
+  f.classList.remove('cast'); void f.offsetWidth; f.classList.add('cast');
+}
+
+function onCostumes(list, quiet = false) {
+  if (!list.length) return;
+  if (!quiet) A.chime();
+  const names = list.map((c) => c.name);
+  toast(`👗 New in your wardrobe: ${names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ')}`);
+  G.save();
+  renderAvatarUI();
+  if (!$('#wardrobe').hidden) renderWardrobe();
+}
+
+let wdTab = 'body', wdCreate = false;
+function openWardrobe(create) {
+  wdCreate = create;
+  wdTab = 'body';
+  $('#wd-title').textContent = create ? (G.state.stats.taps ? 'Meet your fairy' : 'Create your fairy') : 'Wardrobe';
+  $('#wd-sub').textContent = create ? 'This is you! Choose how you look. You can change it any time from the portrait at the top.' : 'Change your look any time. Visit new places and reach milestones to unlock more clothes.';
+  $('#btn-wd-done').textContent = create ? 'Begin ✨' : 'Done';
+  $('#wardrobe').hidden = false;
+  A.chime();
+  renderWardrobe();
+}
+function closeWardrobe() {
+  $('#wardrobe').hidden = true;
+  if (!G.state.avatar.created) G.state.avatar.created = true;
+  G.save();
+  renderAvatarUI();
+  if (G.state.blood.pending > 0) setTimeout(showBloodExchange, 300);
+}
+
+function renderWardrobe() {
+  const look = G.state.avatar.look;
+  $('#wd-fairy').innerHTML = avatarSVG(look, { cls: 'idle' });
+  for (const b of $$('[data-wtab]')) b.classList.toggle('on', b.dataset.wtab === wdTab);
+  const list = $('#wd-list');
+  const thumb = (patch, crop, on, attrs, extra = '') =>
+    `<button class="wd-thumb${on ? ' on' : ''}" ${attrs}>${avatarSVG({ ...look, ...patch }, { viewBox: crop })}${extra}</button>`;
+  const swatches = (key, colors) => `<div class="wd-swatches">${colors.map((c, i) =>
+    `<button class="wd-swatch${look[key] === i ? ' on' : ''}" style="background:${c}" data-look="${key}" data-val="${i}" aria-label="Colour ${i + 1}"></button>`).join('')}</div>`;
+  const styles = (key, opts, crop) => `<div class="wd-grid">${opts.map((o) =>
+    thumb({ [key]: o }, crop, look[key] === o, `data-look="${key}" data-val="${o}" aria-label="${NAMES[o]}"`, `<span>${NAMES[o]}</span>`)).join('')}</div>`;
+
+  if (wdTab === 'body') {
+    list.innerHTML = `
+      <h4>Skin</h4>${swatches('skin', SKINS)}
+      <h4>Hair</h4>${styles('hair', HAIR_STYLES, CROPS.hair)}${swatches('hairColor', HAIR_COLORS)}
+      <h4>Eyes</h4>${styles('eyes', EYE_STYLES, CROPS.eyes)}${swatches('eyeColor', EYE_COLORS)}
+      <h4>Wings</h4>${styles('wings', WING_STYLES, CROPS.wings)}${swatches('wingColor', WING_COLORS)}
+      <h4>Ears</h4>${styles('ears', EAR_STYLES, CROPS.ears)}
+      <h4>Extras</h4><div class="wd-toggles">
+        <button class="toggle ${look.blush ? 'on' : ''}" data-flag="blush">Rosy cheeks</button>
+        <button class="toggle ${look.freckles ? 'on' : ''}" data-flag="freckles">Freckles</button></div>`;
+  } else {
+    const owned = G.state.avatar.owned, fresh = G.state.avatar.fresh;
+    list.innerHTML = COSTUME_SLOTS.map((slot) => {
+      const items = COSTUMES.filter((c) => c.slot === slot.id);
+      const have = items.filter((c) => owned[c.id]).length;
+      return `<h4>${slot.name} <small>${have}/${items.length}</small></h4><div class="wd-grid">${items.map((c) => {
+        const own = !!owned[c.id];
+        return thumb({ [slot.id]: c.id }, CROPS[slot.id], look[slot.id] === c.id,
+          `data-wear="${c.id}" ${own ? '' : 'disabled'} title="${own ? c.name : costumeHint(c)}"`,
+          `<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${fresh[c.id] ? '<i class="new">New</i>' : ''}`);
+      }).join('')}</div>`;
+    }).join('');
+  }
+  for (const b of $$('[data-look]', list)) {
+    b.addEventListener('click', () => {
+      const v = b.dataset.val;
+      G.setLook(b.dataset.look, /^\d+$/.test(v) ? +v : v);
+      A.buy();
+      renderWardrobe();
+    });
+  }
+  for (const b of $$('[data-flag]', list)) {
+    b.addEventListener('click', () => { G.setLook(b.dataset.flag, !look[b.dataset.flag]); A.buy(); renderWardrobe(); });
+  }
+  for (const b of $$('[data-wear]', list)) {
+    b.addEventListener('click', () => { if (G.wearItem(b.dataset.wear)) { A.chime(); renderWardrobe(); renderAvatarUI(); } });
+  }
+  // Viewing the clothes tab clears the "new" markers next time it's opened.
+  if (wdTab === 'clothes') setTimeout(() => { G.state.avatar.fresh = {}; renderAvatarUI(); }, 0);
+}
+
+function surpriseMe() {
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const idx = (arr) => Math.floor(Math.random() * arr.length);
+  const L = G.state.avatar.look;
+  Object.assign(L, {
+    skin: idx(SKINS), hair: pick(HAIR_STYLES), hairColor: idx(HAIR_COLORS), eyes: pick(EYE_STYLES), eyeColor: idx(EYE_COLORS),
+    wings: pick(WING_STYLES), wingColor: idx(WING_COLORS), ears: pick(EAR_STYLES), blush: Math.random() < 0.7, freckles: Math.random() < 0.3,
+  });
+  for (const slot of COSTUME_SLOTS) {
+    const owned = COSTUMES.filter((c) => c.slot === slot.id && G.state.avatar.owned[c.id] && !c.id.startsWith('none'));
+    if (owned.length) L[slot.id] = pick(owned).id;
+  }
+  A.fanfare();
+  renderWardrobe();
+  renderAvatarUI();
+}
+
 // ---------- Blood Moon ----------
 
 let bloodView = false; // visiting the Crimson Castle (courtyard scene)
 
 function renderCourtyard() {
   $('#scene').innerHTML = SCENES.courtyard();
+  const got = G.grantPlaceCostume('castle');
+  if (got.length) setTimeout(() => onCostumes(got), 600);
   setupDracula();
   requestAnimationFrame(placeHandsAtRest);
   $('#scene-name').textContent = 'Crimson Castle';
@@ -1586,6 +1734,7 @@ function renderAll() {
   renderEvents();
   renderMoonBtn();
   renderHands();
+  renderAvatarUI();
 }
 
 function updateMuteBtn() {
@@ -1647,6 +1796,8 @@ function tick(now) {
       achAccum = 0;
       const fresh = G.checkAchievements();
       if (fresh.length) onAchievements(fresh);
+      const clothes = G.checkCostumeUnlocks();
+      if (clothes.length) onCostumes(clothes);
     }
     if (uiAccum >= 0.2) {
       uiAccum = 0;
@@ -1733,6 +1884,11 @@ function boot() {
     else begin();
   });
   $('#btn-home').addEventListener('click', goHome);
+  $('#btn-avatar').addEventListener('click', () => openWardrobe(false));
+  $('#my-fairy').addEventListener('click', () => openWardrobe(false));
+  $('#btn-wd-done').addEventListener('click', closeWardrobe);
+  $('#btn-wd-random').addEventListener('click', surpriseMe);
+  for (const b of $$('[data-wtab]')) b.addEventListener('click', () => { wdTab = b.dataset.wtab; renderWardrobe(); });
   $('#btn-mute').addEventListener('click', () => {
     A.init();
     A.toggleMute();

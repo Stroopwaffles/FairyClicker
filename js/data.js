@@ -347,3 +347,70 @@ export const GATES = [
 ];
 export const GATE_BY_ID = byId(GATES);
 export const BLOOD_MOON_COOLDOWN_CUT_MIN = 15;
+
+// ---------- Fairy wardrobe (purely cosmetic) ----------
+// Drawings live in avatar.js. `from` says how each item is unlocked:
+//   'starter' · { place: id } (first visit) · { ach: id } · { achCount: n } · { prestige: n }
+export const COSTUME_SLOTS = [
+  { id: 'head', name: 'Headwear', none: 'none_head' },
+  { id: 'outfit', name: 'Outfit' },
+  { id: 'feet', name: 'Shoes', none: 'none_feet' },
+  { id: 'held', name: 'In hand', none: 'none_held' },
+];
+export const COSTUMES = [
+  { id: 'none_head', slot: 'head', name: 'Nothing', from: 'starter' },
+  { id: 'flower_clip', slot: 'head', name: 'Flower Clip', from: 'starter' },
+  { id: 'bow', slot: 'head', name: 'Ribbon Bow', from: 'starter' },
+  { id: 'lily_crown', slot: 'head', name: 'Lily Crown', from: { place: 'pond' } },
+  { id: 'toadstool_cap', slot: 'head', name: 'Toadstool Cap', from: { place: 'mushroom' } },
+  { id: 'acorn_cap', slot: 'head', name: 'Acorn Cap', from: { place: 'oak' } },
+  { id: 'crystal_tiara', slot: 'head', name: 'Crystal Tiara', from: { place: 'grotto' } },
+  { id: 'star_crown', slot: 'head', name: 'Star Crown', from: { place: 'meadow' } },
+  { id: 'bat_band', slot: 'head', name: 'Bat Headband', from: { place: 'castle' } },
+  { id: 'moon_crown', slot: 'head', name: 'Moon Circlet', from: { prestige: 1 } },
+  { id: 'lotus_crown', slot: 'head', name: 'Golden Lotus Crown', from: { ach: 'lotus10' } },
+  { id: 'witch_hat', slot: 'head', name: 'Starry Witch Hat', from: { achCount: 25 } },
+  { id: 'halo', slot: 'head', name: 'Moonlight Halo', from: { prestige: 5 } },
+
+  { id: 'leaf_dress', slot: 'outfit', name: 'Leaf Dress', from: 'starter' },
+  { id: 'petal_dress', slot: 'outfit', name: 'Petal Dress', from: 'starter' },
+  { id: 'lily_dress', slot: 'outfit', name: 'Lily Pad Dress', from: { place: 'pond' } },
+  { id: 'spore_dress', slot: 'outfit', name: 'Glowspore Dress', from: { place: 'mushroom' } },
+  { id: 'leaf_tunic', slot: 'outfit', name: 'Woodland Tunic', from: { place: 'oak' } },
+  { id: 'amethyst_gown', slot: 'outfit', name: 'Amethyst Gown', from: { place: 'grotto' } },
+  { id: 'starlight_robe', slot: 'outfit', name: 'Starlight Robe', from: { place: 'meadow' } },
+  { id: 'vampire_cape', slot: 'outfit', name: 'Vampire Cape', from: { place: 'castle' } },
+  { id: 'tinker_apron', slot: 'outfit', name: 'Tinker’s Apron', from: { ach: 'handy' } },
+  { id: 'moon_gown', slot: 'outfit', name: 'Full Moon Gown', from: { prestige: 5 } },
+
+  { id: 'none_feet', slot: 'feet', name: 'Barefoot', from: 'starter' },
+  { id: 'slippers', slot: 'feet', name: 'Petal Slippers', from: 'starter' },
+  { id: 'boots', slot: 'feet', name: 'Forest Boots', from: 'starter' },
+  { id: 'flats', slot: 'feet', name: 'Ruby Flats', from: { achCount: 10 } },
+  { id: 'crystal_shoes', slot: 'feet', name: 'Crystal Shoes', from: { place: 'grotto' } },
+  { id: 'star_boots', slot: 'feet', name: 'Star Boots', from: { place: 'meadow' } },
+
+  { id: 'none_held', slot: 'held', name: 'Nothing', from: 'starter' },
+  { id: 'wand', slot: 'held', name: 'Star Wand', from: 'starter' },
+  { id: 'dewdrop_wand', slot: 'held', name: 'Dewdrop Wand', from: { place: 'pond' } },
+  { id: 'mushroom_staff', slot: 'held', name: 'Mushroom Staff', from: { place: 'mushroom' } },
+  { id: 'amber_lantern', slot: 'held', name: 'Amber Lantern', from: { place: 'oak' } },
+  { id: 'crystal_wand', slot: 'held', name: 'Crystal Wand', from: { place: 'grotto' } },
+  { id: 'star_wand', slot: 'held', name: 'Shooting Star Wand', from: { place: 'meadow' } },
+  { id: 'rose', slot: 'held', name: 'Midnight Rose', from: { place: 'castle' } },
+];
+export const COSTUME_BY_ID = byId(COSTUMES);
+export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle' };
+
+// How to unlock an item, in words (for locked items in the wardrobe).
+export function costumeHint(c) {
+  const f = c.from;
+  if (f === 'starter') return '';
+  if (f.place) return `Visit the ${COSTUME_PLACE_NAMES[f.place]}`;
+  if (f.achCount) return `Earn ${f.achCount} achievements`;
+  if (f.prestige === 5) return 'Restore the realm (the finale)';
+  if (f.prestige) return 'Begin your first new night (prestige)';
+  if (f.ach === 'lotus10') return 'Catch 10 Golden Lotuses';
+  if (f.ach === 'handy') return 'Get the Enchanted Hand';
+  return 'Keep playing';
+}
