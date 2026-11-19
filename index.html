@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b2b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Fairy Clicker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧚</text></svg>">
+</head>
+<body>
+  <!-- Welcome screen -->
+  <section id="screen-title" class="screen active" aria-label="Welcome">
+    <div class="title-sky" aria-hidden="true"></div>
+    <div class="title-moon" aria-hidden="true"></div>
+    <div class="title-card">
+      <h1 class="logo">Fairy Clicker</h1>
+      <p class="tagline">Gather the gifts of a moonlit realm</p>
+      <div id="away-card" class="away-card" hidden></div>
+      <div class="title-buttons">
+        <button id="btn-continue" class="btn primary big" hidden>Continue</button>
+        <button id="btn-new" class="btn big">Begin</button>
+      </div>
+      <p class="title-foot">Version 1 · progress saves automatically on this device</p>
+    </div>
+  </section>
+
+  <!-- Game screen -->
+  <section id="screen-game" class="screen" aria-label="Game">
+    <header class="topbar">
+      <button id="btn-home" class="icon-btn" aria-label="Back to title">☾</button>
+      <div id="res-bar" class="res-bar"></div>
+    </header>
+
+    <div class="stage">
+      <nav id="loc-tabs" class="loc-tabs" aria-label="Locations"></nav>
+      <div id="scene-wrap" class="scene-wrap">
+        <div id="scene" class="scene"></div>
+        <div class="scene-caption">
+          <div id="scene-name" class="scene-name"></div>
+          <div id="scene-rate" class="scene-rate"></div>
+        </div>
+        <div id="tap-hint" class="tap-hint"></div>
+        <div id="lock-overlay" class="lock-overlay" hidden></div>
+        <div id="floaters" class="floaters" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="panel-tabs" role="tablist">
+        <button class="ptab" data-tab="helpers" role="tab">Helpers</button>
+        <button class="ptab" data-tab="upgrades" role="tab">Upgrades</button>
+        <button class="ptab" data-tab="features" role="tab">Features</button>
+        <button class="ptab" data-tab="settings" role="tab">Settings</button>
+      </div>
+      <div id="panel-body" class="panel-body"></div>
+    </aside>
+  </section>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="modal" class="modal" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
