@@ -121,6 +121,16 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 - Your fairy hovers in each scene and flicks her wand when you tap, and greets you on the title screen. You can hide her from scenes in Settings → Display
 - Your look and wardrobe stay through prestiges and travel with save codes
 
+## Releasing an update
+
+Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:
+
+```sh
+node tools/stamp-version.mjs 3.7.1   # updates index.html and every import in js/
+```
+
+If an update doesn't show up, a hard refresh (Ctrl+Shift+R, or Cmd+Shift+R on Mac) always loads the latest files. The version number is shown at the bottom of the title screen.
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:
@@ -143,4 +153,5 @@ POLICY=double node tools/sim.mjs 10 3   # 10 days, 3 taps per second
 | `js/avatar.js` | The player's fairy: body options and clothing drawings |
 | `js/audio.js` | Generated sound effects, ambience, castle theme and finale music |
 | `tools/sim.mjs` | Pacing simulator for balancing |
+| `tools/stamp-version.mjs` | Stamps a release version onto file URLs so updates aren't hidden by caching |
 | `js/main.js` | UI, input and the game loop |

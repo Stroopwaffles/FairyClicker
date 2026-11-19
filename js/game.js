@@ -7,9 +7,9 @@ import {
   SHRINE, SHRINE_BY_ID, BLOOD_SECONDS, BLOOD_EXP, BLOOD_TAP_EQUIV, CHALICE_VALUE_PER_LEVEL,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
-} from './data.js';
-import { DEFAULT_LOOK } from './avatar.js';
-import { ACHIEVEMENTS } from './achievements.js';
+} from './data.js?v=3.7.1';
+import { DEFAULT_LOOK } from './avatar.js?v=3.7.1';
+import { ACHIEVEMENTS } from './achievements.js?v=3.7.1';
 
 // ---------- state ----------
 

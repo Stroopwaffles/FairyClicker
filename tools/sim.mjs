@@ -1,8 +1,11 @@
 // Headless pacing simulation of a casual player.
 // Usage: node tools/sim.mjs [days] [tapsPerSec]
 // Env: POLICY=double (prestige when it doubles lifetime Moonstones) or slow (when growth stalls)
-import * as G from '../js/game.js';
-import * as D from '../js/data.js';
+// Load the same stamped module URLs the game uses (see tools/stamp-version.mjs).
+import { readFileSync } from 'node:fs';
+const V = (readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/window\.FC_V = '([^']*)'/) || [])[1] || '';
+const G = await import(new URL('../js/game.js' + V, import.meta.url));
+const D = await import(new URL('../js/data.js' + V, import.meta.url));
 
 const DAYS = +(process.argv[2] || 6);
 const TAPS = +(process.argv[3] || 3);

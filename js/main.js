@@ -5,14 +5,14 @@ import {
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint,
-} from './data.js';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
-import * as G from './game.js';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js';
+} from './data.js?v=3.7.1';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.7.1';
+import * as G from './game.js?v=3.7.1';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.7.1';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js';
+} from './avatar.js?v=3.7.1';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.7.1';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -20,7 +20,7 @@ const display = { lessBusy: false, hideFairy: false };
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js';
+import * as A from './audio.js?v=3.7.1';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
