@@ -28,6 +28,13 @@ python3 -m http.server 8000
 - Offline earnings for up to 8 hours (Reed Chimes add 2 more)
 - Automatic saving, plus a save code you can copy to move progress between devices
 
+### Version 1.1: sound
+
+- All audio is generated in the browser with the Web Audio API, so there are no sound files
+- A tap sound for each location, chimes for purchases, and fanfares for unlocks and milestones
+- Ambience for each location: slowly changing chords and drifting bell notes, plus crickets and water at the pond, or drips and a low hum in the Mushroom Ring
+- Mute button in the top bar; music and effects volume sliders in Settings (remembered on each device)
+
 ## Roadmap
 
 - **Version 2:** Ancient Oak, Crystal Grotto and Starfall Meadow, random events, and achievements
@@ -42,4 +49,5 @@ python3 -m http.server 8000
 | `js/data.js` | All game content: locations, helpers, upgrades, features |
 | `js/game.js` | State, formulas, saving and loading (no DOM) |
 | `js/scenes.js` | SVG artwork for each location |
+| `js/audio.js` | Generated sound effects and ambience |
 | `js/main.js` | UI, input and the game loop |

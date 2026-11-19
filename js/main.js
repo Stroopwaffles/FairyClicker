@@ -4,6 +4,7 @@ import {
 } from './data.js';
 import * as G from './game.js';
 import { SCENES, SPRITE_COLORS } from './scenes.js';
+import * as A from './audio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -75,6 +76,7 @@ function renderTitle() {
 }
 
 function startGame() {
+  A.init();
   showScreen('screen-game');
   started = true;
   renderAll();
@@ -168,6 +170,7 @@ function renderScene() {
       <button class="btn primary big" id="btn-unlock">Unlock</button></div>`;
     $('#btn-unlock').addEventListener('click', () => {
       if (G.unlockLocation(id)) {
+        A.fanfare();
         toast(`✨ ${l.name} unlocked!`);
         G.save();
         renderAll();
@@ -217,6 +220,7 @@ function onTap(e) {
   const id = G.state.active;
   if (!G.state.locs[id].unlocked) return;
   const v = G.tap(id);
+  A.tap(id);
   const target = e.currentTarget;
   target.classList.remove('bump');
   void target.getBoundingClientRect();
@@ -336,7 +340,12 @@ function renderHelpers(body) {
         $('.buy', card).addEventListener('click', () => {
           if (G.buyHelper(h)) {
             const after = G.state.locs[id].helpers[h.id];
-            if (nm && after >= nm) toast(`${h.plural} work twice as hard! (${nm} recruited)`);
+            if (nm && after >= nm) {
+              A.fanfare();
+              toast(`${h.plural} work twice as hard! (${nm} recruited)`);
+            } else {
+              A.buy();
+            }
             onPurchase();
           }
         });
@@ -368,7 +377,7 @@ function renderUpgrades(body) {
     if (!owned) {
       const btn = $('.buy', card);
       btn.addEventListener('click', () => {
-        if (G.buyUpgrade(u)) { toast(`${u.name}: ${u.desc}`); onPurchase(true); }
+        if (G.buyUpgrade(u)) { A.chime(); toast(`${u.name}: ${u.desc}`); onPurchase(true); }
       });
       panelUpdaters.push(() => { btn.disabled = !G.canAfford(u.cost); refreshCost(btn); });
     }
@@ -394,6 +403,7 @@ function renderFeatures(body) {
       const btn = $('.buy', card);
       btn.addEventListener('click', () => {
         if (G.buildFeature(f)) {
+          A.build();
           toast(`🌙 ${f.flavor}`);
           updateSceneFeatures();
           onPurchase(true);
@@ -407,7 +417,14 @@ function renderFeatures(body) {
 function renderSettings(body) {
   const s = G.state;
   const totalHelpers = Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
+  const ap = A.getPrefs();
   body.innerHTML = `
+    <div class="settings-group">
+      <h3>Sound</h3>
+      <label class="slider"><span>Music &amp; ambience</span><input type="range" id="vol-music" min="0" max="100" value="${Math.round(ap.music * 100)}"></label>
+      <label class="slider"><span>Sound effects</span><input type="range" id="vol-sfx" min="0" max="100" value="${Math.round(ap.sfx * 100)}"></label>
+      <div class="row"><button class="btn" id="btn-mute2">${ap.muted ? 'Unmute' : 'Mute all'}</button></div>
+    </div>
     <div class="settings-group">
       <h3>Move your save to another device</h3>
       <p>Copy this code, then paste it into Import on the other device.</p>
@@ -438,6 +455,14 @@ function renderSettings(body) {
         <button class="btn danger" id="btn-reset">Reset all progress</button>
       </div>
     </div>`;
+  $('#vol-music', body).addEventListener('input', (e) => A.setPref('music', e.target.value / 100));
+  $('#vol-sfx', body).addEventListener('input', (e) => A.setPref('sfx', e.target.value / 100));
+  $('#vol-sfx', body).addEventListener('change', () => A.buy());
+  $('#btn-mute2', body).addEventListener('click', (e) => {
+    const m = A.toggleMute();
+    e.target.textContent = m ? 'Unmute' : 'Mute all';
+    updateMuteBtn();
+  });
   const box = $('#export-box', body);
   box.value = G.exportCode();
   $('#btn-refresh-code', body).addEventListener('click', () => { box.value = G.exportCode(); });
@@ -488,10 +513,19 @@ function onPurchase(rerenderPanel = false) {
 }
 
 function renderAll() {
+  A.setLocation(G.state.active);
+  updateMuteBtn();
   renderResBar();
   renderLocTabs();
   renderScene();
   renderPanel();
+}
+
+function updateMuteBtn() {
+  const muted = A.getPrefs().muted;
+  const b = $('#btn-mute');
+  b.textContent = muted ? '🔇' : '🔊';
+  b.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
 }
 
 function toast(msg) {
@@ -554,6 +588,8 @@ function tick(now) {
 
 // Catch up when returning to the tab / app.
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') A.suspend();
+  else A.resume();
   if (!started) return;
   if (document.visibilityState === 'hidden') {
     G.save();
@@ -591,6 +627,14 @@ function boot() {
     else begin();
   });
   $('#btn-home').addEventListener('click', goHome);
+  $('#btn-mute').addEventListener('click', () => {
+    A.init();
+    A.toggleMute();
+    updateMuteBtn();
+    if (tab === 'settings') renderPanel();
+  });
+  // Any touch wakes the audio if the browser put it to sleep.
+  document.addEventListener('pointerdown', () => A.resume(), { passive: true });
   for (const b of $$('.ptab')) b.addEventListener('click', () => setTab(b.dataset.tab));
   // Stop long-press context menus and pinch-zoom gestures interfering with tapping.
   $('#scene-wrap').addEventListener('contextmenu', (e) => e.preventDefault());
