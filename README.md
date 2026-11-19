@@ -65,6 +65,12 @@ python3 -m http.server 8000
 - **Blood Moon:** a rare event. The moon turns red and you're drawn to the **Crimson Courtyard** of a vampire castle, where you tap a blood pool for Blood Drops to original gothic music (harpsichord, organ, pumping bass). When it sets, you choose which resource the drops become, at a generous rate
 - Two new achievements for the Blood Moon
 
+### Version 3.2: upbeat soundtrack
+
+- **Music style setting** (⚙ → Sound): choose **Calm** (gentle ambience) or **Upbeat**, where every place has its own original looping song. It's remembered on each device
+  - Moonlit Pond: bouncy marimba pop · Mushroom Ring: funky clavinet groove · Ancient Oak: a fiddle jig in 6/8 · Crystal Grotto: sparkly synth-pop · Starfall Meadow: uplifting chiptune
+- The Blood Moon always plays its castle theme
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:

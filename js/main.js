@@ -563,6 +563,12 @@ function renderSettings(body) {
   body.innerHTML = `
     <div class="settings-group">
       <h3>Sound</h3>
+      <div class="style-row"><span>Music style</span>
+        <div class="seg" role="group" aria-label="Music style">
+          <button data-style="calm" class="${ap.style === 'upbeat' ? '' : 'on'}">🌙 Calm</button>
+          <button data-style="upbeat" class="${ap.style === 'upbeat' ? 'on' : ''}">🎵 Upbeat</button>
+        </div></div>
+      <p class="style-note">Calm plays gentle ambience. Upbeat gives every place its own song.</p>
       <label class="slider"><span>Music &amp; ambience</span><input type="range" id="vol-music" min="0" max="100" value="${Math.round(ap.music * 100)}"></label>
       <label class="slider"><span>Sound effects</span><input type="range" id="vol-sfx" min="0" max="100" value="${Math.round(ap.sfx * 100)}"></label>
       <div class="row"><button class="btn" id="btn-mute2">${ap.muted ? 'Unmute' : 'Mute all'}</button></div>
@@ -603,6 +609,14 @@ function renderSettings(body) {
         <button class="btn danger" id="btn-reset">Reset all progress</button>
       </div>
     </div>`;
+  for (const b of $$('[data-style]', body)) {
+    b.addEventListener('click', () => {
+      A.init();
+      A.setMusicStyle(b.dataset.style);
+      for (const x of $$('[data-style]', body)) x.classList.toggle('on', x === b);
+      toast(b.dataset.style === 'upbeat' ? '🎵 Upbeat music on' : '🌙 Calm ambience on');
+    });
+  }
   $('#vol-music', body).addEventListener('input', (e) => A.setPref('music', e.target.value / 100));
   $('#vol-sfx', body).addEventListener('input', (e) => A.setPref('sfx', e.target.value / 100));
   $('#vol-sfx', body).addEventListener('change', () => A.buy());

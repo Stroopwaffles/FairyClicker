@@ -7,7 +7,7 @@
 //   settings: { music, sfx, muted } stored per device
 
 const PREFS_KEY = 'fairyclicker.audio';
-const DEFAULTS = { music: 0.6, sfx: 0.8, muted: false };
+const DEFAULTS = { music: 0.6, sfx: 0.8, muted: false, style: 'calm' }; // style: 'calm' ambience or 'upbeat' songs
 
 let prefs = { ...DEFAULTS };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')); } catch { /* ignore */ }
@@ -85,6 +85,15 @@ export function setPref(key, value) {
   applyVolumes();
 }
 export function toggleMute() { setPref('muted', !prefs.muted); return prefs.muted; }
+
+// Switch between calm ambience and upbeat songs, restarting the current place's music.
+export function setMusicStyle(style) {
+  setPref('style', style);
+  if (!ctx || !wantedLocation) return;
+  if (current) current.stop();
+  current = null;
+  startAmbience(wantedLocation);
+}
 
 export function suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); }
 export function resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
@@ -313,7 +322,7 @@ export function setLocation(id) {
 }
 
 function startAmbience(id) {
-  const def = AMBIENCES[id];
+  const def = prefs.style === 'upbeat' && SONGS[id] ? { custom: (ctx2) => playSong(SONGS[id], ctx2) } : AMBIENCES[id];
   if (!def) return;
   const out = ctx.createGain();
   out.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -605,6 +614,215 @@ function castleTheme({ out, verb, stops }) {
       schedule(step, next);
       next += st;
       step = (step + 1) % 128;
+    }
+  }, 50);
+  stops.push(() => clearInterval(timer));
+}
+
+// ---------- Upbeat songs ----------
+// Each place has an original looping song. A song lists, per bar: a chord
+// (MIDI notes), a bass root, and a melody of [midi or null, length in steps].
+// Patterns are arrays the length of one bar (stepsPerBar).
+
+const R = null; // a rest
+export const SONGS = {
+  // Bouncy marimba pop
+  pond: {
+    bpm: 124, stepsPerBar: 16,
+    chords: [[65, 69, 72], [62, 65, 69], [58, 62, 65], [60, 64, 67], [65, 69, 72], [57, 60, 64], [58, 62, 65], [60, 64, 67]],
+    roots: [41, 38, 46, 36, 41, 45, 46, 36],
+    melody: [
+      [[72, 2], [77, 2], [76, 2], [72, 2], [74, 4], [72, 4]],
+      [[69, 2], [74, 2], [72, 2], [69, 2], [65, 4], [69, 4]],
+      [[70, 2], [74, 2], [77, 2], [79, 2], [77, 4], [74, 4]],
+      [[76, 4], [74, 2], [72, 2], [79, 8]],
+      [[81, 2], [79, 2], [77, 2], [76, 2], [77, 4], [72, 4]],
+      [[76, 2], [72, 2], [69, 2], [72, 2], [76, 4], [81, 4]],
+      [[82, 4], [81, 2], [79, 2], [77, 2], [74, 2], [70, 4]],
+      [[72, 2], [76, 2], [79, 2], [84, 2], [79, 8]],
+    ],
+    lead: 'marimba', leadPeak: 0.16,
+    bass: 'pluck', bassPattern: [0, R, R, R, R, R, 12, R, 7, R, R, R, 12, R, R, R], bassPeak: 0.17,
+    arp: 'pluck', arpPattern: [R, R, 0, R, R, R, 1, R, R, R, 2, R, R, R, 1, R], arpPeak: 0.06, arpOct: 12,
+    drums: { kick: [0, 8], snare: [4, 12], shaker: [1, 3, 5, 7, 9, 11, 13, 15] },
+  },
+  // Funky and syncopated
+  mushroom: {
+    bpm: 112, stepsPerBar: 16,
+    chords: [[57, 60, 64, 67], [62, 66, 69, 72], [57, 60, 64, 67], [62, 66, 69], [64, 67, 71, 74], [62, 66, 69], [60, 64, 67], [62, 66, 69]],
+    roots: [45, 38, 45, 38, 40, 38, 36, 38],
+    melody: [
+      [[69, 2], [R, 1], [72, 1], [74, 2], [76, 2], [R, 2], [74, 2], [72, 2], [69, 2]],
+      [[66, 2], [69, 2], [72, 2], [74, 2], [72, 4], [69, 4]],
+      [[76, 2], [76, 1], [74, 1], [72, 2], [69, 2], [67, 4], [69, 4]],
+      [[74, 3], [72, 1], [69, 4], [66, 4], [69, 4]],
+      [[71, 2], [74, 2], [76, 2], [79, 2], [78, 2], [76, 2], [74, 4]],
+      [[78, 2], [76, 2], [74, 2], [72, 2], [74, 8]],
+      [[72, 2], [76, 2], [79, 4], [76, 2], [72, 2], [76, 4]],
+      [[78, 4], [74, 4], [69, 8]],
+    ],
+    lead: 'clav', leadPeak: 0.075,
+    bass: 'square', bassPattern: [0, R, R, 12, R, R, 0, R, 7, R, 12, R, R, R, 10, R], bassPeak: 0.06,
+    arp: 'stab', arpPattern: [R, R, R, R, 'chord', R, R, R, R, R, R, R, 'chord', R, R, R], arpPeak: 0.025, arpOct: 0,
+    drums: { kick: [0, 7, 10], snare: [4, 12], wood: [2, 6, 11, 14], hat: [1, 3, 5, 9, 13, 15] },
+  },
+  // Folk jig in 6/8
+  oak: {
+    bpm: 300, stepsPerBar: 6, // each step is an eighth note of a lively jig
+    chords: [[55, 59, 62], [60, 64, 67], [55, 59, 62], [62, 66, 69], [55, 59, 62], [64, 67, 71], [60, 64, 67], [62, 66, 69]],
+    roots: [43, 48, 43, 38, 43, 40, 48, 38],
+    melody: [
+      [[67, 1], [71, 1], [74, 1], [79, 2], [74, 1]],
+      [[76, 1], [72, 1], [76, 1], [79, 2], [76, 1]],
+      [[74, 1], [71, 1], [67, 1], [71, 1], [74, 1], [71, 1]],
+      [[69, 2], [66, 1], [62, 3]],
+      [[67, 1], [71, 1], [74, 1], [79, 1], [78, 1], [79, 1]],
+      [[76, 1], [79, 1], [76, 1], [71, 2], [67, 1]],
+      [[72, 1], [76, 1], [72, 1], [69, 1], [72, 1], [76, 1]],
+      [[74, 3], [78, 1], [81, 2]],
+    ],
+    lead: 'fiddle', leadPeak: 0.07,
+    bass: 'pluck', bassPattern: [0, R, R, 7, R, R], bassPeak: 0.17,
+    arp: 'strum', arpPattern: ['chord', R, R, 'chord', R, R], arpPeak: 0.045, arpOct: 0,
+    drums: { tom: [0, 3], shaker: [0, 1, 2, 3, 4, 5], wood: [5] },
+  },
+  // Sparkly synth-pop
+  grotto: {
+    bpm: 120, stepsPerBar: 16,
+    chords: [[64, 67, 71], [60, 64, 67], [62, 67, 71], [62, 66, 69], [64, 67, 71], [60, 64, 67], [57, 60, 64], [59, 63, 66, 69]],
+    roots: [40, 36, 43, 38, 40, 36, 45, 35],
+    melody: [
+      [[79, 4], [78, 2], [76, 2], [71, 4], [74, 4]],
+      [[76, 4], [72, 2], [76, 2], [79, 8]],
+      [[78, 4], [79, 2], [78, 2], [74, 4], [71, 4]],
+      [[74, 4], [76, 2], [78, 2], [81, 8]],
+      [[83, 4], [81, 2], [79, 2], [78, 4], [76, 4]],
+      [[79, 4], [76, 2], [72, 2], [76, 8]],
+      [[72, 2], [74, 2], [76, 2], [79, 2], [81, 4], [79, 4]],
+      [[78, 4], [75, 4], [71, 8]],
+    ],
+    lead: 'glass', leadPeak: 0.07,
+    bass: 'square', bassPattern: [0, R, 0, R, 12, R, 0, R, 0, R, 0, R, 12, R, 7, R], bassPeak: 0.05,
+    arp: 'bell', arpPattern: [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 2, 3, 2], arpPeak: 0.03, arpOct: 12,
+    drums: { kick: [0, 8], snare: [4, 12], hat: [2, 6, 10, 14] },
+  },
+  // Uplifting chiptune
+  meadow: {
+    bpm: 128, stepsPerBar: 16,
+    chords: [[60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 60, 65], [60, 64, 67], [59, 62, 67], [57, 60, 65], [59, 62, 67]],
+    roots: [36, 43, 45, 41, 36, 43, 41, 43],
+    melody: [
+      [[72, 2], [76, 2], [79, 2], [84, 2], [83, 4], [79, 4]],
+      [[79, 2], [81, 2], [83, 2], [86, 2], [84, 4], [83, 4]],
+      [[81, 2], [79, 2], [76, 2], [72, 2], [76, 4], [81, 4]],
+      [[77, 4], [79, 2], [81, 2], [84, 8]],
+      [[88, 4], [86, 2], [84, 2], [83, 4], [79, 4]],
+      [[83, 2], [84, 2], [86, 4], [83, 4], [79, 4]],
+      [[81, 2], [79, 2], [77, 2], [76, 2], [77, 4], [81, 4]],
+      [[79, 4], [83, 4], [86, 8]],
+    ],
+    lead: 'chip', leadPeak: 0.035,
+    bass: 'triangle', bassPattern: [0, R, 12, R, 0, R, 12, R, 0, R, 12, R, 0, R, 12, R], bassPeak: 0.12,
+    arp: 'pluck', arpPattern: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3], arpPeak: 0.022, arpOct: 12,
+    drums: { kick: [0, 4, 8, 12], snare: [4, 12], hat: [2, 6, 10, 14] },
+  },
+};
+
+function playSong(song, { out, verb, stops }) {
+  const st = 60 / song.bpm / (song.stepsPerBar === 6 ? 1 : 4);
+  const bars = song.chords.length;
+  const total = bars * song.stepsPerBar;
+  const mel = {};
+  song.melody.forEach((bar, b) => {
+    let pos = b * song.stepsPerBar;
+    for (const [m, len] of bar) { if (m) mel[pos] = [m, len]; pos += len; }
+  });
+
+  const leadF = ctx.createBiquadFilter(); leadF.type = 'lowpass'; leadF.frequency.value = 3200; leadF.connect(out);
+  const lv = ctx.createGain(); lv.gain.value = 0.3; leadF.connect(lv).connect(verb);
+  const bassF = ctx.createBiquadFilter(); bassF.type = 'lowpass'; bassF.frequency.value = 900; bassF.connect(out);
+  const backF = ctx.createBiquadFilter(); backF.type = 'lowpass'; backF.frequency.value = 3500; backF.connect(out);
+  const bv = ctx.createGain(); bv.gain.value = 0.35; backF.connect(bv).connect(verb);
+
+  const osc = (dest, type, freq, t, dur, peak, attack = 0.005, hold = 0.3) => {
+    const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.setValueAtTime(peak, t + Math.max(attack, dur * hold));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(dest);
+    o.start(t); o.stop(t + dur + 0.02);
+    return o;
+  };
+  // Simple instruments built from oscillators
+  const play = (inst, dest, m, t, len, peak) => {
+    const f = mtof(m), dur = len * st;
+    switch (inst) {
+      case 'marimba': osc(dest, 'sine', f, t, Math.min(dur, 0.45), peak, 0.003, 0.05); osc(dest, 'sine', f * 4, t, 0.08, peak * 0.3, 0.002, 0.05); break;
+      case 'pluck': osc(dest, 'triangle', f, t, Math.min(dur, 0.3), peak, 0.003, 0.1); break;
+      case 'clav': osc(dest, 'square', f, t, Math.min(dur * 0.7, 0.25), peak, 0.003, 0.2); osc(dest, 'sawtooth', f * 2, t, 0.06, peak * 0.4, 0.002, 0.1); break;
+      case 'stab': osc(dest, 'sawtooth', f, t, 0.18, peak, 0.004, 0.3); break;
+      case 'strum': osc(dest, 'triangle', f, t, 0.35, peak, 0.004, 0.1); break;
+      case 'bell': osc(dest, 'sine', f, t, 0.35, peak, 0.003, 0.05); osc(dest, 'sine', f * 2.76, t, 0.15, peak * 0.3, 0.002, 0.05); break;
+      case 'glass': osc(dest, 'sine', f, t, dur * 0.95, peak, 0.01, 0.5); osc(dest, 'triangle', f * 2, t, dur * 0.6, peak * 0.25, 0.01, 0.3); break;
+      case 'chip': {
+        const o = osc(dest, 'square', f, t, dur * 0.9, peak, 0.004, 0.7);
+        if (len >= 4) { const l = ctx.createOscillator(); l.frequency.value = 7; const a = ctx.createGain(); a.gain.value = 12; l.connect(a).connect(o.detune); l.start(t + 0.12); l.stop(t + dur); }
+        break;
+      }
+      case 'fiddle': {
+        const o = osc(dest, 'sawtooth', f, t, dur * 0.95, peak, 0.03, 0.7);
+        const l = ctx.createOscillator(); l.frequency.value = 5.5; const a = ctx.createGain(); a.gain.value = 10; l.connect(a).connect(o.detune); l.start(t + 0.05); l.stop(t + dur);
+        break;
+      }
+      default: osc(dest, inst, f, t, dur * 0.9, peak, 0.004, 0.5);
+    }
+  };
+  const drum = (kind, t) => {
+    const n = (hp, peak, dur, type = 'highpass') => {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = hp;
+      const g = ctx.createGain(); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g).connect(out); s.start(t, Math.random()); s.stop(t + dur + 0.02);
+    };
+    const thump = (f0, f1, peak, dur) => {
+      const o = ctx.createOscillator(); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.7);
+      const g = ctx.createGain(); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+    };
+    if (kind === 'kick') thump(140, 45, 0.3, 0.18);
+    if (kind === 'tom') thump(110, 70, 0.22, 0.2);
+    if (kind === 'snare') { n(1500, 0.08, 0.13); thump(220, 180, 0.05, 0.08); }
+    if (kind === 'hat') n(7500, 0.025, 0.04);
+    if (kind === 'shaker') n(6000, 0.016, 0.06, 'bandpass');
+    if (kind === 'wood') thump(900, 850, 0.06, 0.05);
+  };
+
+  function schedule(step, t) {
+    const bar = Math.floor(step / song.stepsPerBar), s = step % song.stepsPerBar;
+    const chord = song.chords[bar], root = song.roots[bar];
+    const bp = song.bassPattern[s];
+    if (bp !== null && bp !== undefined) play(song.bass, bassF, root + bp, t, 2, song.bassPeak);
+    const ap = song.arpPattern[s];
+    if (ap === 'chord') for (const m of chord) play(song.arp, backF, m + song.arpOct, t + Math.random() * 0.012, 2, song.arpPeak);
+    else if (ap !== null && ap !== undefined) {
+      const tones = [...chord, chord[0] + 12];
+      play(song.arp, backF, tones[ap % tones.length] + song.arpOct, t, 1, song.arpPeak);
+    }
+    const m = mel[step];
+    if (m) play(song.lead, leadF, m[0], t, m[1], song.leadPeak);
+    for (const [kind, steps] of Object.entries(song.drums)) if (steps.includes(s)) drum(kind, t);
+  }
+
+  let step = 0;
+  let next = ctx.currentTime + 0.2;
+  const timer = setInterval(() => {
+    if (ctx.state !== 'running') { next = ctx.currentTime + 0.1; return; }
+    while (next < ctx.currentTime + 0.3) {
+      schedule(step, next);
+      next += st;
+      step = (step + 1) % total;
     }
   }, 50);
   stops.push(() => clearInterval(timer));
