@@ -4,7 +4,7 @@ import {
   RESOURCES, LOCATIONS, HELPERS, FEATURES, EVENTS, FIRST_EVENT_AT, EVENT_GAP,
   LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID, EVENT_BY_ID, GIFT_BY_ID,
   RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
-  SHRINE, SHRINE_BY_ID,
+  SHRINE, SHRINE_BY_ID, BLOOD_RATE_SECONDS, BLOOD_RATE_TAPS,
 } from './data.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -31,6 +31,7 @@ export function freshState() {
     buffs: [],                // [{ id, kind: 'event'|'gift', ends }]
     ev: { next: FIRST_EVENT_AT, nextId: null, lastId: null, count: 0, seen: {} },
     achievements: {},         // id -> timestamp earned
+    blood: { drops: 0, pending: 0, total: 0, best: 0 }, // Blood Moon
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1 },
     prestige: { count: 0, stones: 0, lifetimeStones: 0, shrine: {}, finaleSeen: false, runStart: now, fastestRunMs: 0, hinted: false },
@@ -118,7 +119,7 @@ export function achievementCount() {
 function derive() {
   const fx = collectEffects();
   const locIds = Object.keys(state.locs);
-  const tapMult = {}, helperMult = {}, tapRatePct = {};
+  const tapMult = {}, helperMult = {}, tapRatePct = {}, helperOne = {};
   for (const l of locIds) { tapMult[l] = 1; helperMult[l] = 1; tapRatePct[l] = 0; }
   const out = {
     globalMult: 1, offlineHours: BASE_OFFLINE_HOURS, helperDiscount: 1, upgradeDiscount: 1,
@@ -133,6 +134,7 @@ function derive() {
       case 'tapRatePct': each(e.loc, (l) => { tapRatePct[l] += e.x; }); break;
       case 'holdTap': out.holdTap = true; break;
       case 'giftMult': out.giftMult *= e.x; break;
+      case 'helperOne': helperOne[e.id] = (helperOne[e.id] || 1) * e.x; break;
       case 'globalMult': out.globalMult *= e.x; break;
       case 'offlineHours': out.offlineHours += e.x; break;
       case 'helperDiscount': out.helperDiscount *= e.x; break;
@@ -153,7 +155,7 @@ function derive() {
   for (const h of HELPERS) {
     const ls = state.locs[h.loc];
     const n = ls.helpers[h.id] || 0;
-    const per = h.rate * milestoneMult(n) * helperMult[h.loc] * g;
+    const per = h.rate * milestoneMult(n) * (helperOne[h.id] || 1) * helperMult[h.loc] * g;
     helperRate[h.id] = per;
     if (ls.unlocked) locRate[h.loc] += per * n;
   }
@@ -162,7 +164,7 @@ function derive() {
   const resRate = {};
   for (const r of Object.keys(RESOURCES)) resRate[r] = 0;
   for (const l of locIds) resRate[LOCATION_BY_ID[l].resource] += locRate[l];
-  return { ...out, tapValue, helperRate, locRate, resRate };
+  return { ...out, tapValue, helperRate, locRate, resRate, helperOne };
 }
 
 export function d() {
@@ -248,10 +250,16 @@ export function buyHelper(h) {
   return true;
 }
 
+// Helper upgrades need enough of that helper first.
+export function upgradeAvailable(u) {
+  if (!u.helper) return true;
+  return (state.locs[u.loc].helpers[u.helper] || 0) >= u.req;
+}
+
 export function buyUpgrade(u) {
   const ls = state.locs[u.loc];
   const cost = upgradeCost(u);
-  if (ls.upgrades[u.id] || !canAfford(cost)) return false;
+  if (ls.upgrades[u.id] || !upgradeAvailable(u) || !canAfford(cost)) return false;
   pay(cost);
   ls.upgrades[u.id] = true;
   invalidate();
@@ -342,6 +350,7 @@ function startEvent(id) {
   state.ev.count++;
   state.ev.seen[id] = (state.ev.seen[id] || 0) + 1;
   state.ev.lastId = id;
+  if (id === 'bloodmoon') state.blood.drops = 0;
   invalidate();
 }
 
@@ -360,6 +369,7 @@ export function advance(sec) {
   if (expired.length) {
     state.buffs = state.buffs.filter((b) => state.clock < b.ends);
     happened.ended.push(...expired.map((b) => b.id));
+    if (expired.some((b) => b.id === 'bloodmoon')) endBloodMoon();
     invalidate();
   }
   if (state.ev.nextId == null || !eventEligible(EVENT_BY_ID[state.ev.nextId] || {})) {
@@ -374,6 +384,46 @@ export function advance(sec) {
     state.ev.next += EVENT_BY_ID[id].dur * d().eventDuration;
   }
   return happened;
+}
+
+// ---------- Blood Moon ----------
+
+export function tapBlood() {
+  const echo = Math.random() < d().tapEcho;
+  const v = echo ? 2 : 1;
+  if (echo) state.stats.echoes++;
+  state.blood.drops += v;
+  state.blood.total += v;
+  state.stats.taps++;
+  return { value: v, echo };
+}
+
+function endBloodMoon() {
+  const B = state.blood;
+  B.best = Math.max(B.best, B.drops);
+  B.pending += B.drops;
+  B.drops = 0;
+}
+
+// How much one Blood Drop is worth in each unlocked resource.
+export function bloodRates() {
+  const dd = d();
+  const out = {};
+  for (const l of LOCATIONS) {
+    if (!state.locs[l.id].unlocked) continue;
+    const per = Math.max(dd.locRate[l.id] * BLOOD_RATE_SECONDS, dd.tapValue[l.id] * BLOOD_RATE_TAPS, 1);
+    out[l.resource] = Math.max(out[l.resource] || 0, per);
+  }
+  return out;
+}
+
+export function convertBlood(resource) {
+  const rate = bloodRates()[resource];
+  if (!rate || state.blood.pending <= 0) return 0;
+  const amt = state.blood.pending * rate;
+  gain(resource, amt);
+  state.blood.pending = 0;
+  return amt;
 }
 
 export const secondsUntilNextEvent = () => Math.max(0, state.ev.next - state.clock);
@@ -431,6 +481,7 @@ export function valueForStones(n) {
 }
 
 export function canPrestige() {
+  if (hasBuff('bloodmoon') || state.blood.pending > 0) return false;
   return !!state.locs[PRESTIGE_REQ_LOC]?.unlocked && stonesForRun() >= 1;
 }
 
@@ -441,6 +492,7 @@ export const inEndless = () => state.prestige.count >= FINALE_PRESTIGE;
 export function prestige() {
   if (!canPrestige()) return null;
   const stones = stonesForRun();
+  if (hasBuff('bloodmoon')) endBloodMoon();
   const P = state.prestige;
   P.count++;
   P.stones += stones;
@@ -453,7 +505,7 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, settings: state.settings,
+    created: state.created, achievements: state.achievements, stats: state.stats, settings: state.settings, blood: state.blood,
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

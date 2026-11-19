@@ -57,6 +57,14 @@ python3 -m http.server 8000
 - 8 new moon achievements (60 in total)
 - **Balancing:** tuned with a pacing simulator so a casual player (about 80 minutes a day) reaches the finale in about 6 days, and each night runs faster than the last
 
+### Version 3.1: living helpers and the Blood Moon
+
+- **Every helper has its own look and movement.** Fireflies flit, frogs hop, snails crawl, squirrels climb the trunk, bats dart, the Echo Wyrm slithers and dandelion wisps drift upward. Each one you recruit appears in its place (up to 10 of each kind on screen)
+- **Milestones are visible:** each helper card shows a progress bar to the next ×2 speed boost (25, 50, 100…). Hitting one flashes the card, plays a fanfare and gives those helpers a growing glow in the scene
+- **Helper upgrades:** two per helper (50 in all), unlocked at 10 and 50 owned, shown with the helper's portrait in the Upgrades tab
+- **Blood Moon:** a rare event. The moon turns red and you're drawn to the **Crimson Courtyard** of a vampire castle, where you tap a blood pool for Blood Drops to original gothic music (harpsichord, organ, pumping bass). When it sets, you choose which resource the drops become, at a generous rate
+- Two new achievements for the Blood Moon
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:
@@ -74,7 +82,8 @@ POLICY=double node tools/sim.mjs 10 3   # 10 days, 3 taps per second
 | `js/data.js` | All game content: locations, helpers, upgrades, features, events, Moon Shrine |
 | `js/achievements.js` | Achievement list and unlock conditions |
 | `js/game.js` | State, formulas, saving and loading (no DOM) |
-| `js/scenes.js` | SVG artwork for each location |
-| `js/audio.js` | Generated sound effects, ambience and finale music |
+| `js/scenes.js` | SVG artwork for each location and the Crimson Courtyard |
+| `js/sprites.js` | Helper drawings, where they live and how they move |
+| `js/audio.js` | Generated sound effects, ambience, castle theme and finale music |
 | `tools/sim.mjs` | Pacing simulator for balancing |
 | `js/main.js` | UI, input and the game loop |

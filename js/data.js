@@ -133,6 +133,40 @@ export const UPGRADES = [
   { id: 'cosmicharmony',  loc: 'meadow', name: 'Cosmic Harmony',  desc: 'Everything everywhere ×1.25', cost: { stardust: 500000, moonshards: 2e6 }, effects: [{ t: 'globalMult', x: 1.25 }] },
 ];
 
+// Helper-specific upgrades: two per helper, unlocked by how many you own.
+const HELPER_PERKS = {
+  firefly: ['Brighter Tails', 'Firefly Lanterns'],        watersprite: ['Splash Dance', 'Tidecallers'],
+  lilypixie: ['Lily Cups', 'Petal Ladles'],               frogbard: ['Croaking Chorus', 'Ballad of the Moon'],
+  mothweaver: ['Silken Nets', 'Moonsilk Looms'],
+  beetle: ['Shiny Shells', 'Beetle Brigade'],             snail: ['Slick Trails', 'Spiral Shells'],
+  toadtender: ['Watering Cans', 'Gardeners’ Guild'],      gnome: ['Little Shovels', 'Gnome Tunnels'],
+  lanternmoth: ['Brighter Wings', 'Lantern Festival'],
+  acornsprite: ['Tiny Hammers', 'Acorn Caps'],            sapsquirrel: ['Bushy Tails', 'Squirrel Relay'],
+  woodpecker: ['Steady Beat', 'Drumline'],                dryad: ['Whispering Bark', 'Heartsong'],
+  owlsage: ['Old Wisdom', 'Parliament of Owls'],
+  crystalmite: ['Sharp Mandibles', 'Glitter Colonies'],   glimmerbat: ['Echo Squeaks', 'Cave Choir'],
+  prismpixie: ['Bent Light', 'Rainbow Forge'],            geodegolem: ['Gentle Hands', 'Stone Hearts'],
+  echowyrm: ['Pure Notes', 'Wyrmsong'],
+  dandelionwisp: ['Fluffier Seeds', 'Wishing Winds'],     starhare: ['Quick Feet', 'Moon Leaps'],
+  cometmoth: ['Brighter Trails', 'Comet Swarm'],          wishweaver: ['Spun Wishes', 'Tapestry of Dreams'],
+  moonfairy: ['Silver Wands', 'Court of the Moon'],
+};
+export const HELPER_UPGRADE_TIERS = [
+  { req: 10, costMult: 50,   x: 2 },
+  { req: 50, costMult: 5000, x: 3 },
+];
+for (const h of HELPERS) {
+  HELPER_UPGRADE_TIERS.forEach((tier, i) => {
+    const cost = {};
+    for (const [r, amt] of Object.entries(h.cost)) cost[r] = amt * tier.costMult;
+    UPGRADES.push({
+      id: `${h.id}_perk${i + 1}`, loc: h.loc, helper: h.id, req: tier.req,
+      name: HELPER_PERKS[h.id][i], desc: `${h.plural} gather ×${tier.x}`,
+      cost, effects: [{ t: 'helperOne', id: h.id, x: tier.x }],
+    });
+  });
+}
+
 // Location features: built in order, each changes how the scene looks.
 export const FEATURES = [
   // Pond
@@ -171,8 +205,13 @@ export const EVENTS = [
   { id: 'meteor',     name: 'Meteor Shower',     icon: '🌠', desc: 'Tap the shooting stars for Stardust',     dur: 30,  weight: 1, req: { loc: 'meadow' }, effects: [], special: 'meteor' },
   { id: 'owlcouncil', name: 'Owl Council',       icon: '🦉', desc: 'Helpers cost 25% less',                    dur: 120, weight: 1, req: { loc: 'oak' }, effects: [{ t: 'helperDiscount', x: 0.75 }] },
   { id: 'fog',        name: 'Mischief Fog',      icon: '🌫️', desc: 'Taps ×3 · helpers ×½',                     dur: 60,  weight: 0.8, req: { loc: 'grotto' }, effects: [{ t: 'tapMult', loc: '*', x: 3 }, { t: 'helperMult', loc: '*', x: 0.5 }] },
+  { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Tap the blood pool in the castle courtyard', dur: 75, weight: 0.12, req: { loc: 'mushroom' }, effects: [], special: 'bloodmoon' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
+// Blood Moon exchange: when it sets, each Blood Drop becomes the larger of
+// BLOOD_RATE_SECONDS of that place's production or BLOOD_RATE_TAPS of its taps.
+export const BLOOD_RATE_SECONDS = 6;
+export const BLOOD_RATE_TAPS = 15;
 export const FIRST_EVENT_AT = 90;           // seconds of play before the first event
 export const EVENT_GAP = [120, 240];        // seconds between events
 
@@ -195,7 +234,7 @@ export const GIFT_BY_ID = byId(FAIRY_GIFTS);
 // Run value: each resource's earnings this run are weighted, then turned into Moonstones.
 export const RESOURCE_WEIGHT = { dewdrops: 1, glowspores: 2, ambersap: 10, moonshards: 40, stardust: 150 };
 export const STONE_SCALE = 1e10;         // run value that gives the first few stones
-export const STONE_FACTOR = 5;           // stones = floor(FACTOR * (value / SCALE) ^ EXP)
+export const STONE_FACTOR = 3.5;           // stones = floor(FACTOR * (value / SCALE) ^ EXP)
 export const STONE_EXP = 0.4;
 export const STONE_BONUS = 0.01;         // each unspent Moonstone: +1% to everything
 export const FINALE_PRESTIGE = 5;        // the soft ending happens on this prestige

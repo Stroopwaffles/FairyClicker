@@ -31,6 +31,7 @@ const pond = () => `
       <stop offset="0" stop-color="#fffbe8"/><stop offset="0.7" stop-color="#f1e9c6"/><stop offset="1" stop-color="#d9cfa5"/>
     </radialGradient>
     <radialGradient id="p-halo"><stop offset="0" stop-color="#fff6cf" stop-opacity="0.45"/><stop offset="1" stop-color="#fff6cf" stop-opacity="0"/></radialGradient>
+    <radialGradient id="p-halo-red"><stop offset="0" stop-color="#ff3a4a" stop-opacity="0.5"/><stop offset="1" stop-color="#ff3a4a" stop-opacity="0"/></radialGradient>
     <radialGradient id="p-water" cx="0.5" cy="0.35" r="0.7">
       <stop offset="0" stop-color="#3f5aa8"/><stop offset="0.6" stop-color="#22306e"/><stop offset="1" stop-color="#141a45"/>
     </radialGradient>
@@ -43,8 +44,8 @@ const pond = () => `
 
   <rect width="1000" height="700" fill="url(#p-sky)"/>
   <g class="stars">${stars(7, 90, 330)}</g>
-  <circle cx="700" cy="130" r="150" fill="url(#p-halo)"/>
-  <circle cx="700" cy="130" r="58" fill="url(#p-moon)"/>
+  <circle class="moon-halo" cx="700" cy="130" r="150" fill="url(#p-halo)"/>
+  <circle class="moon-disc" cx="700" cy="130" r="58" fill="url(#p-moon)"/>
   <circle cx="680" cy="118" r="9" fill="#e3d9b0" opacity="0.6"/><circle cx="718" cy="148" r="6" fill="#e3d9b0" opacity="0.5"/>
 
   <!-- distant tree line -->
@@ -402,7 +403,81 @@ const meadow = () => `
   <g data-sprites></g>
 </svg>`;
 
-export const SCENES = { pond, mushroom, oak, grotto, meadow };
+// The Blood Moon's castle courtyard (only reachable during the event).
+const courtyard = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="c-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12030a"/><stop offset="0.55" stop-color="#3a0814"/><stop offset="1" stop-color="#5a1020"/>
+    </linearGradient>
+    <radialGradient id="c-moon" cx="0.42" cy="0.4" r="0.65">
+      <stop offset="0" stop-color="#ff8a7a"/><stop offset="0.6" stop-color="#d0283c"/><stop offset="1" stop-color="#8a0f22"/>
+    </radialGradient>
+    <radialGradient id="c-halo"><stop offset="0" stop-color="#ff3a4a" stop-opacity="0.5"/><stop offset="1" stop-color="#ff3a4a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="c-blood" cx="0.45" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#c8102e"/><stop offset="0.6" stop-color="#7a0016"/><stop offset="1" stop-color="#3a0008"/>
+    </radialGradient>
+    <linearGradient id="c-stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4258"/><stop offset="1" stop-color="#2a2434"/></linearGradient>
+    <linearGradient id="c-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1e2a"/><stop offset="1" stop-color="#120a12"/></linearGradient>
+    <radialGradient id="c-torch"><stop offset="0" stop-color="#ffb35a" stop-opacity="0.8"/><stop offset="1" stop-color="#ff5a2a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#c-sky)"/>
+  <g class="stars" opacity="0.6">${stars(66, 50, 260)}</g>
+  <circle cx="720" cy="140" r="170" fill="url(#c-halo)" class="pulse"/>
+  <circle cx="720" cy="140" r="70" fill="url(#c-moon)"/>
+  <circle cx="700" cy="125" r="10" fill="#a8142a" opacity="0.5"/><circle cx="742" cy="160" r="7" fill="#a8142a" opacity="0.45"/>
+
+  <!-- castle silhouette -->
+  <g fill="#0c0610">
+    <path d="M140 440 V250 l20 -40 l20 40 V440z"/>
+    <path d="M230 440 V180 l35 -80 l35 80 V440z"/>
+    <path d="M330 440 V300 h340 V440z"/>
+    <path d="M330 300 v-24 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v12 h20 v-12 h20 v24z"/>
+    <path d="M430 300 V150 l70 -110 l70 110 V300z"/>
+    <path d="M700 440 V200 l30 -70 l30 70 V440z"/>
+    <path d="M800 440 V270 l22 -45 l22 45 V440z"/>
+  </g>
+  <g fill="#ffb35a" class="pulse">
+    <rect x="490" y="190" width="20" height="34" rx="10"/><rect x="255" y="230" width="12" height="22" rx="6"/>
+    <rect x="723" y="250" width="12" height="22" rx="6"/><rect x="400" y="340" width="10" height="18" rx="5"/><rect x="590" y="340" width="10" height="18" rx="5"/>
+  </g>
+  <!-- bats circling the towers -->
+  <g fill="#0c0610">
+    ${[[300, 120, 0], [600, 90, 1.2], [820, 200, 2.1], [380, 200, 3]].map(([x, y, d]) => `<g class="bat" style="animation-delay:-${d}s"><path transform="translate(${x} ${y})" d="M0 0 q-8 -8 -18 -2 q6 0 6 6 q4 -4 6 0 q2 -4 6 0 q0 -6 6 -6 q-10 -6 -18 2z"/></g>`).join('')}
+  </g>
+
+  <!-- courtyard walls with arches -->
+  <path d="M0 470 V380 H1000 V470 Z" fill="#231a26"/>
+  ${[60, 200, 340, 620, 760, 900].map((x) => `<path d="M${x - 40} 470 V420 a40 40 0 0 1 80 0 V470z" fill="#120a12"/>`).join('')}
+  <rect y="470" width="1000" height="230" fill="url(#c-floor)"/>
+  <g stroke="#3a2a3a" stroke-width="2" opacity="0.6">
+    ${[520, 570, 630].map((y) => `<line x1="0" y1="${y}" x2="1000" y2="${y}"/>`).join('')}
+    ${[-300, -150, 0, 150, 300].map((dx) => `<line x1="${500 + dx * 0.4}" y1="470" x2="${500 + dx * 2.2}" y2="700"/>`).join('')}
+  </g>
+
+  <!-- torches -->
+  ${[[150, 420], [850, 420]].map(([x, y]) => `
+    <circle cx="${x}" cy="${y - 30}" r="70" fill="url(#c-torch)" class="flicker"/>
+    <rect x="${x - 4}" y="${y - 20}" width="8" height="60" fill="#3a2a2a"/>
+    <path d="M${x - 10} ${y - 22} q10 -36 20 0z" fill="#ffb35a" class="flicker"/>`).join('')}
+
+  <!-- the blood pool (tap target) -->
+  <g data-tap class="tap-target blood-target">
+    <ellipse cx="500" cy="590" rx="250" ry="62" fill="#000" opacity="0.45"/>
+    <ellipse cx="500" cy="572" rx="235" ry="64" fill="url(#c-stone)" stroke="#5a5068" stroke-width="3"/>
+    <ellipse class="blood-surface" cx="500" cy="566" rx="205" ry="48" fill="url(#c-blood)"/>
+    <ellipse cx="455" cy="552" rx="60" ry="9" fill="#ff8a8a" opacity="0.35" class="shimmer"/>
+    <path d="M482 566 V470 h36 V566" fill="url(#c-stone)" stroke="#5a5068" stroke-width="2"/>
+    <ellipse cx="500" cy="470" rx="46" ry="12" fill="#4a4258" stroke="#5a5068" stroke-width="2"/>
+    <path d="M488 470 q12 -40 24 0" fill="#3a3248"/>
+    <path class="drip" d="M500 480 v70" stroke="#a8102a" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g fill="#c8102e" opacity="0.85"><circle cx="280" cy="640" r="5"/><circle cx="720" cy="650" r="4"/><circle cx="640" cy="672" r="3"/></g>
+
+  <g data-sprites></g>
+</svg>`;
+
+export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard };
 
 // Sprite colour per location (helpers drawn as drifting motes).
 export const SPRITE_COLORS = { pond: '#fff3a0', mushroom: '#c8ff9a', oak: '#ffc35a', grotto: '#d6c8ff', meadow: '#fff8c8' };

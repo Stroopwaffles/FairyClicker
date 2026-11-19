@@ -57,7 +57,7 @@ function candidates() {
     out.push({ kind: 'helper', cost: G.helperCost(h, owned, 1), buy: () => { s.settings.buyAmt = 1; return G.buyHelper(h); }, apply: () => { s.locs[h.loc].helpers[h.id] = owned + 1; }, undo: () => { s.locs[h.loc].helpers[h.id] = owned; } });
   }
   for (const u of D.UPGRADES) {
-    if (!s.locs[u.loc].unlocked || s.locs[u.loc].upgrades[u.id]) continue;
+    if (!s.locs[u.loc].unlocked || s.locs[u.loc].upgrades[u.id] || !G.upgradeAvailable(u)) continue;
     out.push({ kind: 'upgrade', cost: G.upgradeCost(u), buy: () => G.buyUpgrade(u), apply: () => { s.locs[u.loc].upgrades[u.id] = true; }, undo: () => { delete s.locs[u.loc].upgrades[u.id]; }, name: u.name });
   }
   for (const f of D.FEATURES) {

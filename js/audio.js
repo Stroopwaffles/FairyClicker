@@ -171,6 +171,18 @@ export function tap(locId, echo = false) {
   }
 }
 
+// Blood pool: a thick, low "blup" with the odd high drip.
+export function bloodTap(echo = false) {
+  if (!ready() || prefs.sfx === 0) return;
+  const now = performance.now();
+  if (now - lastTapAt < 35) return;
+  lastTapAt = now;
+  const v = rnd(0.85, 1.15);
+  tone({ freq: 170 * v, to: 62 * v, glide: 0.13, decay: 0.2, peak: 0.42, wet: 0.25 });
+  noise({ dur: 0.14, peak: 0.1, type: 'lowpass', freq: 500, to: 150 });
+  if (Math.random() < 0.3 || echo) tone({ freq: 900 * v, to: 1500 * v, glide: 0.04, start: 0.09, decay: 0.12, peak: 0.06, wet: 0.6 });
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));
@@ -203,6 +215,16 @@ export function eventStart(id) {
     case 'meteor':
       noise({ dur: 1.2, peak: 0.1, type: 'bandpass', freq: 4000, to: 600, q: 2, wet: 0.5 });
       starCatch();
+      break;
+    case 'bloodmoon':
+      // A tolling bell and an organ stab
+      [0, 1.4].forEach((t) => {
+        tone({ freq: 98, start: t, decay: 3, peak: 0.22, wet: 0.7 });
+        tone({ freq: 98 * 2.0, start: t, decay: 2.2, peak: 0.08, wet: 0.7 });
+        tone({ freq: 98 * 2.76, start: t, decay: 1.6, peak: 0.06, wet: 0.8 });
+        tone({ freq: 98 * 5.4, start: t, decay: 0.9, peak: 0.03, wet: 0.8 });
+      });
+      [50, 53, 57, 62].forEach((m) => tone({ freq: mtof(m), type: 'sawtooth', start: 0.05, attack: 0.02, decay: 1.6, peak: 0.035, wet: 0.6 }));
       break;
     case 'fairy':
       for (let i = 0; i < 10; i++) tone({ freq: mtof(pick([88, 91, 93, 95, 98, 100])), start: i * 0.06, decay: 0.4, peak: 0.05, wet: 0.8, pan: rnd(-0.8, 0.8) });
@@ -278,6 +300,7 @@ const AMBIENCES = {
     padType: 'sine', cutoff: 1300, sparkleEvery: [1.8, 4.5],
     layers: [wind, crickets],
   },
+  courtyard: { custom: castleTheme },
 };
 
 export function setLocation(id) {
@@ -309,6 +332,9 @@ function startAmbience(id) {
     setTimeout(loop, rnd(a, b) * 500);
   };
 
+  if (def.custom) {
+    def.custom({ out, verb, stops });
+  } else {
   // Pad: one chord every ~9s, overlapping so it never stops.
   const padFilter = ctx.createBiquadFilter();
   padFilter.type = 'lowpass'; padFilter.frequency.value = def.cutoff; padFilter.Q.value = 0.5;
@@ -352,6 +378,7 @@ function startAmbience(id) {
   }, def.sparkleEvery);
 
   for (const layer of def.layers) layer({ out, verb, every, stops });
+  }
 
   current = {
     id,
@@ -468,4 +495,117 @@ export function finale() {
   });
   // Bring the location ambience back afterwards.
   setTimeout(() => { if (wantedLocation === null) setLocation(back); }, 26000);
+}
+
+// ---------- Crimson Courtyard theme ----------
+// An original gothic piece in D minor (harmonic minor) at 150 BPM: harpsichord
+// arpeggios, an organ holding the chords, a pumping octave bass, a square-wave
+// lead and simple drums. 8 bars that loop.
+const CASTLE = {
+  step: 60 / 150 / 4, // a sixteenth note
+  roots: [38, 34, 36, 33, 38, 31, 33, 38],                 // D Bb C A D G A D (bass, MIDI)
+  chords: [[62, 65, 69], [58, 62, 65], [60, 64, 67], [57, 61, 64], [62, 65, 69], [55, 58, 62], [57, 61, 64], [62, 65, 69]],
+  // Melody in eighth notes per bar: [midi or null, length in eighths]
+  melody: [
+    [[74, 2], [77, 1], [76, 1], [74, 1], [73, 1], [74, 2]],
+    [[70, 2], [74, 1], [77, 1], [82, 2], [81, 1], [79, 1]],
+    [[79, 2], [76, 1], [72, 1], [79, 1], [77, 1], [76, 2]],
+    [[73, 1], [76, 1], [81, 2], [79, 1], [77, 1], [76, 1], [73, 1]],
+    [[74, 1], [69, 1], [74, 1], [77, 1], [81, 2], [79, 1], [77, 1]],
+    [[79, 2], [82, 1], [81, 1], [79, 1], [77, 1], [79, 2]],
+    [[77, 1], [76, 1], [74, 1], [73, 1], [76, 2], [81, 2]],
+    [[74, 4], [null, 2], [69, 1], [73, 1]],
+  ],
+};
+// Turn the melody into a map: sixteenth-step index -> [midi, steps]
+const CASTLE_MELODY = (() => {
+  const map = {};
+  CASTLE.melody.forEach((bar, b) => {
+    let pos = b * 16;
+    for (const [m, len] of bar) { if (m) map[pos] = [m, len * 2]; pos += len * 2; }
+  });
+  return map;
+})();
+
+function castleTheme({ out, verb, stops }) {
+  const st = CASTLE.step;
+  // Instrument buses
+  const bassF = ctx.createBiquadFilter(); bassF.type = 'lowpass'; bassF.frequency.value = 650; bassF.connect(out);
+  const harpF = ctx.createBiquadFilter(); harpF.type = 'lowpass'; harpF.frequency.value = 3200; harpF.connect(out);
+  const organF = ctx.createBiquadFilter(); organF.type = 'lowpass'; organF.frequency.value = 1300; organF.connect(out);
+  const leadF = ctx.createBiquadFilter(); leadF.type = 'lowpass'; leadF.frequency.value = 2600; leadF.connect(out);
+  const leadVerb = ctx.createGain(); leadVerb.gain.value = 0.35; leadF.connect(leadVerb).connect(verb);
+  const organVerb = ctx.createGain(); organVerb.gain.value = 0.5; organF.connect(organVerb).connect(verb);
+
+  const note = (dest, type, freq, t, dur, peak, attack = 0.005) => {
+    const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.setValueAtTime(peak, t + Math.max(attack, dur * 0.6));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(dest);
+    o.start(t); o.stop(t + dur + 0.02);
+    return o;
+  };
+  const drum = (t, kind) => {
+    if (kind === 'kick') {
+      const o = ctx.createOscillator(); o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.2);
+    } else {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = kind === 'snare' ? 1400 : 7000;
+      const g = ctx.createGain(); const dur = kind === 'snare' ? 0.13 : 0.035;
+      g.gain.setValueAtTime(kind === 'snare' ? 0.09 : 0.025, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g).connect(out); s.start(t, Math.random()); s.stop(t + dur + 0.02);
+    }
+  };
+
+  function schedule(step, t) {
+    const bar = Math.floor(step / 16) % 8, s = step % 16;
+    const root = CASTLE.roots[bar], chord = CASTLE.chords[bar];
+    // Bass: pumping octaves on eighth notes
+    if (s % 2 === 0) note(bassF, 'square', mtof(root + (s % 4 === 0 ? 0 : 12)), t, st * 1.8, 0.05);
+    // Harpsichord: broken chord in sixteenths, up and back
+    const pattern = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 1];
+    const tones = [...chord, chord[0] + 12];
+    const hn = tones[pattern[s]] + 12;
+    note(harpF, 'sawtooth', mtof(hn), t, st * 1.4, 0.018, 0.002);
+    note(harpF, 'square', mtof(hn), t, st * 0.9, 0.008, 0.002);
+    // Organ: hold the chord for the whole bar
+    if (s === 0) for (const m of chord) for (const det of [-5, 5]) {
+      const o = note(organF, 'sawtooth', mtof(m - 12), t, st * 16, 0.009, 0.04);
+      o.detune.value = det;
+    }
+    // Lead melody
+    const mel = CASTLE_MELODY[(bar * 16) + s];
+    if (mel) {
+      const dur = mel[1] * st * 0.95;
+      const o = note(leadF, 'square', mtof(mel[0]), t, dur, 0.032, 0.01);
+      // a little vibrato on longer notes
+      if (mel[1] >= 4) {
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 6;
+        const amt = ctx.createGain(); amt.gain.value = 6;
+        lfo.connect(amt).connect(o.detune); lfo.start(t + 0.15); lfo.stop(t + dur);
+      }
+      note(leadF, 'sawtooth', mtof(mel[0] - 12), t, dur, 0.012, 0.01);
+    }
+    // Drums
+    if (s === 0 || s === 8 || s === 10) drum(t, 'kick');
+    if (s === 4 || s === 12) drum(t, 'snare');
+    if (s % 2 === 1) drum(t, 'hat');
+  }
+
+  let step = 0;
+  let next = ctx.currentTime + 0.15;
+  const timer = setInterval(() => {
+    if (ctx.state !== 'running') { next = ctx.currentTime + 0.1; return; }
+    while (next < ctx.currentTime + 0.3) {
+      schedule(step, next);
+      next += st;
+      step = (step + 1) % 128;
+    }
+  }, 50);
+  stops.push(() => clearInterval(timer));
 }

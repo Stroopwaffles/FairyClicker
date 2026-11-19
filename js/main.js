@@ -2,11 +2,12 @@
 import {
   RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES, LOCATION_BY_ID,
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
-  SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE,
+  SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
 } from './data.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
-import { SCENES, SPRITE_COLORS } from './scenes.js';
+import { SCENES } from './scenes.js';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER } from './sprites.js';
 import * as A from './audio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -89,7 +90,9 @@ function startGame() {
   A.init();
   showScreen('screen-game');
   started = true;
+  bloodView = G.hasBuff('bloodmoon');
   renderAll();
+  if (G.state.blood.pending > 0) setTimeout(showBloodExchange, 400);
 }
 
 function goHome() {
@@ -137,8 +140,12 @@ function renderLocTabs() {
     else if (!ls.unlocked) cls.push('locked');
     if (G.state.active === l.id) cls.push('active');
     const right = l.soon ? '<span class="lk">· soon</span>' : !ls?.unlocked ? '<span class="lk">🔒</span>' : icon(l.resource);
+    if (bloodView && cls.includes('active')) cls.splice(cls.indexOf('active'), 1);
     return `<button class="${cls.join(' ')}" data-loc="${l.id}" ${l.soon ? 'disabled' : ''}>${l.name} ${right}</button>`;
   }).join('');
+  if (G.hasBuff('bloodmoon')) {
+    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab courtyard${bloodView ? ' active' : ''}" data-loc="courtyard">🩸 Crimson Courtyard</button>`);
+  }
   for (const b of $$('.loc-tab', nav)) b.addEventListener('click', () => switchLocation(b.dataset.loc));
   updateLocTabs();
 }
@@ -150,13 +157,20 @@ function updateLocTabs() {
 }
 
 function switchLocation(id) {
-  if (G.state.active === id) return;
+  if (id === 'courtyard') {
+    if (bloodView || !G.hasBuff('bloodmoon')) return;
+    bloodView = true;
+    renderAll();
+    return;
+  }
+  if (G.state.active === id && !bloodView) return;
+  bloodView = false;
   G.state.active = id;
   renderAll();
 }
 
-let spriteCount = -1;
 function renderScene() {
+  if (bloodView) { renderCourtyard(); return; }
   const id = G.state.active;
   const l = LOCATION_BY_ID[id];
   const ls = G.state.locs[id];
@@ -164,9 +178,8 @@ function renderScene() {
   $('#scene-name').textContent = l.name;
   const tapEl = $('[data-tap]', $('#scene'));
   tapEl.addEventListener('pointerdown', onTap);
-  spriteCount = -1;
   updateSceneFeatures();
-  updateSprites();
+  updateSprites(true);
 
   const hint = $('#tap-hint');
   hint.textContent = l.tapVerb;
@@ -193,6 +206,10 @@ function renderScene() {
   updateSceneRate();
 }
 function updateSceneRate() {
+  if (bloodView) {
+    $('#scene-rate').innerHTML = `🩸 ${fmt(G.state.blood.drops)} Blood Drops`;
+    return;
+  }
   const id = G.state.active;
   const r = LOCATION_BY_ID[id].resource;
   const dd = G.d();
@@ -204,23 +221,55 @@ function updateSceneFeatures() {
   const ls = G.state.locs[G.state.active];
   for (const g of $$('[data-feature]', $('#scene'))) g.classList.toggle('built', !!ls.features[g.dataset.feature]);
 }
-function updateSprites() {
+// Each recruited helper appears in its place (up to a cap per type), drawn and
+// animated in its own style. Positions are seeded so they stay put between renders.
+let shownSprites = {}; // helperId -> how many are currently drawn
+function seeded(str, i) {
+  let h = 2166136261;
+  for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  h = Math.imul(h ^ (i + 1) * 2654435761, 16777619);
+  let s = (h >>> 0) % 2147483646 + 1;
+  return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+}
+function updateSprites(forceAll = false) {
   const id = G.state.active;
   const ls = G.state.locs[id];
-  const total = Object.values(ls.helpers).reduce((a, b) => a + b, 0);
-  const n = Math.min(40, total === 0 ? 0 : Math.ceil(Math.sqrt(total) * 3));
-  if (n === spriteCount) return;
-  spriteCount = n;
   const layer = $('[data-sprites]', $('#scene'));
-  if (!layer) return;
-  const color = SPRITE_COLORS[id];
-  let html = '';
-  for (let i = 0; i < n; i++) {
-    const x = 80 + Math.random() * 840, y = 230 + Math.random() * 380;
-    const style = `--dx:${(Math.random() * 120 - 60).toFixed(0)}px;--dy:${(Math.random() * 90 - 45).toFixed(0)}px;--dur:${(6 + Math.random() * 6).toFixed(1)}s;--delay:${(-Math.random() * 10).toFixed(1)}s`;
-    html += `<g class="sprite" style="${style}"><circle cx="${x}" cy="${y}" r="9" fill="${color}" opacity=".25"/><circle cx="${x}" cy="${y}" r="3.5" fill="${color}"/></g>`;
+  if (!layer || !ls) return;
+  if (forceAll) { shownSprites = {}; layer.innerHTML = ''; }
+  for (const h of HELPERS.filter((x) => x.loc === id)) {
+    const owned = ls.helpers[h.id] || 0;
+    const want = Math.min(owned, MAX_VISIBLE_PER_HELPER);
+    const tier = MILESTONES.filter((m) => owned >= m).length;
+    let group = $(`g[data-h="${h.id}"]`, layer);
+    if (!group) {
+      group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('data-h', h.id);
+      layer.append(group);
+    }
+    const had = shownSprites[h.id] || 0;
+    const tierChanged = group.dataset.tier !== String(tier);
+    if (want === had && !tierChanged) continue;
+    group.dataset.tier = tier;
+    const vis = HELPER_VIS[h.id];
+    let html = '';
+    for (let i = 0; i < want; i++) {
+      const r = seeded(h.id, i);
+      const [x1, y1, x2, y2] = vis.zone;
+      const x = x1 + r() * (x2 - x1), y = y1 + r() * (y2 - y1);
+      const flip = r() < 0.5 ? -1 : 1;
+      const sc = vis.scale * (0.85 + r() * 0.3);
+      const dur = (vis.slow ? 1.8 : 1) * (0.8 + r() * 0.5);
+      const delay = -r() * 10;
+      // Milestones (25, 50, 100…) give helpers a growing glow.
+      const aura = tier ? `<circle class="aura" r="${12 + tier * 2}" fill="${vis.color}" opacity="${Math.min(0.1 + tier * 0.04, 0.3)}"/>` : '';
+      const spawn = i >= had && !forceAll ? ' spawn' : '';
+      html += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${sc.toFixed(2)})"><g class="hs-in${spawn}">
+        <g class="hs a-${vis.anim}" style="--k:${dur.toFixed(2)};--delay:${delay.toFixed(1)}s">${aura}<g transform="scale(${flip} 1)">${SPRITES[h.id]()}</g></g></g></g>`;
+    }
+    group.innerHTML = html;
+    shownSprites[h.id] = want;
   }
-  layer.innerHTML = html;
 }
 
 // ---------- tapping ----------
@@ -234,16 +283,18 @@ function stopHold(e) {
 window.addEventListener('pointerup', stopHold);
 window.addEventListener('pointercancel', stopHold);
 
+const viewId = () => (bloodView ? 'courtyard' : G.state.active);
+
 function onTap(e) {
   e.preventDefault();
-  const id = G.state.active;
-  if (!G.state.locs[id].unlocked) return;
+  const id = viewId();
+  if (id === 'courtyard' ? !G.hasBuff('bloodmoon') : !G.state.locs[id].unlocked) return;
   if (G.d().holdTap && !holds.has(e.pointerId)) {
     const target = e.currentTarget, x = e.clientX, y = e.clientY, pid = e.pointerId;
     let first = true;
     holds.set(pid, setInterval(() => {
       if (first) { first = false; return; } // wait a moment so a normal tap isn't doubled
-      if (G.state.active !== id) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
+      if (viewId() !== id || (id === 'courtyard' && !G.hasBuff('bloodmoon'))) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
       doTap(id, target, x, y);
     }, 166));
   }
@@ -251,8 +302,9 @@ function onTap(e) {
 }
 
 function doTap(id, target, clientX, clientY) {
-  const { value: v, echo } = G.tap(id);
-  A.tap(id, echo);
+  const blood = id === 'courtyard';
+  const { value: v, echo } = blood ? G.tapBlood() : G.tap(id);
+  if (blood) A.bloodTap(echo); else A.tap(id, echo);
   trackFrenzy();
   target.classList.remove('bump');
   void target.getBoundingClientRect();
@@ -260,7 +312,7 @@ function doTap(id, target, clientX, clientY) {
 
   const wrap = $('#scene-wrap').getBoundingClientRect();
   const x = clientX - wrap.left, y = clientY - wrap.top;
-  const color = RESOURCES[LOCATION_BY_ID[id].resource].color;
+  const color = blood ? '#ff4a5a' : RESOURCES[LOCATION_BY_ID[id].resource].color;
   const layer = $('#floaters');
   const f = document.createElement('div');
   f.className = 'floater';
@@ -275,6 +327,7 @@ function doTap(id, target, clientX, clientY) {
   // Keep the DOM light under very fast multi-finger tapping.
   while (layer.childElementCount > 60) layer.firstElementChild.remove();
 
+  if (blood) { updateSceneRate(); updateBloodPanel(); return; }
   if (G.state.locs[id].taps === 31) $('#tap-hint').classList.add('faded');
   updateResBar();
 }
@@ -289,9 +342,10 @@ function setTab(t) {
 }
 
 function renderPanel() {
-  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab);
+  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView);
   const body = $('#panel-body');
   panelUpdaters = [];
+  if (bloodView) { renderBloodPanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
   if (tab !== 'settings' && tab !== 'awards' && !ls.unlocked) {
@@ -311,7 +365,7 @@ function updateTabDots() {
   const id = G.state.active;
   const ls = G.state.locs[id];
   const dots = {
-    upgrades: ls.unlocked && UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.canAfford(G.upgradeCost(u))),
+    upgrades: ls.unlocked && UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.upgradeAvailable(u) && G.canAfford(G.upgradeCost(u))),
     features: ls.unlocked && FEATURES.some((f) => f.loc === id && !ls.features[f.id] && G.featureAvailable(f) && G.canAfford(G.featureCost(f))),
   };
   for (const b of $$('.ptab')) {
@@ -352,12 +406,14 @@ function renderHelpers(body) {
       card.className = 'card';
       card.innerHTML = `
         <div>
-          <div class="name">${h.name} <span class="owned"></span></div>
+          <div class="name">${h.name} <span class="owned"></span><span class="perks"></span></div>
           <div class="desc">${h.desc}</div>
           <div class="meta"></div>
+          <div class="ms-wrap"><div class="ms-bar"><i></i></div><div class="ms-label"></div></div>
         </div>
         <button class="buy"><span class="lbl"></span><span class="cost"></span></button>`;
-      refs = { owned: $('.owned', card), meta: $('.meta', card), btn: $('.buy', card), lbl: $('.lbl', card), cost: $('.cost', card) };
+      refs = { owned: $('.owned', card), meta: $('.meta', card), btn: $('.buy', card), lbl: $('.lbl', card), cost: $('.cost', card),
+        perks: $('.perks', card), bar: $('.ms-bar i', card), msLabel: $('.ms-label', card) };
       refs.btn.addEventListener('click', () => {
         const before = G.state.locs[id].helpers[h.id] || 0;
         const nm = G.nextMilestone(before);
@@ -365,7 +421,8 @@ function renderHelpers(body) {
           const after = G.state.locs[id].helpers[h.id];
           if (nm && after >= nm) {
             A.fanfare();
-            toast(`${h.plural} work twice as hard! (${nm} recruited)`);
+            toast(`⚡ ${nm} ${h.plural}! They now gather twice as fast`);
+            card.classList.remove('levelup'); void card.offsetWidth; card.classList.add('levelup');
           } else {
             A.buy();
           }
@@ -396,9 +453,16 @@ function renderHelpers(body) {
       if (key !== lastKey) {
         lastKey = key;
         const nm = G.nextMilestone(owned);
+        const prev = [0, ...MILESTONES].filter((m) => m <= owned).pop();
         refs.owned.textContent = owned ? '×' + owned : '';
-        refs.meta.innerHTML = `+${fmtRate(per)}/s each${owned ? ` · ${fmtRate(per * owned)}/s total` : ''}
-          ${nm ? `<span class="ms">· ×2 at ${nm}</span>` : ''}`;
+        refs.meta.innerHTML = `+${fmtRate(per)}/s each${owned ? ` · ${fmtRate(per * owned)}/s total` : ''}`;
+        // Milestone progress: every milestone doubles this helper's gathering.
+        const speed = G.milestoneMult(owned);
+        refs.bar.style.width = nm ? `${((owned - prev) / (nm - prev)) * 100}%` : '100%';
+        refs.msLabel.innerHTML = (speed > 1 ? `<b>Speed ×${speed}</b> · ` : '') +
+          (nm ? `${owned}/${nm} → <b>×2 speed</b>` : 'Top speed reached');
+        const perks = UPGRADES.filter((u) => u.helper === h.id && ls.upgrades[u.id]).length;
+        refs.perks.textContent = perks ? ' ' + '✦'.repeat(perks) : '';
       }
       const costKey = `${n}|${JSON.stringify(cost)}`;
       if (costKey !== lastCostKey) {
@@ -417,25 +481,49 @@ function renderHelpers(body) {
 function renderUpgrades(body) {
   const id = G.state.active;
   const ls = G.state.locs[id];
-  const list = UPGRADES.filter((u) => u.loc === id);
-  const open = list.filter((u) => !ls.upgrades[u.id]);
-  const done = list.filter((u) => ls.upgrades[u.id]);
-  body.innerHTML = `<div class="section-head"><h3>One-time boosts for ${LOCATION_BY_ID[id].name}</h3></div>`;
-  for (const u of [...open, ...done]) {
-    const card = document.createElement('div');
-    const owned = !!ls.upgrades[u.id];
-    card.className = 'card' + (owned ? ' done' : '');
-    card.innerHTML = `<div><div class="name">${u.name}</div><div class="desc">${u.desc}</div></div>
-      ${owned ? '<div class="check">✓ Owned</div>' : `<button class="buy"><span class="lbl">Buy</span>${costHTML(G.upgradeCost(u))}</button>`}`;
-    body.append(card);
-    if (!owned) {
-      const btn = $('.buy', card);
-      btn.addEventListener('click', () => {
-        if (G.buyUpgrade(u)) { A.chime(); onPurchase(true); }
-      });
-      panelUpdaters.push(() => { btn.disabled = !G.canAfford(G.upgradeCost(u)); refreshCost(btn); });
-    }
+  const placeUps = UPGRADES.filter((u) => u.loc === id && !u.helper);
+  const sorted = [...placeUps.filter((u) => !ls.upgrades[u.id]), ...placeUps.filter((u) => ls.upgrades[u.id])];
+  body.innerHTML = `<div class="section-head"><h3>Boosts for ${LOCATION_BY_ID[id].name}</h3></div>`;
+  for (const u of sorted) body.append(upgradeCard(u));
+
+  // Helper upgrades: shown for helpers you've recruited at least once.
+  const helperUps = UPGRADES.filter((u) => u.loc === id && u.helper && (ls.helpers[u.helper] || 0) > 0);
+  const head = document.createElement('div');
+  head.className = 'section-head';
+  head.innerHTML = '<h3>Helper upgrades</h3>';
+  body.append(head);
+  if (!helperUps.length) {
+    body.insertAdjacentHTML('beforeend', '<div class="empty small">Recruit helpers here to discover their upgrades.</div>');
+    return;
   }
+  const rank = (u) => ls.upgrades[u.id] ? 2 : G.upgradeAvailable(u) ? 0 : 1;
+  for (const u of helperUps.sort((a, b) => rank(a) - rank(b))) body.append(upgradeCard(u));
+}
+
+function upgradeCard(u) {
+  const ls = G.state.locs[u.loc];
+  const card = document.createElement('div');
+  const owned = !!ls.upgrades[u.id];
+  const avail = G.upgradeAvailable(u);
+  const h = u.helper ? HELPERS.find((x) => x.id === u.helper) : null;
+  card.className = 'card' + (owned ? ' done' : !avail ? ' locked' : '') + (h ? ' perk' : '');
+  const sprite = h ? `<svg class="perk-icon" viewBox="-24 -24 48 48" aria-hidden="true">${SPRITES[h.id]()}</svg>` : '';
+  const need = h && !avail ? `<div class="meta"><span class="ms">Recruit ${u.req} ${h.plural} (${ls.helpers[h.id] || 0}/${u.req})</span></div>` : '';
+  card.innerHTML = `<div class="perk-row">${sprite}<div><div class="name">${u.name}</div><div class="desc">${u.desc}</div>${need}</div></div>
+    ${owned ? '<div class="check">✓ Owned</div>' : `<button class="buy"><span class="lbl">Buy</span>${costHTML(G.upgradeCost(u))}</button>`}`;
+  if (!owned) {
+    const btn = $('.buy', card);
+    btn.addEventListener('click', () => {
+      if (G.buyUpgrade(u)) {
+        A.chime();
+        if (h) toast(`✦ ${u.name}: ${u.desc}`);
+        onPurchase(true);
+        updateSprites();
+      }
+    });
+    panelUpdaters.push(() => { btn.disabled = !avail || !G.canAfford(G.upgradeCost(u)); refreshCost(btn); });
+  }
+  return card;
 }
 
 function renderFeatures(body) {
@@ -615,15 +703,29 @@ function buffInfo(b) {
 }
 
 function onEventsChanged({ started, ended }) {
+  let bloodChange = false;
   for (const id of started) {
     const e = EVENT_BY_ID[id];
     A.eventStart(id);
-    toast(`${e.icon} ${e.name}! ${e.desc}`);
+    if (id === 'bloodmoon') {
+      bloodView = true;
+      bloodChange = true;
+      bloodFlash();
+      toast('🩸 The Blood Moon rises! You are drawn to a castle courtyard…');
+    } else {
+      toast(`${e.icon} ${e.name}! ${e.desc}`);
+    }
   }
   for (const id of ended) {
     if (id === 'fairy') toast('🧚 The fairy flutters away…');
+    if (id === 'bloodmoon') { bloodView = false; bloodChange = true; }
   }
   G.save();
+  if (bloodChange) {
+    renderAll();
+    if (G.state.blood.pending > 0) showBloodExchange();
+    return;
+  }
   renderEvents();
   updateResBar();
   updateSceneRate();
@@ -738,6 +840,80 @@ function floatText(x, y, text, color) {
   f.textContent = text;
   $('#floaters').append(f);
   setTimeout(() => f.remove(), 1000);
+}
+
+// ---------- Blood Moon ----------
+
+let bloodView = false; // showing the Crimson Courtyard
+
+function renderCourtyard() {
+  $('#scene').innerHTML = SCENES.courtyard();
+  $('#scene-name').textContent = 'Crimson Courtyard';
+  $('[data-tap]', $('#scene')).addEventListener('pointerdown', onTap);
+  const hint = $('#tap-hint');
+  hint.textContent = 'Tap the blood pool';
+  hint.classList.remove('faded');
+  $('#lock-overlay').hidden = true;
+  updateSceneRate();
+}
+
+function bloodFlash() {
+  const f = document.createElement('div');
+  f.className = 'blood-flash';
+  document.body.append(f);
+  setTimeout(() => f.remove(), 2200);
+}
+
+function renderBloodPanel(body) {
+  body.innerHTML = `<div class="blood-panel">
+    <h3>🩸 The Blood Moon</h3>
+    <div class="blood-count"><b id="bp-drops">0</b> Blood Drops</div>
+    <div class="buff-bar"><i id="bp-bar"></i></div>
+    <div class="bp-time" id="bp-time"></div>
+    <p>Tap the blood pool while the moon is red. When it sets, you choose which resource your drops become, at a generous rate. Right now one drop is worth:</p>
+    <div class="bp-rates" id="bp-rates"></div>
+  </div>`;
+  updateBloodPanel();
+}
+
+function updateBloodPanel() {
+  const el = $('#bp-drops');
+  if (!el) return;
+  el.textContent = fmt(G.state.blood.drops);
+  const b = G.state.buffs.find((x) => x.id === 'bloodmoon');
+  if (b) {
+    const left = Math.max(0, b.ends - G.state.clock);
+    $('#bp-bar').style.width = `${(left / b.dur) * 100}%`;
+    $('#bp-time').textContent = `The moon sets in ${fmtClock(left)}`;
+  }
+  const rates = G.bloodRates();
+  $('#bp-rates').innerHTML = Object.entries(rates).map(([r, x]) =>
+    `<div>${icon(r)} ${fmt(x, 100)} ${RESOURCES[r].name}</div>`).join('');
+}
+
+function showBloodExchange() {
+  const pending = G.state.blood.pending;
+  if (pending <= 0) return;
+  const m = $('#modal');
+  const rates = G.bloodRates();
+  m.innerHTML = `<div class="modal-card blood-card" role="dialog" aria-modal="true">
+    <h2>🩸 The Blood Moon sets</h2>
+    <p>You gathered <b>${fmt(pending)}</b> Blood Drops. Choose what they become:</p>
+    <div class="blood-choices">${Object.entries(rates).map(([r, x]) => `
+      <button class="blood-choice" data-r="${r}">${icon(r)}<span><b>+${fmt(pending * x)}</b> ${RESOURCES[r].name}<small>1 drop = ${fmt(x, 100)}</small></span></button>`).join('')}
+    </div></div>`;
+  m.hidden = false;
+  for (const b of $$('.blood-choice', m)) {
+    b.addEventListener('click', () => {
+      const amt = G.convertBlood(b.dataset.r);
+      m.hidden = true; m.innerHTML = '';
+      A.fanfare();
+      toast(`🩸 Your Blood Drops became ${fmt(amt)} ${RESOURCES[b.dataset.r].name}`);
+      G.save();
+      updateResBar();
+      updatePanel();
+    });
+  }
 }
 
 // ---------- the moon: prestige, shrine, finale ----------
@@ -860,7 +1036,8 @@ function updatePrestigeCard() {
   $('#pc-gain').textContent = `+${fmt(n)} Moonstones`;
   $('#pc-bar').style.width = `${Math.max(0, Math.min(1, (G.runValue() - lo) / (hi - lo))) * 100}%`;
   const meadow = G.state.locs.meadow.unlocked;
-  $('#pc-next').textContent = !meadow ? 'Unlock the Starfall Meadow to begin a new night.'
+  $('#pc-next').textContent = G.hasBuff('bloodmoon') || G.state.blood.pending > 0 ? 'Wait for the Blood Moon to set.'
+    : !meadow ? 'Unlock the Starfall Meadow to begin a new night.'
     : n < 1 ? 'Gather a little more to earn your first Moonstone.'
     : `Next Moonstone at ${Math.round(((G.runValue() - lo) / (hi - lo)) * 100)}%`;
   $('#btn-prestige').disabled = !G.canPrestige();
@@ -948,7 +1125,9 @@ function onPurchase(rerenderPanel = false) {
 }
 
 function renderAll() {
-  A.setLocation(G.state.active);
+  if (bloodView && !G.hasBuff('bloodmoon')) bloodView = false;
+  document.body.classList.toggle('blood', G.hasBuff('bloodmoon'));
+  A.setLocation(bloodView ? 'courtyard' : G.state.active);
   updateMuteBtn();
   renderResBar();
   renderLocTabs();
@@ -1017,6 +1196,7 @@ function tick(now) {
       uiAccum = 0;
       updateEvents();
       updateMoonBtn();
+      if (bloodView) updateBloodPanel();
       if (!$('#shrine').hidden) updatePrestigeCard();
       if (!G.state.prestige.hinted && G.canPrestige()) {
         G.state.prestige.hinted = true;
