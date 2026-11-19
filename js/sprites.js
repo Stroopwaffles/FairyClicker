@@ -256,3 +256,4 @@ export const HELPER_VIS = {
 };
 
 export const MAX_VISIBLE_PER_HELPER = 10;
+export const CALM_VISIBLE_PER_HELPER = 5; // the "Less busy" display setting

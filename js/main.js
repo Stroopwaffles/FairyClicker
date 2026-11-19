@@ -8,7 +8,14 @@ import {
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
 import { SCENES, CASTLE_WINDOWS } from './scenes.js';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER } from './sprites.js';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js';
+
+// Per-device display preferences (not part of the save, like sound settings).
+const DISPLAY_KEY = 'fairyclicker.display';
+const display = { lessBusy: false };
+try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
+function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
+const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
 import * as A from './audio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -259,7 +266,7 @@ function updateSprites(forceAll = false) {
   if (forceAll) { shownSprites = {}; layer.innerHTML = ''; }
   for (const h of HELPERS.filter((x) => x.loc === id)) {
     const owned = ls.helpers[h.id] || 0;
-    const want = Math.min(owned, MAX_VISIBLE_PER_HELPER);
+    const want = Math.min(owned, spriteCap());
     const tier = MILESTONES.filter((m) => owned >= m).length;
     let group = $(`g[data-h="${h.id}"]`, layer);
     if (!group) {
@@ -598,6 +605,15 @@ function renderSettings(body) {
   const ap = A.getPrefs();
   body.innerHTML = `
     <div class="settings-group">
+      <h3>Display</h3>
+      <div class="style-row"><span>Helpers on screen</span>
+        <div class="seg" role="group" aria-label="Helpers on screen">
+          <button data-busy="lively" class="${display.lessBusy ? '' : 'on'}">✨ Lively</button>
+          <button data-busy="calm" class="${display.lessBusy ? 'on' : ''}">🍃 Less busy</button>
+        </div></div>
+      <p class="style-note">Lively shows up to ${MAX_VISIBLE_PER_HELPER} of each helper; Less busy shows up to ${CALM_VISIBLE_PER_HELPER}. Helpers off screen still gather.</p>
+    </div>
+    <div class="settings-group">
       <h3>Sound</h3>
       <div class="style-row"><span>Music style</span>
         <div class="seg" role="group" aria-label="Music style">
@@ -645,6 +661,14 @@ function renderSettings(body) {
         <button class="btn danger" id="btn-reset">Reset all progress</button>
       </div>
     </div>`;
+  for (const b of $$('[data-busy]', body)) {
+    b.addEventListener('click', () => {
+      display.lessBusy = b.dataset.busy === 'calm';
+      saveDisplay();
+      for (const x of $$('[data-busy]', body)) x.classList.toggle('on', x === b);
+      updateSprites(true);
+    });
+  }
   for (const b of $$('[data-style]', body)) {
     b.addEventListener('click', () => {
       A.init();

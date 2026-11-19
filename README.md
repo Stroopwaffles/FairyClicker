@@ -100,6 +100,10 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 - Two sealed gates wait for future worlds
 - New achievements: *Between Worlds* and *Frequent Guest*
 
+### Version 3.5: less busy display
+
+- **Settings → Display → Helpers on screen:** *Lively* shows up to 10 of each helper; *Less busy* shows up to 5. It's remembered on each device, and helpers off screen still gather
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:
