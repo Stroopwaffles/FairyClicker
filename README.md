@@ -35,9 +35,21 @@ python3 -m http.server 8000
 - Ambience for each location: slowly changing chords and drifting bell notes, plus crickets and water at the pond, or drips and a low hum in the Mushroom Ring
 - Mute button in the top bar; music and effects volume sliders in Settings (remembered on each device)
 
+### Version 2: the full realm, events and achievements
+
+- Three new locations, each with its own thing to tap, 5 helpers, 5 upgrades and 3 features:
+  - **Ancient Oak:** tap the hollow for Amber Sap
+  - **Crystal Grotto:** tap the crystals for Moonshards
+  - **Starfall Meadow:** tap the fallen star for Stardust
+- Later helpers, upgrades and features cost resources from other locations, so every place stays useful
+- Random events every few minutes, each with a banner, a timer and its own look and sound: Moonrise Blessing, Gentle Rain, Spore Bloom, Meteor Shower (tap the shooting stars), Owl Council, Mischief Fog, and the Wandering Fairy (catch her and choose one of three gifts)
+- New features change events: the Stone Bridge invites rain, the Wishing Stone makes events more frequent and longer, the Observatory shows the next event, and the Echo Chamber makes taps sometimes count twice
+- 52 achievements, including a few secret ones, in a new Awards tab. Each one gives +1% to everything
+- New tap sounds and ambience for each location, plus sounds for events and achievements
+- Version 1 saves carry over automatically
+
 ## Roadmap
 
-- **Version 2:** Ancient Oak, Crystal Grotto and Starfall Meadow, random events, and achievements
 - **Version 3:** prestige (Moonstones and the Moon Shrine), a finale after 5 prestiges with endless mode afterwards, and balancing
 
 ## Code layout
@@ -46,7 +58,8 @@ python3 -m http.server 8000
 |---|---|
 | `index.html` | Page shell: title screen and game screen |
 | `css/style.css` | Styles and responsive layout |
-| `js/data.js` | All game content: locations, helpers, upgrades, features |
+| `js/data.js` | All game content: locations, helpers, upgrades, features, events |
+| `js/achievements.js` | Achievement list and unlock conditions |
 | `js/game.js` | State, formulas, saving and loading (no DOM) |
 | `js/scenes.js` | SVG artwork for each location |
 | `js/audio.js` | Generated sound effects and ambience |

@@ -1,0 +1,70 @@
+// Achievements. Each `check(s, d)` gets the game state and derived values.
+// `secret: true` hides the description until earned.
+import { HELPERS, FEATURES, LOCATIONS, EVENTS } from './data.js';
+
+const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
+const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
+const rosterAt = (s, loc) => HELPERS.filter((h) => h.loc === loc).every((h) => (s.locs[loc].helpers[h.id] || 0) > 0);
+const anyHelperAt = (s, n) => Object.values(s.locs).some((l) => Object.values(l.helpers).some((c) => c >= n));
+const fmtShort = (n) => n >= 1e9 ? n / 1e9 + 'B' : n >= 1e6 ? n / 1e6 + 'M' : n >= 1e3 ? n / 1e3 + 'K' : String(n);
+
+const list = [];
+const add = (a) => list.push(a);
+
+// Tapping
+[[1, 'First Ripple'], [100, 'Getting the Hang of It'], [1000, 'Busy Fingers'], [10000, 'Tireless'], [50000, 'Legendary Tapper']]
+  .forEach(([n, name]) => add({ id: `taps${n}`, group: 'Tapping', name, desc: `Tap ${n.toLocaleString('en-US')} time${n > 1 ? 's' : ''}`, check: (s) => s.stats.taps >= n }));
+
+// Gathering
+const gather = {
+  dewdrops:   [[1e3, 'Morning Dew'], [1e6, 'Overflowing Pond'], [1e9, 'Ocean of Dew']],
+  glowspores: [[1e3, 'Spore Collector'], [1e6, 'Glowing Cloud'], [1e9, 'Luminous Fog']],
+  ambersap:   [[1e3, 'Sticky Fingers'], [1e6, 'Amber Hoard'], [1e9, 'River of Gold']],
+  moonshards: [[1e3, 'Shard Seeker'], [1e6, 'Crystal Cache']],
+  stardust:   [[1e3, 'Pocketful of Stars'], [1e6, 'Galaxy in a Jar']],
+};
+const resNames = { dewdrops: 'Dewdrops', glowspores: 'Glowspores', ambersap: 'Amber Sap', moonshards: 'Moonshards', stardust: 'Stardust' };
+for (const [r, tiers] of Object.entries(gather)) {
+  for (const [n, name] of tiers) {
+    add({ id: `earn_${r}_${n}`, group: 'Gathering', name, desc: `Gather ${fmtShort(n)} ${resNames[r]} in total`, check: (s) => s.earned[r] >= n });
+  }
+}
+add({ id: 'rate1k', group: 'Gathering', name: 'Steady Stream', desc: 'Earn 1,000 of any resource per second', check: (s, d) => Object.values(d.resRate).some((x) => x >= 1000) });
+add({ id: 'rate1m', group: 'Gathering', name: 'Torrent', desc: 'Earn 1M of any resource per second', check: (s, d) => Object.values(d.resRate).some((x) => x >= 1e6) });
+
+// Helpers
+[[10, 'A Little Help'], [50, 'Growing Court'], [150, 'Bustling Realm'], [300, 'Fae Host'], [600, 'The Whole Kingdom']]
+  .forEach(([n, name]) => add({ id: `helpers${n}`, group: 'Helpers', name, desc: `Recruit ${n} helpers in total`, check: (s) => helpersTotal(s) >= n }));
+add({ id: 'century', group: 'Helpers', name: 'Century', desc: 'Own 100 of a single helper', check: (s) => anyHelperAt(s, 100) });
+const rosterNames = { pond: 'Pond Choir', mushroom: 'Ring of Friends', oak: 'Family Tree', grotto: 'Crystal Company', meadow: 'Star Gazers' };
+for (const l of LOCATIONS) {
+  add({ id: `roster_${l.id}`, group: 'Helpers', name: rosterNames[l.id], desc: `Recruit every kind of helper at the ${l.name}`, check: (s) => rosterAt(s, l.id) });
+}
+
+// Places
+for (const l of LOCATIONS.slice(1)) {
+  add({ id: `unlock_${l.id}`, group: 'Places', name: `Into the ${l.name.split(' ').pop()}`, desc: `Unlock the ${l.name}`, check: (s) => s.locs[l.id].unlocked });
+}
+add({ id: 'feature1', group: 'Places', name: 'Home Improvement', desc: 'Build your first feature', check: (s) => Object.values(s.locs).some((l) => Object.values(l.features).some(Boolean)) });
+const completeNames = { pond: 'Pond Perfected', mushroom: 'Royal Ring', oak: 'Heart of the Oak', grotto: 'Crystal Clear', meadow: 'Written in the Stars' };
+for (const l of LOCATIONS) {
+  add({ id: `complete_${l.id}`, group: 'Places', name: completeNames[l.id], desc: `Build every feature at the ${l.name}`, check: (s) => featuresAt(s, l.id) });
+}
+add({ id: 'realmrestored', group: 'Places', name: 'Realm Renewed', desc: 'Build every feature everywhere', check: (s) => LOCATIONS.every((l) => featuresAt(s, l.id)) });
+
+// Events
+add({ id: 'event1', group: 'Events', name: 'Something Stirs', desc: 'Experience your first event', check: (s) => s.ev.count >= 1 });
+add({ id: 'event10', group: 'Events', name: 'Eventful Nights', desc: 'Experience 10 events', check: (s) => s.ev.count >= 10 });
+add({ id: 'event50', group: 'Events', name: 'Weather Watcher', desc: 'Experience 50 events', check: (s) => s.ev.count >= 50 });
+add({ id: 'eventall', group: 'Events', name: 'Seen It All', desc: 'Experience every kind of event', check: (s) => EVENTS.every((e) => s.ev.seen[e.id]) });
+add({ id: 'stars25', group: 'Events', name: 'Star Catcher', desc: 'Catch 25 shooting stars', check: (s) => s.stats.starsCaught >= 25 });
+add({ id: 'fairy5', group: 'Events', name: 'Fairy Friend', desc: 'Catch the wandering fairy 5 times', check: (s) => s.stats.fairiesCaught >= 5 });
+
+// Secrets
+add({ id: 'frenzy', group: 'Secrets', secret: true, name: 'Tap Frenzy', desc: 'Tap 40 times in 5 seconds', check: (s) => s.stats.frenzy });
+add({ id: 'echoes', group: 'Secrets', secret: true, name: 'Echo… echo…', desc: 'Have 100 taps echo', check: (s) => s.stats.echoes >= 100 });
+add({ id: 'nightowl', group: 'Secrets', secret: true, name: 'Night Owl', desc: 'Play for a total of 2 hours', check: (s) => s.stats.playMs >= 2 * 3600e3 });
+add({ id: 'patience', group: 'Secrets', secret: true, name: 'Patience of the Moon', desc: 'Return after your helpers have worked the full offline time', check: (s) => s.stats.fullOffline });
+
+export const ACHIEVEMENTS = list;
+export const ACHIEVEMENT_GROUPS = ['Tapping', 'Gathering', 'Helpers', 'Places', 'Events', 'Secrets'];

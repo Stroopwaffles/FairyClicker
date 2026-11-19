@@ -1,9 +1,10 @@
 // Game state, formulas, and persistence. No DOM access in this file.
 import {
-  SAVE_KEY, SAVE_VERSION, BASE_OFFLINE_HOURS, COST_GROWTH, MILESTONES,
-  RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES,
-  LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID,
+  SAVE_KEY, SAVE_VERSION, BASE_OFFLINE_HOURS, COST_GROWTH, MILESTONES, ACHIEVEMENT_BONUS,
+  RESOURCES, LOCATIONS, HELPERS, FEATURES, EVENTS, FIRST_EVENT_AT, EVENT_GAP,
+  LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID, EVENT_BY_ID, GIFT_BY_ID,
 } from './data.js';
+import { ACHIEVEMENTS } from './achievements.js';
 
 // ---------- state ----------
 
@@ -12,7 +13,6 @@ export function freshState() {
   for (const r of Object.keys(RESOURCES)) { res[r] = 0; earned[r] = 0; }
   const locs = {};
   for (const l of LOCATIONS) {
-    if (l.soon) continue;
     locs[l.id] = { unlocked: !l.unlockCost, helpers: {}, upgrades: {}, features: {}, taps: 0 };
   }
   const now = Date.now();
@@ -21,10 +21,14 @@ export function freshState() {
     created: now,
     lastSaved: now,
     active: 'pond',
+    clock: 0,                 // seconds of active play; events and buffs run on this
     res,
     earned,
     locs,
-    stats: { taps: 0, playMs: 0 },
+    buffs: [],                // [{ id, kind: 'event'|'gift', ends }]
+    ev: { next: FIRST_EVENT_AT, nextId: null, lastId: null, count: 0, seen: {} },
+    achievements: {},         // id -> timestamp earned
+    stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1 },
   };
 }
@@ -43,20 +47,33 @@ function mergeDefaults(base, loaded) {
   return out;
 }
 
+function migrate(s) {
+  s.v = SAVE_VERSION;
+  if (!Array.isArray(s.buffs)) s.buffs = [];
+  return s;
+}
+
 export let state = freshState();
 export function setState(s) { state = s; invalidate(); }
 
-// ---------- derived values (cached, recomputed after purchases) ----------
+// ---------- derived values (cached, recomputed after anything changes) ----------
 
 let cache = null;
 export function invalidate() { cache = null; }
 
+function buffEffects(b) {
+  if (b.kind === 'event') return EVENT_BY_ID[b.id]?.effects || [];
+  if (b.kind === 'gift') return GIFT_BY_ID[b.id]?.effects || [];
+  return [];
+}
+
 function collectEffects() {
   const fx = [];
-  for (const [locId, ls] of Object.entries(state.locs)) {
-    for (const id of Object.keys(ls.upgrades)) if (ls.upgrades[id]) fx.push(...UPGRADE_BY_ID[id].effects);
-    for (const id of Object.keys(ls.features)) if (ls.features[id]) fx.push(...FEATURE_BY_ID[id].effects);
+  for (const ls of Object.values(state.locs)) {
+    for (const id of Object.keys(ls.upgrades)) if (ls.upgrades[id] && UPGRADE_BY_ID[id]) fx.push(...UPGRADE_BY_ID[id].effects);
+    for (const id of Object.keys(ls.features)) if (ls.features[id] && FEATURE_BY_ID[id]) fx.push(...FEATURE_BY_ID[id].effects);
   }
+  for (const b of state.buffs) fx.push(...buffEffects(b));
   return fx;
 }
 
@@ -69,39 +86,54 @@ export function nextMilestone(count) {
   return MILESTONES.find((t) => count < t) ?? null;
 }
 
+export function achievementCount() {
+  return Object.keys(state.achievements).length;
+}
+
 function derive() {
   const fx = collectEffects();
+  const locIds = Object.keys(state.locs);
   const tapMult = {}, helperMult = {}, tapRatePct = {};
-  let globalMult = 1, offlineHours = BASE_OFFLINE_HOURS;
-  for (const l of Object.keys(state.locs)) { tapMult[l] = 1; helperMult[l] = 1; tapRatePct[l] = 0; }
+  for (const l of locIds) { tapMult[l] = 1; helperMult[l] = 1; tapRatePct[l] = 0; }
+  const out = {
+    globalMult: 1, offlineHours: BASE_OFFLINE_HOURS, helperDiscount: 1, upgradeDiscount: 1,
+    tapEcho: 0, eventDuration: 1, eventFreq: 1, eventPreview: false,
+  };
+  const each = (loc, fn) => (loc === '*' ? locIds : [loc]).forEach(fn);
   for (const e of fx) {
     switch (e.t) {
-      case 'tapMult': tapMult[e.loc] *= e.x; break;
-      case 'helperMult': helperMult[e.loc] *= e.x; break;
+      case 'tapMult': each(e.loc, (l) => { tapMult[l] *= e.x; }); break;
+      case 'helperMult': each(e.loc, (l) => { helperMult[l] *= e.x; }); break;
       case 'tapRatePct': tapRatePct[e.loc] += e.x; break;
-      case 'globalMult': globalMult *= e.x; break;
-      case 'offlineHours': offlineHours += e.x; break;
+      case 'globalMult': out.globalMult *= e.x; break;
+      case 'offlineHours': out.offlineHours += e.x; break;
+      case 'helperDiscount': out.helperDiscount *= e.x; break;
+      case 'upgradeDiscount': out.upgradeDiscount *= e.x; break;
+      case 'tapEcho': out.tapEcho += e.x; break;
+      case 'eventDuration': out.eventDuration *= e.x; break;
+      case 'eventFreq': out.eventFreq *= e.x; break;
+      case 'eventPreview': out.eventPreview = true; break;
     }
   }
-  const helperRate = {}; // per single helper, fully multiplied
+  out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
+  const g = out.globalMult * out.achievementMult;
+
+  const helperRate = {};
   const locRate = {};
-  for (const l of Object.keys(state.locs)) locRate[l] = 0;
+  for (const l of locIds) locRate[l] = 0;
   for (const h of HELPERS) {
     const ls = state.locs[h.loc];
-    if (!ls) continue;
     const n = ls.helpers[h.id] || 0;
-    const per = h.rate * milestoneMult(n) * helperMult[h.loc] * globalMult;
+    const per = h.rate * milestoneMult(n) * helperMult[h.loc] * g;
     helperRate[h.id] = per;
     if (ls.unlocked) locRate[h.loc] += per * n;
   }
   const tapValue = {};
-  for (const l of Object.keys(state.locs)) {
-    tapValue[l] = tapMult[l] * globalMult + tapRatePct[l] * locRate[l];
-  }
+  for (const l of locIds) tapValue[l] = tapMult[l] * g + tapRatePct[l] * locRate[l];
   const resRate = {};
   for (const r of Object.keys(RESOURCES)) resRate[r] = 0;
-  for (const l of Object.keys(state.locs)) resRate[LOCATION_BY_ID[l].resource] += locRate[l];
-  return { tapValue, helperRate, locRate, resRate, offlineHours, globalMult };
+  for (const l of locIds) resRate[LOCATION_BY_ID[l].resource] += locRate[l];
+  return { ...out, tapValue, helperRate, locRate, resRate };
 }
 
 export function d() {
@@ -111,25 +143,31 @@ export function d() {
 
 // ---------- costs ----------
 
+const scaleCost = (cost, k) => {
+  const out = {};
+  for (const [r, amt] of Object.entries(cost)) out[r] = Math.ceil(amt * k);
+  return out;
+};
+
 export function helperCost(h, owned, n) {
   // Sum of a geometric series: base * g^owned * (g^n - 1) / (g - 1)
   const g = COST_GROWTH;
-  const factor = Math.pow(g, owned) * (Math.pow(g, n) - 1) / (g - 1);
-  const out = {};
-  for (const [r, base] of Object.entries(h.cost)) out[r] = Math.ceil(base * factor);
-  return out;
+  return scaleCost(h.cost, d().helperDiscount * Math.pow(g, owned) * (Math.pow(g, n) - 1) / (g - 1));
 }
+
+export const upgradeCost = (u) => scaleCost(u.cost, d().upgradeDiscount);
+export const featureCost = (f) => scaleCost(f.cost, d().upgradeDiscount);
 
 export function maxAffordable(h, owned) {
   const g = COST_GROWTH;
+  const disc = d().helperDiscount;
   let n = Infinity;
   for (const [r, base] of Object.entries(h.cost)) {
     const have = state.res[r];
-    const k = Math.floor(Math.log((have * (g - 1)) / (base * Math.pow(g, owned)) + 1) / Math.log(g));
+    const k = Math.floor(Math.log((have * (g - 1)) / (base * disc * Math.pow(g, owned)) + 1) / Math.log(g));
     n = Math.min(n, k);
   }
   n = Math.max(0, n);
-  // Guard against rounding: step down until truly affordable.
   while (n > 0 && !canAfford(helperCost(h, owned, n))) n--;
   return n;
 }
@@ -150,12 +188,15 @@ export function gain(resource, amt) {
   state.earned[resource] += amt;
 }
 
+// Returns { value, echo } — echo means the tap counted twice.
 export function tap(locId) {
-  const v = d().tapValue[locId];
+  let v = d().tapValue[locId];
+  const echo = Math.random() < d().tapEcho;
+  if (echo) { v *= 2; state.stats.echoes++; }
   gain(LOCATION_BY_ID[locId].resource, v);
   state.locs[locId].taps++;
   state.stats.taps++;
-  return v;
+  return { value: v, echo };
 }
 
 export function buyAmountFor(h) {
@@ -179,8 +220,9 @@ export function buyHelper(h) {
 
 export function buyUpgrade(u) {
   const ls = state.locs[u.loc];
-  if (ls.upgrades[u.id] || !canAfford(u.cost)) return false;
-  pay(u.cost);
+  const cost = upgradeCost(u);
+  if (ls.upgrades[u.id] || !canAfford(cost)) return false;
+  pay(cost);
   ls.upgrades[u.id] = true;
   invalidate();
   return true;
@@ -195,8 +237,9 @@ export function featureAvailable(f) {
 
 export function buildFeature(f) {
   const ls = state.locs[f.loc];
-  if (ls.features[f.id] || !featureAvailable(f) || !canAfford(f.cost)) return false;
-  pay(f.cost);
+  const cost = featureCost(f);
+  if (ls.features[f.id] || !featureAvailable(f) || !canAfford(cost)) return false;
+  pay(cost);
   ls.features[f.id] = true;
   invalidate();
   return true;
@@ -212,7 +255,7 @@ export function unlockLocation(locId) {
   return true;
 }
 
-// Advance the simulation by `sec` seconds of helper production.
+// Advance helper production by `sec` seconds.
 export function produce(sec) {
   const rates = d().resRate;
   const gained = {};
@@ -222,14 +265,145 @@ export function produce(sec) {
   return gained;
 }
 
+// ---------- events & buffs ----------
+
+function eventEligible(e) {
+  if (!e.req) return true;
+  if (e.req.loc && !state.locs[e.req.loc]?.unlocked) return false;
+  if (e.req.feature) {
+    const f = FEATURE_BY_ID[e.req.feature];
+    if (!state.locs[f.loc].features[f.id]) return false;
+  }
+  return true;
+}
+
+function pickEvent() {
+  let pool = EVENTS.filter(eventEligible);
+  if (pool.length > 1) pool = pool.filter((e) => e.id !== state.ev.lastId);
+  const total = pool.reduce((a, e) => a + e.weight, 0);
+  let r = Math.random() * total;
+  for (const e of pool) { r -= e.weight; if (r <= 0) return e.id; }
+  return pool[pool.length - 1].id;
+}
+
+function scheduleNext() {
+  const [a, b] = EVENT_GAP;
+  state.ev.next = state.clock + (a + Math.random() * (b - a)) * d().eventFreq;
+  state.ev.nextId = pickEvent();
+}
+
+export const activeEvent = () => state.buffs.find((b) => b.kind === 'event') || null;
+export const hasBuff = (id) => state.buffs.some((b) => b.id === id);
+
+function startEvent(id) {
+  const e = EVENT_BY_ID[id];
+  const dur = e.dur * d().eventDuration;
+  state.buffs.push({ id, kind: 'event', ends: state.clock + dur, dur });
+  state.ev.count++;
+  state.ev.seen[id] = (state.ev.seen[id] || 0) + 1;
+  state.ev.lastId = id;
+  invalidate();
+}
+
+export function removeBuff(id) {
+  const before = state.buffs.length;
+  state.buffs = state.buffs.filter((b) => b.id !== id);
+  if (state.buffs.length !== before) invalidate();
+}
+
+// Advance the play clock: expire buffs and start events.
+// Returns { started: [eventId], ended: [buffId] } for the UI to react to.
+export function advance(sec) {
+  state.clock += sec;
+  const happened = { started: [], ended: [] };
+  const expired = state.buffs.filter((b) => state.clock >= b.ends);
+  if (expired.length) {
+    state.buffs = state.buffs.filter((b) => state.clock < b.ends);
+    happened.ended.push(...expired.map((b) => b.id));
+    invalidate();
+  }
+  if (state.ev.nextId == null || !eventEligible(EVENT_BY_ID[state.ev.nextId] || {})) {
+    state.ev.nextId = pickEvent();
+  }
+  if (state.clock >= state.ev.next && !activeEvent()) {
+    const id = state.ev.nextId;
+    startEvent(id);
+    happened.started.push(id);
+    // The gap starts counting after this event ends.
+    scheduleNext();
+    state.ev.next += EVENT_BY_ID[id].dur * d().eventDuration;
+  }
+  return happened;
+}
+
+export const secondsUntilNextEvent = () => Math.max(0, state.ev.next - state.clock);
+
+// Meteor shower: each caught star gives a burst of stardust.
+export function catchStar() {
+  const dd = d();
+  const amt = Math.max(25, dd.locRate.meadow * 15 + dd.tapValue.meadow * 5);
+  gain('stardust', amt);
+  state.stats.starsCaught++;
+  return amt;
+}
+
+export function catchFairy() {
+  removeBuff('fairy');
+  state.stats.fairiesCaught++;
+}
+
+// Returns a summary of what the gift gave.
+export function applyGift(id) {
+  const gift = GIFT_BY_ID[id];
+  if (gift.id === 'bounty') {
+    const dd = d();
+    const gained = {};
+    for (const l of LOCATIONS) {
+      if (!state.locs[l.id].unlocked) continue;
+      const amt = Math.max(dd.locRate[l.id] * 600, dd.tapValue[l.id] * 100);
+      gain(l.resource, amt);
+      gained[l.resource] = (gained[l.resource] || 0) + amt;
+    }
+    return { gained };
+  }
+  removeBuff(id);
+  state.buffs.push({ id, kind: 'gift', ends: state.clock + gift.dur, dur: gift.dur });
+  invalidate();
+  return {};
+}
+
+// ---------- achievements ----------
+
+// Returns newly earned achievements.
+export function checkAchievements() {
+  const dd = d();
+  const fresh = [];
+  for (const a of ACHIEVEMENTS) {
+    if (state.achievements[a.id]) continue;
+    let ok = false;
+    try { ok = a.check(state, dd); } catch { ok = false; }
+    if (ok) { state.achievements[a.id] = Date.now(); fresh.push(a); }
+  }
+  if (fresh.length) invalidate();
+  return fresh;
+}
+
+// ---------- offline ----------
+
 // Apply earnings for time spent away. Returns a summary or null if nothing happened.
 export function applyOffline(now = Date.now()) {
   const awayMs = now - state.lastSaved;
   if (awayMs < 60_000) return null;
+  // Timed boosts don't apply while away.
+  const hadBuffs = state.buffs.length > 0;
+  const saved = state.buffs;
+  if (hadBuffs) { state.buffs = []; invalidate(); }
   const capMs = d().offlineHours * 3600_000;
   const usedMs = Math.min(awayMs, capMs);
   const gained = produce(usedMs / 1000);
+  if (hadBuffs) { state.buffs = saved; invalidate(); }
   state.lastSaved = now;
+  if (awayMs >= capMs) state.stats.fullOffline = true;
   if (!Object.keys(gained).length) return null;
   return { awayMs, usedMs, capped: awayMs > capMs, gained };
 }
@@ -252,7 +426,7 @@ export function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
-    setState(mergeDefaults(freshState(), JSON.parse(raw)));
+    setState(migrate(mergeDefaults(freshState(), JSON.parse(raw))));
     return true;
   } catch { return false; }
 }
@@ -285,6 +459,6 @@ export function importCode(code) {
   if (!parsed || typeof parsed !== 'object' || !parsed.res || !parsed.locs) {
     throw new Error('The save code is missing game data.');
   }
-  setState(mergeDefaults(freshState(), parsed));
+  setState(migrate(mergeDefaults(freshState(), parsed)));
   save();
 }

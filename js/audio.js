@@ -133,7 +133,7 @@ const ready = () => ctx && ctx.state === 'running' && !prefs.muted;
 
 // ---------- sound effects ----------
 
-export function tap(locId) {
+export function tap(locId, echo = false) {
   if (!ready() || prefs.sfx === 0) return;
   const now = performance.now();
   if (now - lastTapAt < 35) return; // keep rapid multi-finger tapping from turning into noise
@@ -148,6 +148,67 @@ export function tap(locId) {
     tone({ freq: 240 * v, to: 110 * v, glide: 0.09, decay: 0.14, peak: 0.38, wet: 0.15 });
     noise({ dur: 0.16, peak: 0.12, type: 'lowpass', freq: 1400 * v, to: 300, wet: 0.2 });
     tone({ freq: 1800 * v, type: 'triangle', start: 0.02, decay: 0.12, peak: 0.03, wet: 0.5 });
+  } else if (locId === 'oak') {
+    // Hollow wooden "tok" with a warm drip of sap.
+    tone({ freq: 420 * v, to: 300 * v, glide: 0.05, type: 'triangle', decay: 0.1, peak: 0.3, wet: 0.2 });
+    noise({ dur: 0.04, peak: 0.08, type: 'bandpass', freq: 1800, q: 3 });
+    tone({ freq: 700 * v, to: 1300 * v, glide: 0.05, start: 0.07, decay: 0.09, peak: 0.06, wet: 0.4 });
+  } else if (locId === 'grotto') {
+    // Crystal "ting": inharmonic bell partials with a long shimmer.
+    const f = 1400 * v;
+    tone({ freq: f, decay: 0.7, peak: 0.16, wet: 0.6 });
+    tone({ freq: f * 2.76, decay: 0.4, peak: 0.05, wet: 0.7 });
+    tone({ freq: f * 5.4, decay: 0.2, peak: 0.025, wet: 0.8 });
+  } else if (locId === 'meadow') {
+    // Twinkle: a quick rising sparkle of three notes.
+    const base = pick([84, 86, 88, 91]);
+    [0, 4, 7].forEach((st, i) => tone({ freq: mtof(base + st), start: i * 0.035, decay: 0.25, peak: 0.09, wet: 0.6, pan: rnd(-0.4, 0.4) }));
+  }
+  if (echo) {
+    // The echo repeats the sparkle softly.
+    tone({ freq: rnd(1800, 2400), start: 0.12, decay: 0.3, peak: 0.05, wet: 0.9, pan: rnd(-0.6, 0.6) });
+    tone({ freq: rnd(1800, 2400), start: 0.24, decay: 0.3, peak: 0.03, wet: 0.9, pan: rnd(-0.6, 0.6) });
+  }
+}
+
+export function starCatch() {
+  if (!ready()) return;
+  [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));
+}
+
+export function achievement() {
+  if (!ready()) return;
+  [72, 79, 84].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.1, decay: 1, peak: 0.12, wet: 0.5 }));
+  tone({ freq: mtof(88), start: 0.32, attack: 0.02, decay: 1.6, peak: 0.08, wet: 0.8 });
+  tone({ freq: mtof(91), start: 0.32, attack: 0.02, decay: 1.6, peak: 0.05, wet: 0.8 });
+}
+
+// A short sound that sets the mood for each event.
+export function eventStart(id) {
+  if (!ready()) return;
+  switch (id) {
+    case 'rain':
+      for (let i = 0; i < 14; i++) noise({ start: i * 0.06, dur: 0.05, peak: 0.05, type: 'highpass', freq: rnd(2500, 5000) });
+      break;
+    case 'fog':
+      noise({ dur: 2, peak: 0.12, type: 'lowpass', freq: 300, to: 900, wet: 0.6 });
+      tone({ freq: 220, to: 196, glide: 2, attack: 0.6, decay: 1.6, peak: 0.06, wet: 0.6 });
+      break;
+    case 'owlcouncil':
+      [0, 0.55, 1.3].forEach((t) => tone({ freq: 400, to: 360, glide: 0.25, start: t, attack: 0.05, decay: 0.35, peak: 0.1, wet: 0.6 }));
+      break;
+    case 'sporebloom':
+      for (let i = 0; i < 8; i++) tone({ freq: 220 * rnd(0.8, 1.3), to: 110, glide: 0.1, start: i * 0.09, decay: 0.12, peak: 0.12, wet: 0.3 });
+      break;
+    case 'meteor':
+      noise({ dur: 1.2, peak: 0.1, type: 'bandpass', freq: 4000, to: 600, q: 2, wet: 0.5 });
+      starCatch();
+      break;
+    case 'fairy':
+      for (let i = 0; i < 10; i++) tone({ freq: mtof(pick([88, 91, 93, 95, 98, 100])), start: i * 0.06, decay: 0.4, peak: 0.05, wet: 0.8, pan: rnd(-0.8, 0.8) });
+      break;
+    default: // moonrise
+      [67, 74, 79, 83, 86].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.15, attack: 0.08, decay: 2, peak: 0.07, wet: 0.8 }));
   }
 }
 
@@ -195,6 +256,27 @@ const AMBIENCES = {
     scale: [69, 72, 74, 76, 78, 81, 84],
     padType: 'triangle', cutoff: 750, sparkleEvery: [3, 7],
     layers: [drips, hum],
+  },
+  oak: {
+    // Warm F-major, a touch of folk
+    chords: [[41, 53, 57, 60, 65], [46, 53, 58, 62, 65], [43, 55, 58, 62, 67], [48, 55, 60, 64, 67]],
+    scale: [72, 74, 77, 79, 81, 84, 86],
+    padType: 'triangle', cutoff: 900, sparkleEvery: [3, 7],
+    layers: [wind, owls],
+  },
+  grotto: {
+    // Ethereal E-lydian with a cold shimmer
+    chords: [[40, 52, 56, 59, 63], [45, 57, 61, 64, 68], [42, 54, 58, 61, 66], [47, 54, 59, 63, 66]],
+    scale: [76, 78, 80, 82, 83, 87, 88, 90, 94],
+    padType: 'sine', cutoff: 1500, sparkleEvery: [1.5, 4],
+    layers: [drips, shimmer],
+  },
+  meadow: {
+    // Wide open C major / sus chords
+    chords: [[36, 48, 55, 62, 67], [41, 53, 60, 65, 69], [45, 52, 59, 64, 67], [43, 50, 55, 62, 67]],
+    scale: [79, 81, 84, 86, 88, 91, 93, 96],
+    padType: 'sine', cutoff: 1300, sparkleEvery: [1.8, 4.5],
+    layers: [wind, crickets],
   },
 };
 
@@ -326,4 +408,37 @@ function hum({ out, stops }) {
   const oscs = [55, 82.4].map((fr) => { const o = ctx.createOscillator(); o.frequency.value = fr; o.connect(g); o.start(); return o; });
   g.connect(out); lfo.start();
   stops.push(() => { oscs.forEach((o) => o.stop()); lfo.stop(); });
+}
+
+function wind({ out, stops }) {
+  // Soft breeze: band-passed noise whose brightness drifts slowly.
+  const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.6;
+  const fl = ctx.createOscillator(); fl.frequency.value = 0.07;
+  const fa = ctx.createGain(); fa.gain.value = 400;
+  fl.connect(fa).connect(f.frequency);
+  const g = ctx.createGain(); g.gain.value = 0.018;
+  const gl = ctx.createOscillator(); gl.frequency.value = 0.11;
+  const ga = ctx.createGain(); ga.gain.value = 0.012;
+  gl.connect(ga).connect(g.gain);
+  src.connect(f).connect(g).connect(out);
+  src.start(); fl.start(); gl.start();
+  stops.push(() => { src.stop(); fl.stop(); gl.stop(); });
+}
+
+function owls({ out, verb, every }) {
+  every(() => {
+    if (ctx.state !== 'running') return;
+    const f = rnd(330, 400), pan = rnd(-0.8, 0.8);
+    tone({ freq: f, to: f * 0.92, glide: 0.25, attack: 0.06, decay: 0.3, peak: 0.035, dest: out, wet: 0.7, verb, pan });
+    tone({ freq: f * 0.95, to: f * 0.85, glide: 0.4, start: 0.45, attack: 0.08, decay: 0.5, peak: 0.03, dest: out, wet: 0.7, verb, pan });
+  }, [9, 20]);
+}
+
+function shimmer({ out, verb, every }) {
+  every(() => {
+    if (ctx.state !== 'running') return;
+    const f = rnd(3000, 5200);
+    tone({ freq: f, attack: 0.2, decay: 1.5, peak: 0.01, dest: out, wet: 1, verb, pan: rnd(-0.9, 0.9) });
+  }, [0.5, 1.6]);
 }

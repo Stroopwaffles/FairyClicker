@@ -26,7 +26,7 @@
         <button id="btn-continue" class="btn primary big" hidden>Continue</button>
         <button id="btn-new" class="btn big">Begin</button>
       </div>
-      <p class="title-foot">Version 1.1 · progress saves automatically on this device</p>
+      <p class="title-foot">Version 2 · progress saves automatically on this device</p>
     </div>
   </section>
 
@@ -46,7 +46,11 @@
           <div id="scene-name" class="scene-name"></div>
           <div id="scene-rate" class="scene-rate"></div>
         </div>
+        <div id="event-fx" class="event-fx" aria-hidden="true"></div>
         <div id="tap-hint" class="tap-hint"></div>
+        <div id="event-layer" class="event-layer"></div>
+        <button id="fairy" class="fairy" aria-label="Wandering fairy" hidden><span>🧚</span></button>
+        <div id="event-banner" class="event-banner" aria-live="polite"></div>
         <div id="lock-overlay" class="lock-overlay" hidden></div>
         <div id="floaters" class="floaters" aria-hidden="true"></div>
       </div>
@@ -57,7 +61,8 @@
         <button class="ptab" data-tab="helpers" role="tab">Helpers</button>
         <button class="ptab" data-tab="upgrades" role="tab">Upgrades</button>
         <button class="ptab" data-tab="features" role="tab">Features</button>
-        <button class="ptab" data-tab="settings" role="tab">Settings</button>
+        <button class="ptab" data-tab="awards" role="tab">Awards</button>
+        <button class="ptab" data-tab="settings" role="tab" aria-label="Settings">⚙</button>
       </div>
       <div id="panel-body" class="panel-body"></div>
     </aside>

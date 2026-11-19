@@ -1,7 +1,9 @@
 // UI, input and the game loop.
 import {
   RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES, LOCATION_BY_ID,
+  EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
 } from './data.js';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
 import { SCENES, SPRITE_COLORS } from './scenes.js';
 import * as A from './audio.js';
@@ -35,6 +37,9 @@ function fmtDuration(ms) {
 const ICONS = {
   dewdrops: `<svg class="ricon" viewBox="0 0 32 32"><defs><radialGradient id="ri-d" cx=".35" cy=".55" r=".7"><stop offset="0" stop-color="#e8f8ff"/><stop offset=".5" stop-color="#8fd8ff"/><stop offset="1" stop-color="#3b7fd1"/></radialGradient></defs><path d="M16 3 C16 3 6 15 6 21 a10 10 0 0 0 20 0 C26 15 16 3 16 3z" fill="url(#ri-d)"/><ellipse cx="12" cy="20" rx="2.2" ry="3.5" fill="#fff" opacity=".7"/></svg>`,
   glowspores: `<svg class="ricon" viewBox="0 0 32 32"><defs><radialGradient id="ri-s"><stop offset="0" stop-color="#f4ffe0"/><stop offset=".45" stop-color="#b8ff8a"/><stop offset="1" stop-color="#b8ff8a" stop-opacity="0"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#ri-s)"/><circle cx="16" cy="16" r="6" fill="#e9ffd2"/><circle cx="8" cy="9" r="2" fill="#d8ffb5"/><circle cx="25" cy="23" r="1.6" fill="#d8ffb5"/></svg>`,
+  ambersap: `<svg class="ricon" viewBox="0 0 32 32"><defs><radialGradient id="ri-a" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fff0c2"/><stop offset=".5" stop-color="#ffb54d"/><stop offset="1" stop-color="#b8601a"/></radialGradient></defs><path d="M16 4 C22 10 26 15 26 20 a10 10 0 0 1 -20 0 C6 15 10 10 16 4z" fill="url(#ri-a)"/><circle cx="12.5" cy="18" r="2.6" fill="#fff6d8" opacity=".75"/></svg>`,
+  moonshards: `<svg class="ricon" viewBox="0 0 32 32"><defs><linearGradient id="ri-m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5eeff"/><stop offset=".5" stop-color="#c9b6ff"/><stop offset="1" stop-color="#6b4fd0"/></linearGradient></defs><path d="M16 2 L25 13 L16 30 L7 13 Z" fill="url(#ri-m)"/><path d="M16 2 L25 13 L16 13 Z" fill="#fff" opacity=".35"/><path d="M7 13 H25" stroke="#fff" stroke-opacity=".5"/></svg>`,
+  stardust: `<svg class="ricon" viewBox="0 0 32 32"><defs><radialGradient id="ri-t"><stop offset="0" stop-color="#fffef0"/><stop offset=".6" stop-color="#fff0a0"/><stop offset="1" stop-color="#ffc94d"/></radialGradient></defs><path d="M16 2 L19.5 11.5 L29.5 12 L21.6 18.2 L24.4 28 L16 22.4 L7.6 28 L10.4 18.2 L2.5 12 L12.5 11.5 Z" fill="url(#ri-t)"/></svg>`,
 };
 const icon = (r) => ICONS[r] || '';
 
@@ -219,8 +224,9 @@ function onTap(e) {
   e.preventDefault();
   const id = G.state.active;
   if (!G.state.locs[id].unlocked) return;
-  const v = G.tap(id);
-  A.tap(id);
+  const { value: v, echo } = G.tap(id);
+  A.tap(id, echo);
+  trackFrenzy();
   const target = e.currentTarget;
   target.classList.remove('bump');
   void target.getBoundingClientRect();
@@ -233,7 +239,8 @@ function onTap(e) {
   const f = document.createElement('div');
   f.className = 'floater';
   f.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
-  f.textContent = `+${fmt(v, 100)}`;
+  f.textContent = `+${fmt(v, 100)}${echo ? ' ×2' : ''}`;
+  if (echo) f.classList.add('echo');
   const rp = document.createElement('div');
   rp.className = 'ripple';
   rp.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
@@ -261,11 +268,11 @@ function renderPanel() {
   panelUpdaters = [];
   const id = G.state.active;
   const ls = G.state.locs[id];
-  if (tab !== 'settings' && !ls.unlocked) {
+  if (tab !== 'settings' && tab !== 'awards' && !ls.unlocked) {
     body.innerHTML = `<div class="empty">Unlock ${LOCATION_BY_ID[id].name} to see its ${tab}.</div>`;
     return;
   }
-  ({ helpers: renderHelpers, upgrades: renderUpgrades, features: renderFeatures, settings: renderSettings })[tab](body);
+  ({ helpers: renderHelpers, upgrades: renderUpgrades, features: renderFeatures, awards: renderAwards, settings: renderSettings })[tab](body);
   updatePanel();
 }
 
@@ -278,8 +285,8 @@ function updateTabDots() {
   const id = G.state.active;
   const ls = G.state.locs[id];
   const dots = {
-    upgrades: ls.unlocked && UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.canAfford(u.cost)),
-    features: ls.unlocked && FEATURES.some((f) => f.loc === id && !ls.features[f.id] && G.featureAvailable(f) && G.canAfford(f.cost)),
+    upgrades: ls.unlocked && UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.canAfford(G.upgradeCost(u))),
+    features: ls.unlocked && FEATURES.some((f) => f.loc === id && !ls.features[f.id] && G.featureAvailable(f) && G.canAfford(G.featureCost(f))),
   };
   for (const b of $$('.ptab')) {
     const want = !!dots[b.dataset.tab];
@@ -310,51 +317,72 @@ function renderHelpers(body) {
     const card = document.createElement('div');
     card.className = 'card';
     wrap.append(card);
-    let lastKey = '';
+    // The card's structure is built once; later updates only change text,
+    // so the button never gets replaced mid-tap.
+    let built = null; // 'locked' | 'open'
+    let refs = {};
+    let lastKey = '', lastCostKey = '';
+    const buildOpen = () => {
+      card.className = 'card';
+      card.innerHTML = `
+        <div>
+          <div class="name">${h.name} <span class="owned"></span></div>
+          <div class="desc">${h.desc}</div>
+          <div class="meta"></div>
+        </div>
+        <button class="buy"><span class="lbl"></span><span class="cost"></span></button>`;
+      refs = { owned: $('.owned', card), meta: $('.meta', card), btn: $('.buy', card), lbl: $('.lbl', card), cost: $('.cost', card) };
+      refs.btn.addEventListener('click', () => {
+        const before = G.state.locs[id].helpers[h.id] || 0;
+        const nm = G.nextMilestone(before);
+        if (G.buyHelper(h)) {
+          const after = G.state.locs[id].helpers[h.id];
+          if (nm && after >= nm) {
+            A.fanfare();
+            toast(`${h.plural} work twice as hard! (${nm} recruited)`);
+          } else {
+            A.buy();
+          }
+          onPurchase();
+        }
+      });
+      built = 'open';
+      lastKey = lastCostKey = '';
+    };
     const update = () => {
       const ls = G.state.locs[id];
       const owned = ls.helpers[h.id] || 0;
       // Reveal helpers one at a time: show the next one once the previous is owned.
       const prevOwned = i === 0 || (ls.helpers[list[i - 1].id] || 0) > 0;
-      const n = G.buyAmountFor(h);
-      const cost = G.helperCost(h, owned, n);
-      const key = `${owned}|${n}|${prevOwned}|${G.d().helperRate[h.id]}`;
-      if (key !== lastKey) {
-        lastKey = key;
-        if (!prevOwned && owned === 0) {
+      if (!prevOwned && owned === 0) {
+        if (built !== 'locked') {
           card.className = 'card locked';
           card.innerHTML = `<div><div class="name">???</div><div class="desc">Recruit a ${list[i - 1].name} to discover this helper.</div></div>`;
-          return;
+          built = 'locked';
         }
-        card.className = 'card';
-        const per = G.d().helperRate[h.id];
+        return;
+      }
+      if (built !== 'open') buildOpen();
+      const n = G.buyAmountFor(h);
+      const cost = G.helperCost(h, owned, n);
+      const per = G.d().helperRate[h.id];
+      const key = `${owned}|${per}`;
+      if (key !== lastKey) {
+        lastKey = key;
         const nm = G.nextMilestone(owned);
-        card.innerHTML = `
-          <div>
-            <div class="name">${h.name} <span class="owned">${owned ? '×' + owned : ''}</span></div>
-            <div class="desc">${h.desc}</div>
-            <div class="meta">+${fmtRate(per)}/s each${owned ? ` · ${fmtRate(per * owned)}/s total` : ''}
-              ${nm ? `<span class="ms">· ×2 at ${nm}</span>` : ''}</div>
-          </div>
-          <button class="buy"><span class="lbl">Recruit ×${n}</span>${costHTML(cost)}</button>`;
-        $('.buy', card).addEventListener('click', () => {
-          if (G.buyHelper(h)) {
-            const after = G.state.locs[id].helpers[h.id];
-            if (nm && after >= nm) {
-              A.fanfare();
-              toast(`${h.plural} work twice as hard! (${nm} recruited)`);
-            } else {
-              A.buy();
-            }
-            onPurchase();
-          }
-        });
+        refs.owned.textContent = owned ? '×' + owned : '';
+        refs.meta.innerHTML = `+${fmtRate(per)}/s each${owned ? ` · ${fmtRate(per * owned)}/s total` : ''}
+          ${nm ? `<span class="ms">· ×2 at ${nm}</span>` : ''}`;
       }
-      const btn = $('.buy', card);
-      if (btn) {
-        btn.disabled = !G.canAfford(cost);
-        refreshCost(btn);
+      const costKey = `${n}|${JSON.stringify(cost)}`;
+      if (costKey !== lastCostKey) {
+        lastCostKey = costKey;
+        refs.lbl.textContent = `Recruit ×${n}`;
+        refs.cost.outerHTML = costHTML(cost);
+        refs.cost = $('.cost', refs.btn);
       }
+      refs.btn.disabled = !G.canAfford(cost);
+      refreshCost(refs.btn);
     };
     panelUpdaters.push(update);
   });
@@ -372,14 +400,14 @@ function renderUpgrades(body) {
     const owned = !!ls.upgrades[u.id];
     card.className = 'card' + (owned ? ' done' : '');
     card.innerHTML = `<div><div class="name">${u.name}</div><div class="desc">${u.desc}</div></div>
-      ${owned ? '<div class="check">✓ Owned</div>' : `<button class="buy"><span class="lbl">Buy</span>${costHTML(u.cost)}</button>`}`;
+      ${owned ? '<div class="check">✓ Owned</div>' : `<button class="buy"><span class="lbl">Buy</span>${costHTML(G.upgradeCost(u))}</button>`}`;
     body.append(card);
     if (!owned) {
       const btn = $('.buy', card);
       btn.addEventListener('click', () => {
-        if (G.buyUpgrade(u)) { A.chime(); toast(`${u.name}: ${u.desc}`); onPurchase(true); }
+        if (G.buyUpgrade(u)) { A.chime(); onPurchase(true); }
       });
-      panelUpdaters.push(() => { btn.disabled = !G.canAfford(u.cost); refreshCost(btn); });
+      panelUpdaters.push(() => { btn.disabled = !G.canAfford(G.upgradeCost(u)); refreshCost(btn); });
     }
   }
 }
@@ -397,7 +425,7 @@ function renderFeatures(body) {
     const prev = list[list.indexOf(f) - 1];
     card.innerHTML = `<div><div class="name">${f.name}</div><div class="desc">${f.desc}</div>
       ${!built && !avail ? `<div class="meta"><span class="ms">Build ${prev.name} first</span></div>` : ''}</div>
-      ${built ? '<div class="check">✓ Built</div>' : `<button class="buy"><span class="lbl">Build</span>${costHTML(f.cost)}</button>`}`;
+      ${built ? '<div class="check">✓ Built</div>' : `<button class="buy"><span class="lbl">Build</span>${costHTML(G.featureCost(f))}</button>`}`;
     body.append(card);
     if (!built) {
       const btn = $('.buy', card);
@@ -409,7 +437,7 @@ function renderFeatures(body) {
           onPurchase(true);
         }
       });
-      panelUpdaters.push(() => { btn.disabled = !avail || !G.canAfford(f.cost); refreshCost(btn); });
+      panelUpdaters.push(() => { btn.disabled = !avail || !G.canAfford(G.featureCost(f)); refreshCost(btn); });
     }
   }
 }
@@ -445,6 +473,9 @@ function renderSettings(body) {
         ${Object.keys(RESOURCES).map((r) => `<span>${RESOURCES[r].name} gathered</span><span>${fmt(s.earned[r])}</span>`).join('')}
         <span>Time played</span><span>${fmtDuration(s.stats.playMs)}</span>
         <span>Offline earnings limit</span><span>${G.d().offlineHours} hours</span>
+        <span>Events seen</span><span>${fmt(s.ev.count)}</span>
+        <span>Shooting stars caught</span><span>${fmt(s.stats.starsCaught)}</span>
+        <span>Achievements</span><span>${G.achievementCount()} / ${ACHIEVEMENTS.length}</span>
       </div>
     </div>
     <div class="settings-group">
@@ -502,6 +533,184 @@ function renderSettings(body) {
   });
 }
 
+// ---------- awards ----------
+
+function renderAwards(body) {
+  const n = G.achievementCount();
+  const groups = ACHIEVEMENT_GROUPS.map((g) => {
+    const items = ACHIEVEMENTS.filter((a) => a.group === g);
+    const got = items.filter((a) => G.state.achievements[a.id]).length;
+    return `<div class="ach-group"><h4>${g} <span>${got} / ${items.length}</span></h4><div class="ach-grid">
+      ${items.map((a) => {
+        const earned = !!G.state.achievements[a.id];
+        const hide = a.secret && !earned;
+        return `<div class="ach${earned ? ' earned' : ''}">
+          <div class="ach-icon">${earned ? '🏆' : hide ? '❔' : '🔒'}</div>
+          <div><div class="ach-name">${hide ? 'Secret' : a.name}</div><div class="ach-desc">${hide ? 'Keep playing to discover this one.' : a.desc}</div></div>
+        </div>`;
+      }).join('')}</div></div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="ach-summary">
+      <div class="big">🏆 ${n} <small>/ ${ACHIEVEMENTS.length}</small></div>
+      <div>Each achievement adds +${Math.round(ACHIEVEMENT_BONUS * 100)}% to everything you gather.<br>
+      Current bonus: <b>+${Math.round(n * ACHIEVEMENT_BONUS * 100)}%</b></div>
+    </div>${groups}`;
+}
+
+function onAchievements(list) {
+  A.achievement();
+  for (const a of list) toast(`🏆 Achievement: ${a.name}`);
+  G.save();
+  updateResBar();
+  updateSceneRate();
+  if (tab === 'awards' || tab === 'settings') renderPanel();
+}
+
+// Detect a burst of fast tapping for the "Tap Frenzy" achievement.
+let tapTimes = [];
+function trackFrenzy() {
+  if (G.state.stats.frenzy) return;
+  const now = performance.now();
+  tapTimes.push(now);
+  while (tapTimes.length && now - tapTimes[0] > 5000) tapTimes.shift();
+  if (tapTimes.length >= 40) G.state.stats.frenzy = true;
+}
+
+// ---------- events ----------
+
+const fmtClock = (sec) => { sec = Math.ceil(sec); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+
+function buffInfo(b) {
+  return b.kind === 'event' ? EVENT_BY_ID[b.id] : GIFT_BY_ID[b.id];
+}
+
+function onEventsChanged({ started, ended }) {
+  for (const id of started) {
+    const e = EVENT_BY_ID[id];
+    A.eventStart(id);
+    toast(`${e.icon} ${e.name}! ${e.desc}`);
+  }
+  for (const id of ended) {
+    if (id === 'fairy') toast('🧚 The fairy flutters away…');
+  }
+  G.save();
+  renderEvents();
+  updateResBar();
+  updateSceneRate();
+  if (tab === 'helpers') renderPanel(); else updatePanel();
+}
+
+// Build the banner, scene overlay and special actors for the current buffs.
+function renderEvents() {
+  const fx = $('#event-fx');
+  const ev = G.activeEvent();
+  fx.className = 'event-fx' + (ev ? ' fx-' + ev.id : '');
+  const banner = $('#event-banner');
+  banner.innerHTML = G.state.buffs.map((b) => {
+    const info = buffInfo(b);
+    return `<div class="buff" data-id="${b.id}"><div class="buff-icon">${info.icon}</div>
+      <div class="buff-txt"><div class="buff-name">${info.name}</div><div class="buff-desc">${info.desc}</div>
+      <div class="buff-bar"><i></i></div></div><div class="buff-time"></div></div>`;
+  }).join('') + (G.d().eventPreview && !ev ? '<div class="buff preview" id="next-event"></div>' : '');
+
+  const fairyEl = $('#fairy');
+  fairyEl.hidden = !G.hasBuff('fairy');
+  if (!G.hasBuff('meteor')) $$('.meteor').forEach((m) => m.remove());
+  updateEvents();
+}
+
+function updateEvents() {
+  for (const el of $$('#event-banner .buff[data-id]')) {
+    const b = G.state.buffs.find((x) => x.id === el.dataset.id);
+    if (!b) continue;
+    const left = Math.max(0, b.ends - G.state.clock);
+    $('.buff-time', el).textContent = fmtClock(left);
+    $('.buff-bar i', el).style.width = `${(left / b.dur) * 100}%`;
+  }
+  const next = $('#next-event');
+  if (next) {
+    const e = EVENT_BY_ID[G.state.ev.nextId];
+    next.innerHTML = e ? `<div class="buff-icon">🔭</div><div class="buff-txt"><div class="buff-name">Next: ${e.icon} ${e.name}</div><div class="buff-desc">in ${fmtClock(G.secondsUntilNextEvent())}</div></div>` : '';
+  }
+}
+
+// The wandering fairy drifts in a looping path over the scene.
+function moveFairy(now) {
+  const el = $('#fairy');
+  if (el.hidden) return;
+  const w = $('#scene-wrap').clientWidth, h = $('#scene-wrap').clientHeight;
+  const t = now / 1000;
+  const x = (0.5 + 0.36 * Math.sin(t * 0.55)) * w;
+  const y = (0.42 + 0.22 * Math.sin(t * 1.15 + 1)) * h;
+  el.style.transform = `translate(${x - 40}px, ${y - 40}px) scaleX(${Math.cos(t * 0.55) > 0 ? 1 : -1})`;
+}
+
+function onFairyTap(e) {
+  e.preventDefault();
+  if (!G.hasBuff('fairy')) return;
+  G.catchFairy();
+  A.fanfare();
+  renderEvents();
+  const m = $('#modal');
+  m.innerHTML = `<div class="modal-card gift-card" role="dialog" aria-modal="true">
+    <h2>🧚 A gift from the fairy</h2><p>She offers you one of three gifts. Choose wisely!</p>
+    <div class="gifts">${FAIRY_GIFTS.map((g) => `<button class="gift" data-gift="${g.id}"><span class="gift-icon">${g.icon}</span><b>${g.name}</b><span>${g.desc}</span></button>`).join('')}</div></div>`;
+  m.hidden = false;
+  for (const b of $$('.gift', m)) {
+    b.addEventListener('click', () => {
+      const res = G.applyGift(b.dataset.gift);
+      m.hidden = true; m.innerHTML = '';
+      A.chime();
+      if (res.gained) toast(`🎁 ${Object.entries(res.gained).map(([r, a]) => `+${fmt(a)} ${RESOURCES[r].name}`).join(', ')}`);
+      else toast(`${GIFT_BY_ID[b.dataset.gift].icon} ${GIFT_BY_ID[b.dataset.gift].name}!`);
+      G.save();
+      renderEvents();
+      updateResBar();
+      updateSceneRate();
+      updatePanel();
+    });
+  }
+}
+
+// Meteor shower: shooting stars streak across whatever scene you're on.
+let meteorTimer = 0;
+function spawnMeteors(dt) {
+  if (!G.hasBuff('meteor')) return;
+  meteorTimer -= dt;
+  if (meteorTimer > 0) return;
+  meteorTimer = 0.7 + Math.random() * 0.8;
+  const wrap = $('#scene-wrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const m = document.createElement('button');
+  m.className = 'meteor';
+  m.setAttribute('aria-label', 'Shooting star');
+  const sx = w * (0.45 + Math.random() * 0.6), sy = -40 + Math.random() * h * 0.25;
+  const dist = w * (0.5 + Math.random() * 0.3);
+  m.style.cssText = `left:${sx}px;top:${sy}px;--mx:${-dist}px;--my:${dist * 0.45}px;--md:${(2.6 + Math.random()).toFixed(2)}s`;
+  m.innerHTML = '<span class="trail"></span><span class="head">✦</span>';
+  m.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const amt = G.catchStar();
+    A.starCatch();
+    const r = wrap.getBoundingClientRect();
+    floatText(e.clientX - r.left, e.clientY - r.top, `+${fmt(amt)} ✦`, RESOURCES.stardust.color);
+    m.remove();
+    updateResBar();
+  });
+  m.addEventListener('animationend', () => m.remove());
+  $('#event-layer').append(m);
+}
+
+function floatText(x, y, text, color) {
+  const f = document.createElement('div');
+  f.className = 'floater';
+  f.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
+  f.textContent = text;
+  $('#floaters').append(f);
+  setTimeout(() => f.remove(), 1000);
+}
+
 // ---------- shared ----------
 
 function onPurchase(rerenderPanel = false) {
@@ -519,6 +728,7 @@ function renderAll() {
   renderLocTabs();
   renderScene();
   renderPanel();
+  renderEvents();
 }
 
 function updateMuteBtn() {
@@ -533,8 +743,8 @@ function toast(msg) {
   t.className = 'toast';
   t.textContent = msg;
   $('#toasts').append(t);
-  setTimeout(() => t.remove(), 3700);
-  while ($('#toasts').childElementCount > 3) $('#toasts').firstElementChild.remove();
+  setTimeout(() => t.remove(), 3000);
+  while ($('#toasts').childElementCount > 2) $('#toasts').firstElementChild.remove();
 }
 
 function confirmModal(title, text, okLabel, onOk, danger = false) {
@@ -554,7 +764,7 @@ function confirmModal(title, text, okLabel, onOk, danger = false) {
 // ---------- loop ----------
 
 let last = performance.now();
-let uiAccum = 0, saveAccum = 0;
+let uiAccum = 0, saveAccum = 0, achAccum = 0;
 let knownUnlockable = new Set();
 
 function tick(now) {
@@ -566,15 +776,25 @@ function tick(now) {
     dt = Math.min(dt, 1);
     G.produce(dt);
     G.state.stats.playMs += dt * 1000;
-    uiAccum += dt; saveAccum += dt;
+    const happened = G.advance(dt);
+    if (happened.started.length || happened.ended.length) onEventsChanged(happened);
+    moveFairy(now);
+    spawnMeteors(dt);
+    uiAccum += dt; saveAccum += dt; achAccum += dt;
+    if (achAccum >= 1) {
+      achAccum = 0;
+      const fresh = G.checkAchievements();
+      if (fresh.length) onAchievements(fresh);
+    }
     if (uiAccum >= 0.2) {
       uiAccum = 0;
+      updateEvents();
       updateResBar();
       updatePanel();
       updateLocTabs();
       updateSceneRate();
       for (const l of LOCATIONS) {
-        if (l.soon || G.state.locs[l.id].unlocked) continue;
+        if (G.state.locs[l.id].unlocked) continue;
         if (G.canAfford(l.unlockCost) && !knownUnlockable.has(l.id)) {
           knownUnlockable.add(l.id);
           toast(`${l.name} can now be unlocked!`);
@@ -636,6 +856,7 @@ function boot() {
   // Any touch wakes the audio if the browser put it to sleep.
   document.addEventListener('pointerdown', () => A.resume(), { passive: true });
   for (const b of $$('.ptab')) b.addEventListener('click', () => setTab(b.dataset.tab));
+  $('#fairy').addEventListener('pointerdown', onFairyTap);
   // Stop long-press context menus and pinch-zoom gestures interfering with tapping.
   $('#scene-wrap').addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
