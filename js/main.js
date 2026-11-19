@@ -2,6 +2,7 @@
 import {
   RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES, LOCATION_BY_ID,
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
+  SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE,
 } from './data.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
@@ -65,6 +66,10 @@ function showScreen(id) {
 
 function renderTitle() {
   const has = G.hasSave();
+  const tm = $('#title-moons');
+  const count = has ? G.state.prestige.count : 0;
+  tm.hidden = count === 0;
+  if (count) tm.innerHTML = moonRow(count) + `<div>${G.inEndless() ? `Endless Night · ${count} nights` : `Night ${count + 1} of ${FINALE_PRESTIGE}`}</div>`;
   $('#btn-continue').hidden = !has;
   $('#btn-new').textContent = has ? 'New Game' : 'Begin';
   $('#btn-new').classList.toggle('primary', !has);
@@ -220,20 +225,41 @@ function updateSprites() {
 
 // ---------- tapping ----------
 
+// Steady Hand (Moon Shrine): holding a finger down keeps tapping.
+const holds = new Map();
+function stopHold(e) {
+  const h = holds.get(e.pointerId);
+  if (h) { clearInterval(h); holds.delete(e.pointerId); }
+}
+window.addEventListener('pointerup', stopHold);
+window.addEventListener('pointercancel', stopHold);
+
 function onTap(e) {
   e.preventDefault();
   const id = G.state.active;
   if (!G.state.locs[id].unlocked) return;
+  if (G.d().holdTap && !holds.has(e.pointerId)) {
+    const target = e.currentTarget, x = e.clientX, y = e.clientY, pid = e.pointerId;
+    let first = true;
+    holds.set(pid, setInterval(() => {
+      if (first) { first = false; return; } // wait a moment so a normal tap isn't doubled
+      if (G.state.active !== id) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
+      doTap(id, target, x, y);
+    }, 166));
+  }
+  doTap(id, e.currentTarget, e.clientX, e.clientY);
+}
+
+function doTap(id, target, clientX, clientY) {
   const { value: v, echo } = G.tap(id);
   A.tap(id, echo);
   trackFrenzy();
-  const target = e.currentTarget;
   target.classList.remove('bump');
   void target.getBoundingClientRect();
   target.classList.add('bump');
 
   const wrap = $('#scene-wrap').getBoundingClientRect();
-  const x = e.clientX - wrap.left, y = e.clientY - wrap.top;
+  const x = clientX - wrap.left, y = clientY - wrap.top;
   const color = RESOURCES[LOCATION_BY_ID[id].resource].color;
   const layer = $('#floaters');
   const f = document.createElement('div');
@@ -476,6 +502,9 @@ function renderSettings(body) {
         <span>Events seen</span><span>${fmt(s.ev.count)}</span>
         <span>Shooting stars caught</span><span>${fmt(s.stats.starsCaught)}</span>
         <span>Achievements</span><span>${G.achievementCount()} / ${ACHIEVEMENTS.length}</span>
+        <span>Nights completed (prestiges)</span><span>${s.prestige.count}</span>
+        <span>Moonstones earned</span><span>${fmt(s.prestige.lifetimeStones)}</span>
+        ${s.prestige.fastestRunMs ? `<span>Fastest night</span><span>${fmtDuration(s.prestige.fastestRunMs)}</span>` : ''}
       </div>
     </div>
     <div class="settings-group">
@@ -711,6 +740,203 @@ function floatText(x, y, text, color) {
   setTimeout(() => f.remove(), 1000);
 }
 
+// ---------- the moon: prestige, shrine, finale ----------
+
+let moonUid = 0;
+// A moon at phase 0 (new) to 5 (full).
+function moonSVG(phase, cls = '') {
+  const f = Math.max(0, Math.min(1, phase / 5));
+  const id = 'mc' + (++moonUid);
+  const r = 16, shift = 2 * r * f;
+  return `<svg class="moon-svg ${cls}" viewBox="0 0 40 40" aria-hidden="true">
+    <defs><clipPath id="${id}"><circle cx="20" cy="20" r="${r}"/></clipPath>
+      <radialGradient id="${id}g" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fffbe8"/><stop offset="1" stop-color="#e3d6a6"/></radialGradient></defs>
+    <circle cx="20" cy="20" r="${r}" fill="#2b2758" stroke="#6b63b8" stroke-width="1"/>
+    ${f > 0 ? `<g clip-path="url(#${id})"><circle cx="20" cy="20" r="${r}" fill="url(#${id}g)"/>${f < 1 ? `<circle cx="${20 - shift}" cy="20" r="${r}" fill="#2b2758"/>` : ''}</g>` : ''}
+  </svg>`;
+}
+
+function moonRow(count) {
+  let html = '<div class="moon-row">';
+  for (let i = 1; i <= FINALE_PRESTIGE; i++) html += moonSVG(i, count >= i ? 'lit' : 'dim');
+  return html + '</div>';
+}
+
+function renderMoonBtn() {
+  const P = G.state.prestige;
+  $('#btn-moon').innerHTML = `${moonSVG(Math.min(P.count, FINALE_PRESTIGE))}<span class="moon-count">${fmt(P.stones)}</span>`;
+  updateMoonBtn();
+}
+function updateMoonBtn() {
+  const b = $('#btn-moon');
+  const ready = G.canPrestige();
+  b.classList.toggle('ready', ready);
+  b.title = ready ? `Moon Shrine: a new night would bring +${G.stonesForRun()} Moonstones` : 'Moon Shrine';
+  const c = $('.moon-count', b);
+  if (c) c.textContent = fmt(G.state.prestige.stones);
+}
+
+function openShrine() {
+  A.chime();
+  $('#shrine').hidden = false;
+  renderShrine();
+}
+function closeShrine() {
+  $('#shrine').hidden = true;
+}
+
+function renderShrine() {
+  renderPrestigeCard();
+  const P = G.state.prestige;
+  const paths = SHRINE_PATHS.map((p) => {
+    const items = SHRINE.filter((u) => u.path === p.id);
+    return `<div class="spath"><h3><span>${p.icon}</span> ${p.name} <small>${p.desc}</small></h3>
+      ${items.map((u) => shrineCard(u)).join('')}</div>`;
+  }).join('');
+  const cap = SHRINE.find((u) => u.path === 'capstone');
+  const capHTML = P.count >= cap.minPrestige || P.shrine[cap.id]
+    ? `<div class="spath capstone">${shrineCard(cap)}</div>`
+    : `<div class="spath capstone teaser"><div class="scard locked"><div><b>A final offering</b><div class="sdesc">Appears after your ${cap.minPrestige}th night.</div></div></div></div>`;
+  $('#shrine-paths').innerHTML = paths + capHTML;
+  for (const b of $$('#shrine-paths [data-buy]')) {
+    b.addEventListener('click', () => {
+      if (G.buyShrine(b.dataset.buy)) {
+        A.build();
+        toast(`🌙 ${SHRINE.find((u) => u.id === b.dataset.buy).name}`);
+        G.save();
+        renderShrine();
+        renderMoonBtn();
+        updateResBar();
+        updateSceneRate();
+        renderPanel();
+        const fresh = G.checkAchievements();
+        if (fresh.length) onAchievements(fresh);
+      }
+    });
+  }
+}
+
+function shrineCard(u) {
+  const P = G.state.prestige;
+  const owned = !!P.shrine[u.id];
+  const avail = G.shrineAvailable(u);
+  const afford = P.stones >= u.cost;
+  return `<div class="scard${owned ? ' owned' : !avail ? ' locked' : ''}">
+    <div><b>${u.name}</b><div class="sdesc">${u.desc}</div></div>
+    ${owned ? '<div class="check">✓</div>'
+      : `<button class="sbuy" data-buy="${u.id}" ${avail && afford ? '' : 'disabled'}>${moonSVG(5, 'tiny')} ${u.cost}</button>`}
+  </div>`;
+}
+
+function renderPrestigeCard() {
+  const P = G.state.prestige;
+  const card = $('#prestige-card');
+  const finaleNext = G.isFinaleNext();
+  card.innerHTML = `
+    ${moonRow(P.count)}
+    <div class="night">${G.inEndless() ? `Endless Night · ${P.count} nights` : P.count === 0 ? 'The moon is new' : `Night ${P.count + 1} of ${FINALE_PRESTIGE}`}</div>
+    <div class="stones-held">${moonSVG(5, 'small')} <b id="pc-stones"></b> Moonstones <small id="pc-bonus"></small></div>
+    <p class="pc-explain">Begin a new night to turn this night's gatherings into Moonstones. Spend them below on lasting gifts, or keep them: each unspent Moonstone adds +${Math.round(STONE_BONUS * 100)}% to everything.</p>
+    <div class="pc-gain">A new night now brings <b id="pc-gain"></b></div>
+    <div class="pc-bar"><i id="pc-bar"></i></div>
+    <div class="pc-next" id="pc-next"></div>
+    <button class="btn primary big" id="btn-prestige">${finaleNext ? '🌕 Call the full moon' : '🌙 Begin a new night'}</button>
+    <details class="pc-details"><summary>What happens?</summary>
+      <p><b>Resets:</b> all resources, helpers, upgrades, features and unlocked places (except those the Shrine keeps).</p>
+      <p><b>Stays:</b> Moonstones, Moon Shrine gifts, achievements, stats and settings.</p>
+    </details>`;
+  $('#btn-prestige').addEventListener('click', doPrestige);
+  updatePrestigeCard();
+}
+
+function updatePrestigeCard() {
+  const P = G.state.prestige;
+  const el = $('#pc-stones');
+  if (!el) return;
+  el.textContent = fmt(P.stones);
+  $('#pc-bonus').textContent = P.stones ? `(+${Math.round(P.stones * STONE_BONUS * 100)}% while unspent)` : '';
+  const n = G.stonesForRun();
+  const lo = G.valueForStones(n), hi = G.valueForStones(n + 1);
+  $('#pc-gain').textContent = `+${fmt(n)} Moonstones`;
+  $('#pc-bar').style.width = `${Math.max(0, Math.min(1, (G.runValue() - lo) / (hi - lo))) * 100}%`;
+  const meadow = G.state.locs.meadow.unlocked;
+  $('#pc-next').textContent = !meadow ? 'Unlock the Starfall Meadow to begin a new night.'
+    : n < 1 ? 'Gather a little more to earn your first Moonstone.'
+    : `Next Moonstone at ${Math.round(((G.runValue() - lo) / (hi - lo)) * 100)}%`;
+  $('#btn-prestige').disabled = !G.canPrestige();
+}
+
+function doPrestige() {
+  if (!G.canPrestige()) return;
+  const n = G.stonesForRun();
+  const finale = G.isFinaleNext();
+  confirmModal(finale ? 'Call the full moon?' : 'Begin a new night?',
+    `You'll gain ${n} Moonstones. Your resources, helpers, upgrades, features and places will reset.${finale ? ' This is the fifth night: the full moon will rise.' : ''}`,
+    finale ? 'Call the moon' : 'Begin', () => {
+      const r = G.prestige();
+      if (!r) return;
+      G.checkAchievements();
+      G.save();
+      closeShrine();
+      knownUnlockable = new Set();
+      tab = 'helpers';
+      renderAll();
+      if (r.finale) playFinale();
+      else {
+        moonriseFlash();
+        A.fanfare();
+        toast(`🌙 A new night begins. +${r.stones} Moonstones`);
+        setTimeout(() => openShrine(), 1600);
+      }
+    });
+}
+
+function moonriseFlash() {
+  const f = document.createElement('div');
+  f.className = 'moonrise-flash';
+  f.innerHTML = moonSVG(Math.min(G.state.prestige.count, FINALE_PRESTIGE), 'flash-moon');
+  document.body.append(f);
+  setTimeout(() => f.remove(), 2600);
+}
+
+function playFinale() {
+  const el = $('#finale');
+  el.hidden = false;
+  el.classList.remove('play');
+  void el.offsetWidth;
+  el.classList.add('play');
+  A.finale();
+  const s = G.state;
+  const lines = [
+    'Five nights have passed.',
+    'The pond shimmers. The ring glows. The old oak sings.',
+    'Crystals hum beneath the hills, and the meadow is full of stars.',
+    'The full moon rises over a realm restored.',
+  ];
+  const text = $('#finale-text');
+  text.innerHTML = lines.map((l, i) => `<p style="animation-delay:${3 + i * 3.2}s">${l}</p>`).join('') + `
+    <div class="finale-stats" style="animation-delay:${3 + lines.length * 3.2}s">
+      <h2>The Realm Restored</h2>
+      <div class="stats">
+        <span>Time played</span><span>${fmtDuration(s.stats.playMs)}</span>
+        <span>Taps</span><span>${fmt(s.stats.taps)}</span>
+        <span>Events witnessed</span><span>${fmt(s.ev.count)}</span>
+        <span>Achievements</span><span>${G.achievementCount()} / ${ACHIEVEMENTS.length}</span>
+        <span>Moonstones earned</span><span>${fmt(s.prestige.lifetimeStones)}</span>
+      </div>
+      <p class="thanks">Thank you for tending the moonlit realm.<br>The night goes on, as long as you like.</p>
+      <button class="btn primary big" id="btn-endless">Continue into the Endless Night</button>
+    </div>`;
+  $('#btn-endless').addEventListener('click', () => {
+    s.prestige.finaleSeen = true;
+    G.save();
+    el.hidden = true;
+    el.classList.remove('play');
+    toast('🌕 Endless Night: keep gathering and prestiging as long as you like');
+    renderAll();
+  });
+}
+
 // ---------- shared ----------
 
 function onPurchase(rerenderPanel = false) {
@@ -729,6 +955,7 @@ function renderAll() {
   renderScene();
   renderPanel();
   renderEvents();
+  renderMoonBtn();
 }
 
 function updateMuteBtn() {
@@ -789,6 +1016,13 @@ function tick(now) {
     if (uiAccum >= 0.2) {
       uiAccum = 0;
       updateEvents();
+      updateMoonBtn();
+      if (!$('#shrine').hidden) updatePrestigeCard();
+      if (!G.state.prestige.hinted && G.canPrestige()) {
+        G.state.prestige.hinted = true;
+        A.fanfare();
+        toast('🌙 The Moon Shrine has awakened! Tap the glowing moon at the top to learn more.');
+      }
       updateResBar();
       updatePanel();
       updateLocTabs();
@@ -857,6 +1091,8 @@ function boot() {
   document.addEventListener('pointerdown', () => A.resume(), { passive: true });
   for (const b of $$('.ptab')) b.addEventListener('click', () => setTab(b.dataset.tab));
   $('#fairy').addEventListener('pointerdown', onFairyTap);
+  $('#btn-moon').addEventListener('click', openShrine);
+  $('#btn-shrine-close').addEventListener('click', closeShrine);
   // Stop long-press context menus and pinch-zoom gestures interfering with tapping.
   $('#scene-wrap').addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());

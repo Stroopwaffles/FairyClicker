@@ -21,20 +21,22 @@
     <div class="title-card">
       <h1 class="logo">Fairy Clicker</h1>
       <p class="tagline">Gather the gifts of a moonlit realm</p>
+      <div id="title-moons" class="title-moons" hidden></div>
       <div id="away-card" class="away-card" hidden></div>
       <div class="title-buttons">
         <button id="btn-continue" class="btn primary big" hidden>Continue</button>
         <button id="btn-new" class="btn big">Begin</button>
       </div>
-      <p class="title-foot">Version 2 · progress saves automatically on this device</p>
+      <p class="title-foot">Version 3 · progress saves automatically on this device</p>
     </div>
   </section>
 
   <!-- Game screen -->
   <section id="screen-game" class="screen" aria-label="Game">
     <header class="topbar">
-      <button id="btn-home" class="icon-btn" aria-label="Back to title">☾</button>
+      <button id="btn-home" class="icon-btn" aria-label="Back to title">⌂</button>
       <div id="res-bar" class="res-bar"></div>
+      <button id="btn-moon" class="moon-btn" aria-label="Moon Shrine"></button>
       <button id="btn-mute" class="icon-btn" aria-label="Mute sound">🔊</button>
     </header>
 
@@ -66,6 +68,28 @@
       </div>
       <div id="panel-body" class="panel-body"></div>
     </aside>
+  </section>
+
+  <!-- Moon Shrine: prestige and permanent upgrades -->
+  <section id="shrine" class="shrine" aria-label="Moon Shrine" hidden>
+    <div class="shrine-sky" aria-hidden="true"></div>
+    <header class="shrine-head">
+      <h2>Moon Shrine</h2>
+      <button id="btn-shrine-close" class="icon-btn" aria-label="Close">✕</button>
+    </header>
+    <div class="shrine-body">
+      <div id="prestige-card" class="prestige-card"></div>
+      <div id="shrine-paths" class="shrine-paths"></div>
+    </div>
+  </section>
+
+  <!-- Finale -->
+  <section id="finale" class="finale" aria-label="The realm is restored" hidden>
+    <div class="finale-sky"></div>
+    <div class="finale-stars"></div>
+    <div class="finale-moon"></div>
+    <div class="finale-land"></div>
+    <div class="finale-text" id="finale-text"></div>
   </section>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>

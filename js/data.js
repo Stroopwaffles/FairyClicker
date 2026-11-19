@@ -16,7 +16,7 @@
 //   { t: 'eventPreview' }            show which event comes next
 
 export const SAVE_KEY = 'fairyclicker.save';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const BASE_OFFLINE_HOURS = 8;
 export const COST_GROWTH = 1.15;
 export const MILESTONES = [25, 50, 100, 150, 200, 300, 400, 500];
@@ -44,17 +44,17 @@ export const LOCATIONS = [
   {
     id: 'oak', name: 'Ancient Oak', resource: 'ambersap', tapVerb: 'Tap the hollow',
     blurb: 'The oldest tree in the realm. Golden sap wells up from the hollow in its heart.',
-    unlockCost: { dewdrops: 200000, glowspores: 25000 },
+    unlockCost: { dewdrops: 2e6, glowspores: 300000 },
   },
   {
     id: 'grotto', name: 'Crystal Grotto', resource: 'moonshards', tapVerb: 'Tap the crystals',
     blurb: 'Deep beneath the hills, crystals hum with stored moonlight. A gentle tap chips off a shard.',
-    unlockCost: { ambersap: 50000, glowspores: 500000 },
+    unlockCost: { ambersap: 1e6, glowspores: 50e6 },
   },
   {
     id: 'meadow', name: 'Starfall Meadow', resource: 'stardust', tapVerb: 'Tap the fallen star',
     blurb: 'Where stars come to rest. A fallen star glows in the grass, shedding stardust at every touch.',
-    unlockCost: { moonshards: 50000, ambersap: 500000, dewdrops: 50e6 },
+    unlockCost: { moonshards: 2e6, ambersap: 50e6, dewdrops: 5e9 },
   },
 ];
 
@@ -190,3 +190,52 @@ export const UPGRADE_BY_ID = byId(UPGRADES);
 export const FEATURE_BY_ID = byId(FEATURES);
 export const EVENT_BY_ID = byId(EVENTS);
 export const GIFT_BY_ID = byId(FAIRY_GIFTS);
+
+// ---------- Prestige: Moonstones and the Moon Shrine ----------
+// Run value: each resource's earnings this run are weighted, then turned into Moonstones.
+export const RESOURCE_WEIGHT = { dewdrops: 1, glowspores: 2, ambersap: 10, moonshards: 40, stardust: 150 };
+export const STONE_SCALE = 1e10;         // run value that gives the first few stones
+export const STONE_FACTOR = 5;           // stones = floor(FACTOR * (value / SCALE) ^ EXP)
+export const STONE_EXP = 0.4;
+export const STONE_BONUS = 0.01;         // each unspent Moonstone: +1% to everything
+export const FINALE_PRESTIGE = 5;        // the soft ending happens on this prestige
+export const PRESTIGE_REQ_LOC = 'meadow';// must unlock this location before prestiging
+
+// Shrine paths. Within a path, upgrades are bought in order.
+export const SHRINE_PATHS = [
+  { id: 'tides',   name: 'Tides',      icon: '🌊', desc: 'Tapping' },
+  { id: 'kinship', name: 'Kinship',    icon: '🧚', desc: 'Helpers' },
+  { id: 'way',     name: 'Wayfinding', icon: '🗺️', desc: 'Progress' },
+  { id: 'fate',    name: 'Fate',       icon: '🔮', desc: 'Events' },
+];
+
+export const SHRINE = [
+  // Tides — tapping
+  { id: 'moontouch',   path: 'tides', name: 'Moonlit Touch',   desc: 'All taps ×3',                                   cost: 2,   effects: [{ t: 'tapMult', loc: '*', x: 3 }] },
+  { id: 'doubleecho',  path: 'tides', name: 'Double Ripple',   desc: 'Taps have an extra 15% chance to count twice',   cost: 8,   effects: [{ t: 'tapEcho', x: 0.15 }] },
+  { id: 'steadyhand',  path: 'tides', name: 'Steady Hand',     desc: 'Hold your finger down to tap 6 times a second',  cost: 30,  effects: [{ t: 'holdTap' }] },
+  { id: 'tidalsurge',  path: 'tides', name: 'Tidal Surge',     desc: 'Every tap also gives 5% of that place’s production per second', cost: 100, effects: [{ t: 'tapRatePct', loc: '*', x: 0.05 }] },
+
+  // Kinship — helpers
+  { id: 'kindred',     path: 'kinship', name: 'Kindred Spirits',   desc: 'All helpers ×3',                                        cost: 2,   effects: [{ t: 'helperMult', loc: '*', x: 3 }] },
+  { id: 'faebargain',  path: 'kinship', name: 'Fae Bargain',       desc: 'Helpers cost half as much',                              cost: 8,   effects: [{ t: 'helperDiscount', x: 0.5 }] },
+  { id: 'welcome',     path: 'kinship', name: 'Welcome Party',     desc: 'Each place starts with 10 of its first helper and 5 of its second', cost: 30, effects: [{ t: 'startHelpers' }] },
+  { id: 'moonbonds',   path: 'kinship', name: 'Bonds of Moonlight',desc: 'All helpers ×5',                                         cost: 120,  effects: [{ t: 'helperMult', loc: '*', x: 5 }] },
+
+  // Wayfinding — progress
+  { id: 'pocketdew',   path: 'way', name: 'Pocket of Dew',     desc: 'Start each run with 25,000 Dewdrops and 2,500 Glowspores', cost: 2,  effects: [{ t: 'startRes' }] },
+  { id: 'longnight',   path: 'way', name: 'Long Night',        desc: 'Offline earnings last 4 hours longer',                     cost: 6,  effects: [{ t: 'offlineHours', x: 4 }] },
+  { id: 'paths',       path: 'way', name: 'Remembered Paths',  desc: 'The Mushroom Ring and Ancient Oak stay unlocked',          cost: 20, effects: [{ t: 'keepLocs', locs: ['mushroom', 'oak'] }] },
+  { id: 'foundations', path: 'way', name: 'First Foundations', desc: 'The first feature at every place stays built',             cost: 50, effects: [{ t: 'keepFirstFeature' }] },
+  { id: 'farpaths',    path: 'way', name: 'Far Paths',         desc: 'The Crystal Grotto and Starfall Meadow stay unlocked too',  cost: 120, effects: [{ t: 'keepLocs', locs: ['grotto', 'meadow'] }] },
+
+  // Fate — events
+  { id: 'omens',       path: 'fate', name: 'Gathering Omens',  desc: 'Events come 25% more often',                       cost: 3,  effects: [{ t: 'eventFreq', x: 0.75 }] },
+  { id: 'lingering',   path: 'fate', name: 'Lingering Magic',  desc: 'Events last 50% longer',                           cost: 12, effects: [{ t: 'eventDuration', x: 1.5 }] },
+  { id: 'kindfortune', path: 'fate', name: 'Kind Fortune',     desc: 'Events no longer slow anything down',              cost: 35, effects: [{ t: 'noHarm' }] },
+  { id: 'fairyfavor',  path: 'fate', name: 'Fairy’s Favor',    desc: 'Fairy gifts are twice as strong',                  cost: 90, effects: [{ t: 'giftMult', x: 2 }] },
+
+  // Capstone — appears after the 4th prestige
+  { id: 'fullmoon', path: 'capstone', name: 'Call of the Full Moon', desc: 'Everything ×5. The full moon is ready to rise.', cost: 150, minPrestige: 4, effects: [{ t: 'globalMult', x: 5 }] },
+];
+export const SHRINE_BY_ID = byId(SHRINE);

@@ -3,6 +3,8 @@ import {
   SAVE_KEY, SAVE_VERSION, BASE_OFFLINE_HOURS, COST_GROWTH, MILESTONES, ACHIEVEMENT_BONUS,
   RESOURCES, LOCATIONS, HELPERS, FEATURES, EVENTS, FIRST_EVENT_AT, EVENT_GAP,
   LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID, EVENT_BY_ID, GIFT_BY_ID,
+  RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
+  SHRINE, SHRINE_BY_ID,
 } from './data.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -23,13 +25,15 @@ export function freshState() {
     active: 'pond',
     clock: 0,                 // seconds of active play; events and buffs run on this
     res,
-    earned,
+    earned,                   // lifetime totals (never reset)
+    runEarned: { ...earned }, // this run only; decides Moonstones
     locs,
     buffs: [],                // [{ id, kind: 'event'|'gift', ends }]
     ev: { next: FIRST_EVENT_AT, nextId: null, lastId: null, count: 0, seen: {} },
     achievements: {},         // id -> timestamp earned
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1 },
+    prestige: { count: 0, stones: 0, lifetimeStones: 0, shrine: {}, finaleSeen: false, runStart: now, fastestRunMs: 0, hinted: false },
   };
 }
 
@@ -47,7 +51,12 @@ function mergeDefaults(base, loaded) {
   return out;
 }
 
-function migrate(s) {
+function migrate(s, fromV) {
+  if ((fromV || 1) < 3) {
+    // Before prestige existed the whole save was one run.
+    s.runEarned = { ...s.earned };
+    s.prestige.runStart = s.created || Date.now();
+  }
   s.v = SAVE_VERSION;
   if (!Array.isArray(s.buffs)) s.buffs = [];
   return s;
@@ -61,6 +70,13 @@ export function setState(s) { state = s; invalidate(); }
 let cache = null;
 export function invalidate() { cache = null; }
 
+function shrineEffects() {
+  const fx = [];
+  for (const id of Object.keys(state.prestige.shrine)) if (state.prestige.shrine[id] && SHRINE_BY_ID[id]) fx.push(...SHRINE_BY_ID[id].effects);
+  return fx;
+}
+export const hasShrineEffect = (t) => shrineEffects().some((e) => e.t === t);
+
 function buffEffects(b) {
   if (b.kind === 'event') return EVENT_BY_ID[b.id]?.effects || [];
   if (b.kind === 'gift') return GIFT_BY_ID[b.id]?.effects || [];
@@ -73,7 +89,16 @@ function collectEffects() {
     for (const id of Object.keys(ls.upgrades)) if (ls.upgrades[id] && UPGRADE_BY_ID[id]) fx.push(...UPGRADE_BY_ID[id].effects);
     for (const id of Object.keys(ls.features)) if (ls.features[id] && FEATURE_BY_ID[id]) fx.push(...FEATURE_BY_ID[id].effects);
   }
-  for (const b of state.buffs) fx.push(...buffEffects(b));
+  const shrine = shrineEffects();
+  fx.push(...shrine);
+  const noHarm = shrine.some((e) => e.t === 'noHarm');
+  for (const b of state.buffs) {
+    for (const e of buffEffects(b)) {
+      // Kind Fortune removes the slowing half of events.
+      if (noHarm && b.kind === 'event' && typeof e.x === 'number' && e.x < 1 && e.t !== 'helperDiscount') continue;
+      fx.push(e);
+    }
+  }
   return fx;
 }
 
@@ -98,13 +123,16 @@ function derive() {
   const out = {
     globalMult: 1, offlineHours: BASE_OFFLINE_HOURS, helperDiscount: 1, upgradeDiscount: 1,
     tapEcho: 0, eventDuration: 1, eventFreq: 1, eventPreview: false,
+    holdTap: false, giftMult: 1,
   };
   const each = (loc, fn) => (loc === '*' ? locIds : [loc]).forEach(fn);
   for (const e of fx) {
     switch (e.t) {
       case 'tapMult': each(e.loc, (l) => { tapMult[l] *= e.x; }); break;
       case 'helperMult': each(e.loc, (l) => { helperMult[l] *= e.x; }); break;
-      case 'tapRatePct': tapRatePct[e.loc] += e.x; break;
+      case 'tapRatePct': each(e.loc, (l) => { tapRatePct[l] += e.x; }); break;
+      case 'holdTap': out.holdTap = true; break;
+      case 'giftMult': out.giftMult *= e.x; break;
       case 'globalMult': out.globalMult *= e.x; break;
       case 'offlineHours': out.offlineHours += e.x; break;
       case 'helperDiscount': out.helperDiscount *= e.x; break;
@@ -116,7 +144,8 @@ function derive() {
     }
   }
   out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
-  const g = out.globalMult * out.achievementMult;
+  out.stoneMult = 1 + state.prestige.stones * STONE_BONUS;
+  const g = out.globalMult * out.achievementMult * out.stoneMult;
 
   const helperRate = {};
   const locRate = {};
@@ -186,6 +215,7 @@ function pay(cost) {
 export function gain(resource, amt) {
   state.res[resource] += amt;
   state.earned[resource] += amt;
+  state.runEarned[resource] += amt;
 }
 
 // Returns { value, echo } — echo means the tap counted twice.
@@ -251,8 +281,18 @@ export function unlockLocation(locId) {
   if (!ls || ls.unlocked || !canAfford(l.unlockCost)) return false;
   pay(l.unlockCost);
   ls.unlocked = true;
+  applyStartHelpers(locId);
   invalidate();
   return true;
+}
+
+// Welcome Party: a newly opened place starts with a few helpers.
+function applyStartHelpers(locId) {
+  if (!hasShrineEffect('startHelpers')) return;
+  const list = HELPERS.filter((h) => h.loc === locId);
+  const ls = state.locs[locId];
+  ls.helpers[list[0].id] = Math.max(ls.helpers[list[0].id] || 0, 10);
+  ls.helpers[list[1].id] = Math.max(ls.helpers[list[1].id] || 0, 5);
 }
 
 // Advance helper production by `sec` seconds.
@@ -360,16 +400,99 @@ export function applyGift(id) {
     const gained = {};
     for (const l of LOCATIONS) {
       if (!state.locs[l.id].unlocked) continue;
-      const amt = Math.max(dd.locRate[l.id] * 600, dd.tapValue[l.id] * 100);
+      const amt = Math.max(dd.locRate[l.id] * 600, dd.tapValue[l.id] * 100) * dd.giftMult;
       gain(l.resource, amt);
       gained[l.resource] = (gained[l.resource] || 0) + amt;
     }
     return { gained };
   }
   removeBuff(id);
-  state.buffs.push({ id, kind: 'gift', ends: state.clock + gift.dur, dur: gift.dur });
+  const dur = gift.dur * d().giftMult;
+  state.buffs.push({ id, kind: 'gift', ends: state.clock + dur, dur });
   invalidate();
   return {};
+}
+
+// ---------- prestige ----------
+
+export function runValue() {
+  let v = 0;
+  for (const [r, w] of Object.entries(RESOURCE_WEIGHT)) v += (state.runEarned[r] || 0) * w;
+  return v;
+}
+
+export function stonesForRun() {
+  return Math.floor(STONE_FACTOR * Math.pow(runValue() / STONE_SCALE, STONE_EXP));
+}
+
+// Run value needed for the next whole stone (for a progress bar).
+export function valueForStones(n) {
+  return STONE_SCALE * Math.pow(n / STONE_FACTOR, 1 / STONE_EXP);
+}
+
+export function canPrestige() {
+  return !!state.locs[PRESTIGE_REQ_LOC]?.unlocked && stonesForRun() >= 1;
+}
+
+export const isFinaleNext = () => state.prestige.count + 1 === FINALE_PRESTIGE;
+export const inEndless = () => state.prestige.count >= FINALE_PRESTIGE;
+
+// Reset the realm and keep Moonstones. Returns { stones, finale }.
+export function prestige() {
+  if (!canPrestige()) return null;
+  const stones = stonesForRun();
+  const P = state.prestige;
+  P.count++;
+  P.stones += stones;
+  P.lifetimeStones += stones;
+  const runMs = Date.now() - P.runStart;
+  P.fastestRunMs = P.fastestRunMs ? Math.min(P.fastestRunMs, runMs) : runMs;
+  P.runStart = Date.now();
+  const finale = P.count === FINALE_PRESTIGE;
+
+  // Fresh realm, keeping everything that lasts across runs.
+  const fresh = freshState();
+  const keep = {
+    created: state.created, achievements: state.achievements, stats: state.stats, settings: state.settings,
+    earned: state.earned, prestige: P, clock: state.clock,
+    ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
+  };
+  state = Object.assign(fresh, keep);
+  invalidate();
+
+  const fx = shrineEffects();
+  for (const e of fx) {
+    if (e.t === 'keepLocs') for (const l of e.locs) state.locs[l].unlocked = true;
+    if (e.t === 'startRes') { state.res.dewdrops += 25000; state.res.glowspores += 2500; }
+  }
+  if (fx.some((e) => e.t === 'keepFirstFeature')) {
+    for (const l of LOCATIONS) {
+      const first = FEATURES.find((f) => f.loc === l.id);
+      if (first) state.locs[l.id].features[first.id] = true;
+    }
+  }
+  for (const l of LOCATIONS) if (state.locs[l.id].unlocked) applyStartHelpers(l.id);
+  invalidate();
+  return { stones, finale };
+}
+
+export function shrineAvailable(u) {
+  const P = state.prestige;
+  if (P.shrine[u.id]) return false;
+  if (u.minPrestige && P.count < u.minPrestige) return false;
+  const path = SHRINE.filter((x) => x.path === u.path);
+  const i = path.indexOf(u);
+  return i === 0 || !!P.shrine[path[i - 1].id];
+}
+
+export function buyShrine(id) {
+  const u = SHRINE_BY_ID[id];
+  const P = state.prestige;
+  if (!shrineAvailable(u) || P.stones < u.cost) return false;
+  P.stones -= u.cost;
+  P.shrine[id] = true;
+  invalidate();
+  return true;
 }
 
 // ---------- achievements ----------
@@ -426,7 +549,8 @@ export function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
-    setState(migrate(mergeDefaults(freshState(), JSON.parse(raw))));
+    const parsed = JSON.parse(raw);
+    setState(migrate(mergeDefaults(freshState(), parsed), parsed.v));
     return true;
   } catch { return false; }
 }
@@ -459,6 +583,6 @@ export function importCode(code) {
   if (!parsed || typeof parsed !== 'object' || !parsed.res || !parsed.locs) {
     throw new Error('The save code is missing game data.');
   }
-  setState(migrate(mergeDefaults(freshState(), parsed)));
+  setState(migrate(mergeDefaults(freshState(), parsed), parsed.v));
   save();
 }

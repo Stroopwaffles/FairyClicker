@@ -442,3 +442,30 @@ function shimmer({ out, verb, every }) {
     tone({ freq: f, attack: 0.2, decay: 1.5, peak: 0.01, dest: out, wet: 1, verb, pan: rnd(-0.9, 0.9) });
   }, [0.5, 1.6]);
 }
+
+// The finale: a short piece that swells as the full moon rises (~22 seconds).
+export function finale() {
+  if (!ctx || prefs.muted) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  const back = wantedLocation;
+  setLocation(null); // let the ambience fade so the piece can breathe
+  const prog = [
+    [50, 57, 62, 66], [47, 54, 59, 62], [43, 50, 55, 59], [45, 52, 57, 61],
+    [50, 57, 62, 66], [43, 55, 59, 64], [45, 57, 61, 64], [50, 57, 62, 66, 69],
+  ];
+  const beat = 0.42;
+  prog.forEach((chord, ci) => {
+    const t0 = ci * beat * 6 + 0.5;
+    const last = ci === prog.length - 1;
+    // Warm chord underneath
+    chord.forEach((m) => tone({ freq: mtof(m), type: 'triangle', start: t0, attack: 0.6, decay: last ? 7 : beat * 6, peak: 0.035, dest: musicBus, wet: 0.5, verb: sfxVerb }));
+    // Rising arpeggio on top
+    const arp = [...chord.slice(1).map((m) => m + 12), chord[1] + 24, chord[2] + 24];
+    arp.forEach((m, i) => tone({ freq: mtof(m), start: t0 + i * beat, decay: 1.4, peak: 0.06 + ci * 0.006, dest: musicBus, wet: 0.7, verb: sfxVerb, pan: (i % 2 ? 0.3 : -0.3) }));
+    if (last) {
+      for (let i = 0; i < 16; i++) tone({ freq: mtof(pick([86, 88, 90, 93, 95, 98])), start: t0 + 1 + i * 0.18, decay: 1.2, peak: 0.03, dest: musicBus, wet: 0.9, verb: sfxVerb, pan: rnd(-0.8, 0.8) });
+    }
+  });
+  // Bring the location ambience back afterwards.
+  setTimeout(() => { if (wantedLocation === null) setLocation(back); }, 26000);
+}

@@ -317,6 +317,89 @@ textarea { font: 500 13px/1.4 ui-monospace, Menlo, Consolas, monospace; user-sel
 .ach-name { font-size: .92rem; }
 .ach-desc { font-size: .78rem; color: var(--muted); font-weight: 500; }
 
+/* ---------- moon button & shrine ---------- */
+.moon-btn {
+  flex: none; display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 4px 14px 4px 6px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.moon-btn .moon-svg { width: 36px; height: 36px; }
+.moon-btn.ready { border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(255, 217, 138, .35), 0 0 18px rgba(255, 217, 138, .35); animation: pulse 2.4s ease-in-out infinite; }
+.moon-svg.dim { opacity: .35; }
+.moon-svg.tiny { width: 18px; height: 18px; vertical-align: -4px; }
+.moon-svg.small { width: 26px; height: 26px; vertical-align: -7px; }
+.moon-row { display: flex; justify-content: center; gap: 10px; }
+.moon-row .moon-svg { width: 44px; height: 44px; }
+.moon-row .moon-svg.lit { filter: drop-shadow(0 0 8px rgba(255, 244, 200, .6)); }
+.title-moons { margin: -10px 0 22px; color: var(--accent-2); font-size: .95rem; }
+.title-moons .moon-row { margin-bottom: 6px; }
+
+.shrine { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: #0a0920; padding-top: var(--safe-top); }
+.shrine-sky { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% -10%, #3a2f8a 0%, #15123d 45%, #0a0920 80%); pointer-events: none; }
+.shrine-head { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; }
+.shrine-head h2 { font-family: var(--font-display); margin: 0; font-size: 1.5rem; color: #fff1cc; }
+.shrine-body { position: relative; flex: 1; overflow-y: auto; padding: 0 18px calc(var(--safe-bottom) + 20px); display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 18px; align-items: start; }
+.prestige-card { position: sticky; top: 0; background: rgba(35, 35, 97, .8); border: 1px solid rgba(255, 217, 138, .35); border-radius: 22px; padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+.prestige-card .night { font-family: var(--font-display); font-size: 1.15rem; color: var(--accent-2); }
+.stones-held { font-size: 1.1rem; }
+.stones-held b { font-size: 1.5rem; color: #fff1cc; }
+.stones-held small { color: var(--good); font-size: .85rem; display: block; }
+.pc-explain { color: var(--muted); font-weight: 500; font-size: .88rem; margin: 0; }
+.pc-gain b { color: var(--accent-2); }
+.pc-bar { height: 8px; background: rgba(255, 255, 255, .1); border-radius: 8px; overflow: hidden; }
+.pc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #a77bff, #ffd98a); transition: width .3s; }
+.pc-next { color: var(--muted); font-size: .85rem; font-weight: 500; }
+.pc-details { text-align: left; color: var(--muted); font-size: .85rem; font-weight: 500; }
+.pc-details summary { cursor: pointer; color: var(--text); padding: 6px 0; }
+.pc-details p { margin: 6px 0; }
+.shrine-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (min-width: 1400px) { .shrine-paths { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .shrine-paths { grid-template-columns: 1fr; } }
+.spath h3 { margin: 4px 4px 10px; font-size: 1.05rem; display: flex; align-items: baseline; gap: 6px; }
+.spath h3 small { color: var(--muted); font-weight: 500; font-size: .8rem; }
+.spath.capstone { grid-column: 1 / -1; }
+.scard { display: flex; align-items: center; gap: 10px; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 8px; }
+.scard .sdesc { color: var(--muted); font-size: .82rem; font-weight: 500; margin-top: 2px; }
+.scard.owned { border-color: rgba(159, 242, 184, .4); background: linear-gradient(180deg, #24305e, #1f2a55); }
+.scard.locked { opacity: .5; }
+.capstone .scard { border-color: rgba(255, 217, 138, .5); background: linear-gradient(90deg, #3a2f7a, #2a2364); }
+.sbuy { flex: none; min-width: 84px; min-height: 48px; border-radius: 12px; border: 1px solid #b996ff; background: linear-gradient(180deg, #6d4fd0, #4b3599); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.sbuy:disabled { background: var(--panel-2); border-color: var(--line); color: var(--muted); cursor: default; }
+.scard .check { min-width: 0; padding: 0 10px; }
+
+.moonrise-flash { position: fixed; inset: 0; z-index: 55; pointer-events: none; display: grid; place-items: center; background: radial-gradient(circle, rgba(255, 244, 200, .5), rgba(10, 9, 32, 0) 60%); animation: flash 2.6s ease-out forwards; }
+.moonrise-flash .flash-moon { width: 40vmin; height: 40vmin; animation: rise 2.6s ease-out forwards; }
+@keyframes flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes rise { from { transform: translateY(20vh) scale(.8); } to { transform: translateY(-5vh) scale(1); } }
+
+/* ---------- finale ---------- */
+.finale { position: fixed; inset: 0; z-index: 70; overflow: hidden; background: #050414; }
+.finale-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #050414 0%, #120f3a 60%, #2a1f5a 100%); transition: background 1s; }
+.finale.play .finale-sky { animation: dawnSky 16s ease-in-out forwards; }
+@keyframes dawnSky { to { background: linear-gradient(180deg, #1b1650 0%, #3b3192 55%, #8a6bc0 100%); } }
+.finale-stars { position: absolute; inset: 0; opacity: 0; background-image:
+  radial-gradient(1.5px 1.5px at 10% 20%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 30% 70%, #fff 50%, transparent 51%),
+  radial-gradient(2px 2px at 55% 35%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 80% 60%, #fff 50%, transparent 51%),
+  radial-gradient(2px 2px at 90% 15%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 65% 85%, #fff 50%, transparent 51%);
+  background-size: 260px 260px; }
+.finale.play .finale-stars { animation: fadeIn 4s ease-out forwards, twinkle 4s ease-in-out 4s infinite alternate; }
+.finale-moon { position: absolute; left: 50%; top: 100%; width: 30vmin; height: 30vmin; margin-left: -15vmin; border-radius: 50%;
+  background: radial-gradient(circle at 40% 38%, #fffef4, #f3e8bf 65%, #d9cc9c); box-shadow: 0 0 80px 40px rgba(255, 244, 200, .35), 0 0 200px 80px rgba(201, 167, 255, .25); }
+.finale.play .finale-moon { animation: moonUp 14s cubic-bezier(.2, .7, .2, 1) 1s forwards; }
+@keyframes moonUp { to { top: 5%; } }
+.finale-land { position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+  background: radial-gradient(ellipse 60% 100% at 20% 100%, #12233a 60%, transparent 61%), radial-gradient(ellipse 70% 90% at 80% 100%, #0e1c30 60%, transparent 61%), linear-gradient(transparent 40%, #0a1424 41%); }
+.finale-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 24px 20px calc(var(--safe-bottom) + 28px); text-align: center; overflow-y: auto; }
+.finale-text p { margin: 4px 0; font-size: clamp(1rem, 2.4vw, 1.35rem); color: #f6efff; text-shadow: 0 2px 12px #000; opacity: 0; animation: fadeIn 1.6s ease-out forwards; }
+.finale-stats { opacity: 0; animation: fadeIn 1.6s ease-out forwards; margin-top: 14px; background: rgba(20, 16, 60, .82); border: 1px solid rgba(255, 217, 138, .45); border-radius: 22px; padding: 18px 22px; width: min(460px, 100%); backdrop-filter: blur(6px); }
+.finale-stats h2 { font-family: var(--font-display); color: #fff1cc; margin: 0 0 12px; }
+.finale-stats .thanks { color: var(--muted); font-size: .95rem; text-shadow: none; opacity: 1; animation: none; margin: 14px 0; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (orientation: portrait), (max-width: 760px) {
+  .shrine-body { grid-template-columns: 1fr; }
+  .prestige-card { position: static; }
+}
+
 /* ---------- panel ---------- */
 .panel-tabs { display: grid; grid-template-columns: repeat(4, 1fr) 52px; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
 .ptab {
@@ -415,6 +498,9 @@ textarea { font: 500 13px/1.4 ui-monospace, Menlo, Consolas, monospace; user-sel
   .loc-tabs { padding: 8px; }
   .loc-tab { min-height: 42px; padding: 6px 12px; font-size: .9rem; }
   .ptab { font-size: .82rem; }
+  .moon-btn { min-height: 42px; padding: 3px 10px 3px 4px; }
+  .moon-btn .moon-svg { width: 30px; height: 30px; }
+  .shrine-body { padding: 0 10px 20px; }
   .card { padding: 10px; gap: 8px; }
   .buy, .check { min-width: 108px; }
   .scene-name { font-size: 1rem; }

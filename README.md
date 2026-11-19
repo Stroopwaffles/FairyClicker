@@ -48,9 +48,22 @@ python3 -m http.server 8000
 - New tap sounds and ambience for each location, plus sounds for events and achievements
 - Version 1 saves carry over automatically
 
-## Roadmap
+### Version 3: prestige, the Moon Shrine and the finale
 
-- **Version 3:** prestige (Moonstones and the Moon Shrine), a finale after 5 prestiges with endless mode afterwards, and balancing
+- **Begin a new night (prestige):** once the Starfall Meadow is open, reset the realm to earn **Moonstones**. The more you gathered this run, the more you get. Each unspent Moonstone adds +1% to everything
+- **Moon Shrine:** 17 permanent upgrades in four paths (Tides for tapping, Kinship for helpers, Wayfinding for progress, Fate for events), plus a final capstone that appears after the 4th night. Highlights include hold-to-tap, starting helpers, and keeping places unlocked
+- **Moon phases:** the moon in the top bar and on the title screen fills in with each night. It glows when a new night is worth starting
+- **The finale:** on the 5th prestige the full moon rises over the restored realm, with its own music and a summary of your journey. Afterwards the game continues in **Endless Night**
+- 8 new moon achievements (60 in total)
+- **Balancing:** tuned with a pacing simulator so a casual player (about 80 minutes a day) reaches the finale in about 6 days, and each night runs faster than the last
+
+## Balancing tool
+
+`tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:
+
+```sh
+POLICY=double node tools/sim.mjs 10 3   # 10 days, 3 taps per second
+```
 
 ## Code layout
 
@@ -58,9 +71,10 @@ python3 -m http.server 8000
 |---|---|
 | `index.html` | Page shell: title screen and game screen |
 | `css/style.css` | Styles and responsive layout |
-| `js/data.js` | All game content: locations, helpers, upgrades, features, events |
+| `js/data.js` | All game content: locations, helpers, upgrades, features, events, Moon Shrine |
 | `js/achievements.js` | Achievement list and unlock conditions |
 | `js/game.js` | State, formulas, saving and loading (no DOM) |
 | `js/scenes.js` | SVG artwork for each location |
-| `js/audio.js` | Generated sound effects and ambience |
+| `js/audio.js` | Generated sound effects, ambience and finale music |
+| `tools/sim.mjs` | Pacing simulator for balancing |
 | `js/main.js` | UI, input and the game loop |

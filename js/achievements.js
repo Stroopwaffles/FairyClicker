@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS } from './data.js';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
@@ -60,6 +60,16 @@ add({ id: 'eventall', group: 'Events', name: 'Seen It All', desc: 'Experience ev
 add({ id: 'stars25', group: 'Events', name: 'Star Catcher', desc: 'Catch 25 shooting stars', check: (s) => s.stats.starsCaught >= 25 });
 add({ id: 'fairy5', group: 'Events', name: 'Fairy Friend', desc: 'Catch the wandering fairy 5 times', check: (s) => s.stats.fairiesCaught >= 5 });
 
+// The Moon
+add({ id: 'newmoon', group: 'The Moon', name: 'New Moon', desc: 'Prestige for the first time', check: (s) => s.prestige.count >= 1 });
+add({ id: 'halfmoon', group: 'The Moon', name: 'Half Moon', desc: 'Prestige 3 times', check: (s) => s.prestige.count >= 3 });
+add({ id: 'realmrestored2', group: 'The Moon', name: 'The Full Moon Rises', desc: 'Restore the fairy realm (prestige 5 times)', check: (s) => s.prestige.count >= 5 });
+add({ id: 'endless10', group: 'The Moon', name: 'Endless Night', desc: 'Prestige 10 times', check: (s) => s.prestige.count >= 10 });
+add({ id: 'shrine1', group: 'The Moon', name: 'First Offering', desc: 'Buy a Moon Shrine upgrade', check: (s) => Object.keys(s.prestige.shrine).length >= 1 });
+add({ id: 'shrinepath', group: 'The Moon', name: 'Devoted', desc: 'Complete a whole Moon Shrine path', check: (s) => ['tides', 'kinship', 'way', 'fate'].some((p) => SHRINE.filter((u) => u.path === p).every((u) => s.prestige.shrine[u.id])) });
+add({ id: 'shrineall', group: 'The Moon', name: 'Keeper of the Shrine', desc: 'Buy every Moon Shrine upgrade', check: (s) => SHRINE.every((u) => s.prestige.shrine[u.id]) });
+add({ id: 'stones100', group: 'The Moon', name: 'Moonstone Hoard', desc: 'Earn 100 Moonstones in total', check: (s) => s.prestige.lifetimeStones >= 100 });
+
 // Secrets
 add({ id: 'frenzy', group: 'Secrets', secret: true, name: 'Tap Frenzy', desc: 'Tap 40 times in 5 seconds', check: (s) => s.stats.frenzy });
 add({ id: 'echoes', group: 'Secrets', secret: true, name: 'Echo… echo…', desc: 'Have 100 taps echo', check: (s) => s.stats.echoes >= 100 });
@@ -67,4 +77,4 @@ add({ id: 'nightowl', group: 'Secrets', secret: true, name: 'Night Owl', desc: '
 add({ id: 'patience', group: 'Secrets', secret: true, name: 'Patience of the Moon', desc: 'Return after your helpers have worked the full offline time', check: (s) => s.stats.fullOffline });
 
 export const ACHIEVEMENTS = list;
-export const ACHIEVEMENT_GROUPS = ['Tapping', 'Gathering', 'Helpers', 'Places', 'Events', 'Secrets'];
+export const ACHIEVEMENT_GROUPS = ['Tapping', 'Gathering', 'Helpers', 'Places', 'Events', 'The Moon', 'Secrets'];
