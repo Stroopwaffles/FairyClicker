@@ -57,8 +57,10 @@ add({ id: 'event1', group: 'Events', name: 'Something Stirs', desc: 'Experience 
 add({ id: 'event10', group: 'Events', name: 'Eventful Nights', desc: 'Experience 10 events', check: (s) => s.ev.count >= 10 });
 add({ id: 'event50', group: 'Events', name: 'Weather Watcher', desc: 'Experience 50 events', check: (s) => s.ev.count >= 50 });
 add({ id: 'eventall', group: 'Events', name: 'Seen It All', desc: 'Experience every kind of event', check: (s) => EVENTS.filter((e) => e.id !== 'bloodmoon').every((e) => s.ev.seen[e.id]) });
-add({ id: 'bloodmoon1', group: 'Events', name: 'Once in a Blood Moon', desc: 'Witness the rare Blood Moon', check: (s) => s.ev.seen.bloodmoon >= 1 });
-add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single Blood Moon', check: (s) => s.blood.best >= 300 });
+add({ id: 'bloodmoon1', group: 'Events', name: 'Once in a Blood Moon', desc: 'Witness the Blood Moon', check: (s) => s.ev.seen.bloodmoon >= 1 });
+add({ id: 'gateway', group: 'Events', name: 'Between Worlds', desc: 'Open the Moonlit Gateway', check: (s) => s.gates.owned });
+add({ id: 'castle10', group: 'Events', name: 'Frequent Guest', desc: 'Visit the Crimson Castle 10 times', check: (s) => (s.gates.visits.castle || 0) >= 10 });
+add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single castle visit', check: (s) => s.blood.best >= 300 });
 add({ id: 'stars25', group: 'Events', name: 'Star Catcher', desc: 'Catch 25 shooting stars', check: (s) => s.stats.starsCaught >= 25 });
 add({ id: 'fairy5', group: 'Events', name: 'Fairy Friend', desc: 'Catch the wandering fairy 5 times', check: (s) => s.stats.fairiesCaught >= 5 });
 

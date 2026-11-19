@@ -6,6 +6,7 @@ import {
   RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
   SHRINE, SHRINE_BY_ID, BLOOD_RATE_SECONDS, BLOOD_RATE_TAPS,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
+  GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
 } from './data.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -34,6 +35,7 @@ export function freshState() {
     achievements: {},         // id -> timestamp earned
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
     workshop: {},             // id -> level (resets on prestige)
+    gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1, steward: true, stewardMode: 'cheapest' },
     stats2: { crits: 0, lotuses: 0, handTaps: 0 },
@@ -336,6 +338,7 @@ export function produce(sec) {
 function eventEligible(e) {
   if (!e.req) return true;
   if (e.req.loc && !state.locs[e.req.loc]?.unlocked) return false;
+  if (e.req.gateway && !state.gates.owned) return false;
   if (e.req.feature) {
     const f = FEATURE_BY_ID[e.req.feature];
     if (!state.locs[f.loc].features[f.id]) return false;
@@ -368,7 +371,10 @@ function startEvent(id) {
   state.ev.count++;
   state.ev.seen[id] = (state.ev.seen[id] || 0) + 1;
   state.ev.lastId = id;
-  if (id === 'bloodmoon') state.blood.drops = 0;
+  if (id === 'bloodmoon') {
+    const cd = state.gates.cd.castle || 0;
+    state.gates.cd.castle = Math.max(Date.now(), cd - BLOOD_MOON_COOLDOWN_CUT_MIN * 60000);
+  }
   invalidate();
 }
 
@@ -387,7 +393,6 @@ export function advance(sec) {
   if (expired.length) {
     state.buffs = state.buffs.filter((b) => state.clock < b.ends);
     happened.ended.push(...expired.map((b) => b.id));
-    if (expired.some((b) => b.id === 'bloodmoon')) endBloodMoon();
     invalidate();
   }
   if (state.ev.nextId == null || !eventEligible(EVENT_BY_ID[state.ev.nextId] || {})) {
@@ -406,10 +411,13 @@ export function advance(sec) {
 
 // ---------- Blood Moon ----------
 
+const bloodMoonMult = () => (hasBuff('bloodmoon') ? 2 : 1);
+
 export function tapBlood() {
+  if (!visitActive()) return { value: 0, echo: false, crit: false };
   const echo = Math.random() < d().tapEcho;
   const crit = Math.random() < d().critChance;
-  const v = d().bloodPerTap * (echo ? 2 : 1) * (crit ? CRIT_MULT : 1);
+  const v = d().bloodPerTap * bloodMoonMult() * (echo ? 2 : 1) * (crit ? CRIT_MULT : 1);
   if (echo) state.stats.echoes++;
   if (crit) state.stats2.crits++;
   state.blood.drops += v;
@@ -420,18 +428,46 @@ export function tapBlood() {
 
 // Tapping Dracula in a castle window: a big burst of drops.
 export function biteBack() {
-  const v = 40 * d().bloodPerTap;
+  if (!visitActive()) return 0;
+  const v = 40 * d().bloodPerTap * bloodMoonMult();
   state.blood.drops += v;
   state.blood.total += v;
   state.blood.draculas++;
   return v;
 }
 
-function endBloodMoon() {
+// ---------- Gateways ----------
+
+export const visitActive = () => !!state.gates.visit && Date.now() < state.gates.visit.ends;
+export const visitLeftMs = () => (state.gates.visit ? Math.max(0, state.gates.visit.ends - Date.now()) : 0);
+export const gateReadyInMs = (id) => Math.max(0, (state.gates.cd[id] || 0) - Date.now());
+
+export function canEnterGate(id) {
+  const g = GATE_BY_ID[id];
+  return state.gates.owned && g && !g.soon && !state.gates.visit && state.blood.pending <= 0 && gateReadyInMs(id) === 0;
+}
+
+export function enterGate(id) {
+  if (!canEnterGate(id)) return false;
+  const g = GATE_BY_ID[id];
+  state.gates.visit = { gate: id, ends: Date.now() + g.visitSec * 1000 };
+  state.gates.visits[id] = (state.gates.visits[id] || 0) + 1;
+  state.blood.drops = 0;
+  return true;
+}
+
+// Call regularly: ends a visit whose time is up. Returns true if one just ended.
+export function checkVisitEnd(now = Date.now()) {
+  const v = state.gates.visit;
+  if (!v || now < v.ends) return false;
+  const g = GATE_BY_ID[v.gate];
   const B = state.blood;
   B.best = Math.max(B.best, B.drops);
   B.pending += B.drops;
   B.drops = 0;
+  state.gates.cd[v.gate] = v.ends + g.cooldownMin * 60000;
+  state.gates.visit = null;
+  return true;
 }
 
 // How much one Blood Drop is worth in each unlocked resource.
@@ -494,7 +530,8 @@ export function applyGift(id) {
 
 // ---------- Workshop ----------
 
-export const wl = (id) => state.workshop[id] || 0; // workshop level
+// Workshop level. Items marked `keep` (the Gateway) are stored permanently instead.
+export const wl = (id) => (WORKSHOP_BY_ID[id]?.keep ? (state.gates.owned ? 1 : 0) : state.workshop[id] || 0);
 
 // Cost of buying level `level + 1`. Higher levels also ask for later resources.
 export function workshopCost(id, level = wl(id)) {
@@ -522,7 +559,8 @@ export function buyWorkshop(id) {
   const cost = workshopCost(id);
   if (!canAfford(cost)) return false;
   pay(cost);
-  state.workshop[id] = wl(id) + 1;
+  if (WORKSHOP_BY_ID[id].keep) state.gates.owned = true;
+  else state.workshop[id] = wl(id) + 1;
   invalidate();
   return true;
 }
@@ -608,7 +646,7 @@ export function valueForStones(n) {
 }
 
 export function canPrestige() {
-  if (hasBuff('bloodmoon') || state.blood.pending > 0) return false;
+  if (state.gates.visit || state.blood.pending > 0) return false;
   return !!state.locs[PRESTIGE_REQ_LOC]?.unlocked && stonesForRun() >= 1;
 }
 
@@ -619,7 +657,6 @@ export const inEndless = () => state.prestige.count >= FINALE_PRESTIGE;
 export function prestige() {
   if (!canPrestige()) return null;
   const stones = stonesForRun();
-  if (hasBuff('bloodmoon')) endBloodMoon();
   const P = state.prestige;
   P.count++;
   P.stones += stones;
@@ -632,7 +669,7 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood,
+    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates,
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

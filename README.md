@@ -92,6 +92,14 @@ A new **Workshop** tab of realm-wide upgrades (they reset when you prestige):
 
 During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him before he vanishes for a big burst of Blood Drops. Five new achievements go with these.
 
+### Version 3.4: the Gate Room
+
+- **🌀 Moonlit Gateway** (Workshop, one-time): opens the **Gate Room**, a hall of portals reached from the start of the place tabs. Unlike other Workshop items, it **stays through prestiges**
+- **Crimson Gate:** step through for a 75-second visit to the Crimson Castle. Tap the blood pool, catch Dracula in the windows, then exchange your Blood Drops when the gate pulls you home. The gate then rests for 30 minutes. Cooldowns run on real time, so they finish even while the game is closed
+- **Blood Moon (reworked):** no longer pulls you away. While it's up, the moon turns red, the Crimson Gate's cooldown drops by 15 minutes, and castle visits give ×2 Blood Drops
+- Two sealed gates wait for future worlds
+- New achievements: *Between Worlds* and *Frequent Guest*
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:

@@ -510,6 +510,25 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .win { transition: fill .3s; }
 .win.red { fill: #8a0f22; }
 
+/* ---------- Gate Room ---------- */
+.loc-tab.gates { background: linear-gradient(180deg, #3a2f8a, #241d5e); border-color: #8f6ee6; }
+.loc-tab.gates.ready { box-shadow: 0 0 0 2px var(--accent-2) inset, 0 0 14px rgba(255, 217, 138, .35); }
+.loc-tab.gates.active { background: linear-gradient(180deg, #5a46c8, #3a2f8a); border-color: #c9a7ff; }
+.portal { cursor: pointer; }
+.portal.sealed { cursor: default; opacity: .7; }
+.portal.resting { cursor: default; }
+.portal.resting .portal-face { filter: saturate(.25) brightness(.6); }
+.portal.resting .swirl { animation-duration: 20s; opacity: .4; }
+.portal .swirl { animation: spin 6s linear infinite; }
+.portal .swirl.rev { animation-direction: reverse; animation-duration: 4s; }
+.portal:not(.sealed):not(.resting):hover .portal-face { filter: brightness(1.2); }
+.gate-intro { color: var(--muted); font-weight: 500; font-size: .9rem; margin: 0 4px 12px; }
+.gate-card .buy { min-width: 120px; }
+.gate-card.ready { border-color: rgba(255, 217, 138, .55); }
+.gate-card .gate-status { color: var(--accent-2); }
+.portal-flash { position: fixed; inset: 0; z-index: 56; pointer-events: none; background: radial-gradient(circle, var(--pc, #c9a7ff) 0%, rgba(10, 8, 30, .6) 45%, transparent 75%); animation: portalFlash 1.2s ease-out forwards; }
+@keyframes portalFlash { 0% { opacity: 0; transform: scale(.3); } 35% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+
 /* ---------- panel ---------- */
 .panel-tabs { display: grid; grid-template-columns: repeat(5, 1fr) 46px; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
 .ptab {

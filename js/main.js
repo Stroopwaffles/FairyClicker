@@ -3,7 +3,7 @@ import {
   RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES, LOCATION_BY_ID,
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
-  WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY,
+  WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
 } from './data.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
@@ -93,7 +93,8 @@ function startGame() {
   A.init();
   showScreen('screen-game');
   started = true;
-  bloodView = G.hasBuff('bloodmoon');
+  bloodView = G.visitActive();
+  gateView = false;
   renderAll();
   if (G.state.blood.pending > 0) setTimeout(showBloodExchange, 400);
 }
@@ -143,11 +144,15 @@ function renderLocTabs() {
     else if (!ls.unlocked) cls.push('locked');
     if (G.state.active === l.id) cls.push('active');
     const right = l.soon ? '<span class="lk">· soon</span>' : !ls?.unlocked ? '<span class="lk">🔒</span>' : icon(l.resource);
-    if (bloodView && cls.includes('active')) cls.splice(cls.indexOf('active'), 1);
+    if ((bloodView || gateView) && cls.includes('active')) cls.splice(cls.indexOf('active'), 1);
     return `<button class="${cls.join(' ')}" data-loc="${l.id}" ${l.soon ? 'disabled' : ''}>${l.name} ${right}</button>`;
   }).join('');
-  if (G.hasBuff('bloodmoon')) {
-    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab courtyard${bloodView ? ' active' : ''}" data-loc="courtyard">🩸 Crimson Courtyard</button>`);
+  if (G.state.gates.owned) {
+    const ready = GATES.some((g) => !g.soon && G.canEnterGate(g.id));
+    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab gates${gateView ? ' active' : ''}${ready ? ' ready' : ''}" data-loc="gates">🌀 Gate Room</button>`);
+  }
+  if (G.visitActive()) {
+    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab courtyard${bloodView ? ' active' : ''}" data-loc="courtyard">🏰 Crimson Castle</button>`);
   }
   for (const b of $$('.loc-tab', nav)) b.addEventListener('click', () => switchLocation(b.dataset.loc));
   updateLocTabs();
@@ -161,19 +166,26 @@ function updateLocTabs() {
 
 function switchLocation(id) {
   if (id === 'courtyard') {
-    if (bloodView || !G.hasBuff('bloodmoon')) return;
-    bloodView = true;
+    if (bloodView || !G.visitActive()) return;
+    bloodView = true; gateView = false;
     renderAll();
     return;
   }
-  if (G.state.active === id && !bloodView) return;
-  bloodView = false;
+  if (id === 'gates') {
+    if (gateView || !G.state.gates.owned) return;
+    gateView = true; bloodView = false;
+    renderAll();
+    return;
+  }
+  if (G.state.active === id && !bloodView && !gateView) return;
+  bloodView = false; gateView = false;
   G.state.active = id;
   renderAll();
 }
 
 function renderScene() {
   if (bloodView) { renderCourtyard(); return; }
+  if (gateView) { renderGateRoom(); return; }
   const id = G.state.active;
   const l = LOCATION_BY_ID[id];
   const ls = G.state.locs[id];
@@ -211,7 +223,11 @@ function renderScene() {
 }
 function updateSceneRate() {
   if (bloodView) {
-    $('#scene-rate').innerHTML = `🩸 ${fmt(G.state.blood.drops)} Blood Drops`;
+    $('#scene-rate').innerHTML = `🩸 ${fmt(G.state.blood.drops)} Blood Drops · back in ${fmtClock(G.visitLeftMs() / 1000)}`;
+    return;
+  }
+  if (gateView) {
+    $('#scene-rate').textContent = 'Choose a gate to step through';
     return;
   }
   const id = G.state.active;
@@ -287,18 +303,19 @@ function stopHold(e) {
 window.addEventListener('pointerup', stopHold);
 window.addEventListener('pointercancel', stopHold);
 
-const viewId = () => (bloodView ? 'courtyard' : G.state.active);
+const viewId = () => (bloodView ? 'courtyard' : gateView ? 'gates' : G.state.active);
 
 function onTap(e) {
   e.preventDefault();
   const id = viewId();
-  if (id === 'courtyard' ? !G.hasBuff('bloodmoon') : !G.state.locs[id].unlocked) return;
+  if (id === 'gates') return;
+  if (id === 'courtyard' ? !G.visitActive() : !G.state.locs[id].unlocked) return;
   if (G.d().holdTap && !holds.has(e.pointerId)) {
     const target = e.currentTarget, x = e.clientX, y = e.clientY, pid = e.pointerId;
     let first = true;
     holds.set(pid, setInterval(() => {
       if (first) { first = false; return; } // wait a moment so a normal tap isn't doubled
-      if (viewId() !== id || (id === 'courtyard' && !G.hasBuff('bloodmoon'))) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
+      if (viewId() !== id || (id === 'courtyard' && !G.visitActive())) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
       doTap(id, target, x, y);
     }, 166));
   }
@@ -355,10 +372,11 @@ function setTab(t) {
 }
 
 function renderPanel() {
-  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView);
+  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView && !gateView);
   const body = $('#panel-body');
   panelUpdaters = [];
   if (bloodView) { renderBloodPanel(body); return; }
+  if (gateView) { renderGatePanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
   if (!['settings', 'awards', 'workshop'].includes(tab) && !ls.unlocked) {
@@ -740,22 +758,20 @@ function onEventsChanged({ started, ended }) {
     const e = EVENT_BY_ID[id];
     A.eventStart(id);
     if (id === 'bloodmoon') {
-      bloodView = true;
       bloodChange = true;
       bloodFlash();
-      toast('🩸 The Blood Moon rises! You are drawn to a castle courtyard…');
+      toast(`🩸 The Blood Moon rises! The Crimson Gate's cooldown shrinks by ${BLOOD_MOON_COOLDOWN_CUT_MIN} min, and castle visits give ×2 Blood Drops`);
     } else {
       toast(`${e.icon} ${e.name}! ${e.desc}`);
     }
   }
   for (const id of ended) {
     if (id === 'fairy') toast('🧚 The fairy flutters away…');
-    if (id === 'bloodmoon') { bloodView = false; bloodChange = true; }
+    if (id === 'bloodmoon') bloodChange = true;
   }
   G.save();
   if (bloodChange) {
     renderAll();
-    if (G.state.blood.pending > 0) showBloodExchange();
     return;
   }
   renderEvents();
@@ -920,6 +936,7 @@ function renderWorkshop(body) {
         G.save();
         renderPanel(); // other cards can depend on this one (e.g. Almanac → Steward)
         renderHands();
+        if (w.keep) { renderLocTabs(); toast('🌀 The Gate Room is open: find it at the start of the place tabs'); }
         updateResBar();
         updateSceneRate();
         updatePanel();
@@ -982,7 +999,7 @@ function tickHands(dt) {
   const dd = G.d();
   if (!dd.hands || !$('#modal').hidden || !$('#shrine').hidden) return;
   const id = viewId();
-  if (id === 'courtyard' ? !G.hasBuff('bloodmoon') : !G.state.locs[id]?.unlocked) return;
+  if (id === 'gates' || (id === 'courtyard' ? !G.visitActive() : !G.state.locs[id]?.unlocked)) return;
   handAccum += dt * dd.handRate * dd.hands;
   let n = 0;
   while (handAccum >= 1 && n++ < 6) {
@@ -1033,7 +1050,7 @@ function tickStreak(dt) {
 let lotusTimer = 60;
 function tickLotus(dt) {
   const L = G.wl('lotus');
-  if (!L || bloodView || $('#event-layer .lotus')) return;
+  if (!L || bloodView || gateView || $('#event-layer .lotus')) return;
   lotusTimer -= dt;
   if (lotusTimer > 0) return;
   lotusTimer = LOTUS_EVERY[L - 1] * (0.7 + Math.random() * 0.6);
@@ -1047,7 +1064,7 @@ function tickLotus(dt) {
     <circle r="5" fill="#fff6c8"/><ellipse cy="12" rx="20" ry="4" fill="#3f8f5e"/></svg>`;
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault(); e.stopPropagation();
-    if (bloodView) return;
+    if (bloodView || gateView) return;
     const amt = G.catchLotus(G.state.active);
     A.lotus();
     const r = wrap.getBoundingClientRect();
@@ -1064,7 +1081,7 @@ function tickLotus(dt) {
 // --- Helper Steward: recruits at the place you're viewing ---
 let stewardAccum = 0;
 function tickSteward(dt) {
-  if (!G.wl('steward') || !G.state.settings.steward || bloodView) return;
+  if (!G.wl('steward') || !G.state.settings.steward || bloodView || gateView) return;
   stewardAccum += dt;
   if (stewardAccum < 2) return;
   stewardAccum = 0;
@@ -1103,7 +1120,7 @@ function hideDracula() {
   $$('#scene .win.red').forEach((w) => w.classList.remove('red'));
 }
 function tickDracula(dt) {
-  if (!bloodView || !G.hasBuff('bloodmoon') || $('#scene .dracula.show')) return;
+  if (!bloodView || !G.visitActive() || $('#scene .dracula.show')) return;
   draculaTimer -= dt;
   if (draculaTimer > 0) return;
   draculaTimer = 6 + Math.random() * 6;
@@ -1116,15 +1133,143 @@ function tickDracula(dt) {
   draculaHide = setTimeout(hideDracula, 1700);
 }
 
+// ---------- Gate Room ----------
+
+let gateView = false; // showing the Gate Room
+
+function gateSceneSVG() {
+  const slots = [[220, 'soon1'], [500, 'castle'], [780, 'soon2']];
+  const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 1000}" cy="${(i * 53) % 260}" r="${(i % 3) * 0.6 + 0.6}" fill="#fff" opacity=".6"/>`).join('');
+  return `<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="gr-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0a26"/><stop offset="1" stop-color="#1c1846"/></linearGradient>
+      <linearGradient id="gr-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2550"/><stop offset="1" stop-color="#110e2a"/></linearGradient>
+      <radialGradient id="gr-castle"><stop offset="0" stop-color="#ff6a7a"/><stop offset=".55" stop-color="#a0142e"/><stop offset="1" stop-color="#3a0814"/></radialGradient>
+      <radialGradient id="gr-sealed"><stop offset="0" stop-color="#3a3a6a"/><stop offset="1" stop-color="#14122e"/></radialGradient>
+      <radialGradient id="gr-glow"><stop offset="0" stop-color="#c9a7ff" stop-opacity=".5"/><stop offset="1" stop-color="#c9a7ff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="1000" height="700" fill="url(#gr-bg)"/>
+    <g>${stars}</g>
+    <path d="M0 0 H1000 V90 Q500 30 0 90 Z" fill="#090720"/>
+    ${[90, 360, 640, 910].map((x) => `<rect x="${x - 22}" y="60" width="44" height="480" fill="#1a1640" stroke="#2e2864" stroke-width="3"/>`).join('')}
+    <rect y="540" width="1000" height="160" fill="url(#gr-floor)"/>
+    <ellipse cx="500" cy="610" rx="420" ry="40" fill="none" stroke="#c9a7ff" stroke-opacity=".25" stroke-width="2"/>
+    <g fill="none" stroke="#c9a7ff" stroke-opacity=".35" stroke-width="2" class="spin" style="transform-origin:500px 610px">
+      <ellipse cx="500" cy="610" rx="300" ry="28" stroke-dasharray="6 18"/>
+    </g>
+    ${slots.map(([x, id]) => {
+      const g = GATE_BY_ID[id];
+      const sealed = g.soon;
+      return `<g class="portal${sealed ? ' sealed' : ''}" data-gate="${id}">
+        <circle cx="${x}" cy="380" r="170" fill="url(#gr-glow)" class="${sealed ? '' : 'pulse'}"/>
+        <path d="M${x - 95} 560 V330 a95 95 0 0 1 190 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
+        <path class="portal-face" d="M${x - 78} 556 V334 a78 78 0 0 1 156 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
+        ${sealed
+          ? `<g opacity=".75"><path d="M${x - 14} 418 v-12 a14 14 0 0 1 28 0 v12" fill="none" stroke="#7a72c8" stroke-width="5"/>
+               <rect x="${x - 22}" y="416" width="44" height="34" rx="6" fill="#4a4290"/><circle cx="${x}" cy="430" r="5" fill="#14122e"/><rect x="${x - 2}" y="432" width="4" height="9" fill="#14122e"/></g>`
+          : `<g fill="none" stroke="#ffd6dc" stroke-opacity=".6">
+               <circle class="swirl" cx="${x}" cy="440" r="52" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 440px"/>
+               <circle class="swirl rev" cx="${x}" cy="440" r="32" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 440px"/></g>
+             <path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`}
+        <rect class="portal-hit" x="${x - 95}" y="235" width="190" height="325" fill="transparent"/>
+        <text x="${x}" y="592" text-anchor="middle" font-size="22" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
+        <text class="portal-status" x="${x}" y="618" text-anchor="middle" font-size="17" fill="#c9b6ff" font-family="Quicksand, sans-serif"></text>
+      </g>`;
+    }).join('')}
+  </svg>`;
+}
+
+function renderGateRoom() {
+  $('#scene').innerHTML = gateSceneSVG();
+  $('#scene-name').textContent = 'Gate Room';
+  const hint = $('#tap-hint');
+  hint.textContent = '';
+  hint.classList.add('faded');
+  $('#lock-overlay').hidden = true;
+  for (const p of $$('#scene .portal:not(.sealed)')) {
+    p.addEventListener('pointerdown', (e) => { e.preventDefault(); tryEnterGate(p.dataset.gate); });
+  }
+  updateSceneRate();
+  updateGates();
+}
+
+function renderGatePanel(body) {
+  body.innerHTML = `<div class="section-head"><h3>Gates to other worlds</h3></div>
+    <p class="gate-intro">Step through a gate for a short visit. When you come back, the gate rests for a while before it opens again, even while the game is closed.</p>
+    ${GATES.map((g) => g.soon
+      ? `<div class="card gate-card locked"><div class="ws-main"><div class="ws-icon">🔒</div><div><div class="name">Sealed Gate</div><div class="desc">A new world will open here in a future update.</div></div></div></div>`
+      : `<div class="card gate-card" data-gcard="${g.id}"><div class="ws-main"><div class="ws-icon">${g.icon}</div><div>
+          <div class="name">${g.world} <span class="lvl">${g.visitSec}s visit · ${g.cooldownMin} min rest</span></div>
+          <div class="desc">${g.blurb}</div><div class="meta gate-status"></div></div></div>
+          <button class="buy gate-enter" data-enter="${g.id}"><span class="lbl">Step through</span><span class="gate-btn-txt">Enter</span></button></div>`).join('')}`;
+  for (const b of $$('[data-enter]', body)) b.addEventListener('click', () => tryEnterGate(b.dataset.enter));
+  updateGates();
+}
+
+function gateStatus(id) {
+  if (G.state.gates.visit) return G.state.gates.visit.gate === id ? 'You are visiting now' : 'Finish your current visit first';
+  if (G.state.blood.pending > 0) return 'Exchange your Blood Drops first';
+  const ms = G.gateReadyInMs(id);
+  if (ms > 0) return `Resting · ready in ${fmtClock(ms / 1000)}`;
+  return 'Ready to enter';
+}
+
+function updateGates() {
+  for (const g of GATES) {
+    if (g.soon) continue;
+    const st = gateStatus(g.id);
+    const ok = G.canEnterGate(g.id);
+    const card = $(`[data-gcard="${g.id}"]`);
+    if (card) {
+      $('.gate-status', card).textContent = (G.hasBuff('bloodmoon') && g.id === 'castle' ? '🩸 Blood Moon: ×2 drops! · ' : '') + st;
+      $('[data-enter]', card).disabled = !ok;
+      card.classList.toggle('ready', ok);
+    }
+    const p = $(`#scene .portal[data-gate="${g.id}"]`);
+    if (p) {
+      p.classList.toggle('resting', !ok);
+      $('.portal-status', p).textContent = ok ? '✨ Ready' : G.gateReadyInMs(g.id) > 0 ? `Ready in ${fmtClock(G.gateReadyInMs(g.id) / 1000)}` : '';
+    }
+  }
+}
+
+function tryEnterGate(id) {
+  if (!G.enterGate(id)) { A.buy(); return; }
+  A.portal();
+  portalFlash(GATE_BY_ID[id].color);
+  bloodView = true; gateView = false;
+  G.save();
+  toast(`🌀 You step through the ${GATE_BY_ID[id].name}…`);
+  setTimeout(renderAll, 350);
+}
+
+function onVisitEnd() {
+  A.portal();
+  portalFlash('#c9a7ff');
+  bloodView = false;
+  gateView = G.state.gates.owned;
+  G.save();
+  renderAll();
+  if (G.state.blood.pending > 0) showBloodExchange();
+}
+
+function portalFlash(color) {
+  const f = document.createElement('div');
+  f.className = 'portal-flash';
+  f.style.setProperty('--pc', color);
+  document.body.append(f);
+  setTimeout(() => f.remove(), 1200);
+}
+
 // ---------- Blood Moon ----------
 
-let bloodView = false; // showing the Crimson Courtyard
+let bloodView = false; // visiting the Crimson Castle (courtyard scene)
 
 function renderCourtyard() {
   $('#scene').innerHTML = SCENES.courtyard();
   setupDracula();
   requestAnimationFrame(placeHandsAtRest);
-  $('#scene-name').textContent = 'Crimson Courtyard';
+  $('#scene-name').textContent = 'Crimson Castle';
   $('[data-tap]', $('#scene')).addEventListener('pointerdown', onTap);
   const hint = $('#tap-hint');
   hint.textContent = 'Tap the blood pool';
@@ -1142,11 +1287,12 @@ function bloodFlash() {
 
 function renderBloodPanel(body) {
   body.innerHTML = `<div class="blood-panel">
-    <h3>🩸 The Blood Moon</h3>
+    <h3>🏰 The Crimson Castle</h3>
     <div class="blood-count"><b id="bp-drops">0</b> Blood Drops</div>
     <div class="buff-bar"><i id="bp-bar"></i></div>
     <div class="bp-time" id="bp-time"></div>
-    <p>Tap the blood pool while the moon is red. When it sets, you choose which resource your drops become, at a generous rate. Right now one drop is worth:</p>
+    <p id="bp-moon"></p>
+    <p>Tap the blood pool and watch the windows. When the gate pulls you home, you choose which resource your drops become, at a generous rate. Right now one drop is worth:</p>
     <div class="bp-rates" id="bp-rates"></div>
   </div>`;
   updateBloodPanel();
@@ -1156,12 +1302,13 @@ function updateBloodPanel() {
   const el = $('#bp-drops');
   if (!el) return;
   el.textContent = fmt(G.state.blood.drops);
-  const b = G.state.buffs.find((x) => x.id === 'bloodmoon');
-  if (b) {
-    const left = Math.max(0, b.ends - G.state.clock);
-    $('#bp-bar').style.width = `${(left / b.dur) * 100}%`;
-    $('#bp-time').textContent = `The moon sets in ${fmtClock(left)}`;
+  const v = G.state.gates.visit;
+  if (v) {
+    const left = G.visitLeftMs() / 1000;
+    $('#bp-bar').style.width = `${(left / GATE_BY_ID[v.gate].visitSec) * 100}%`;
+    $('#bp-time').textContent = `The gate pulls you home in ${fmtClock(left)}`;
   }
+  $('#bp-moon').textContent = G.hasBuff('bloodmoon') ? '🩸 The Blood Moon is up: every drop counts double!' : '';
   const rates = G.bloodRates();
   $('#bp-rates').innerHTML = Object.entries(rates).map(([r, x]) =>
     `<div>${icon(r)} ${fmt(x, 100)} ${RESOURCES[r].name}</div>`).join('');
@@ -1173,7 +1320,7 @@ function showBloodExchange() {
   const m = $('#modal');
   const rates = G.bloodRates();
   m.innerHTML = `<div class="modal-card blood-card" role="dialog" aria-modal="true">
-    <h2>🩸 The Blood Moon sets</h2>
+    <h2>🌀 Back through the gate</h2>
     <p>You gathered <b>${fmt(pending)}</b> Blood Drops. Choose what they become:</p>
     <div class="blood-choices">${Object.entries(rates).map(([r, x]) => `
       <button class="blood-choice" data-r="${r}">${icon(r)}<span><b>+${fmt(pending * x)}</b> ${RESOURCES[r].name}<small>1 drop = ${fmt(x, 100)}</small></span></button>`).join('')}
@@ -1188,6 +1335,7 @@ function showBloodExchange() {
       G.save();
       updateResBar();
       updatePanel();
+      if (gateView) renderAll();
     });
   }
 }
@@ -1312,7 +1460,7 @@ function updatePrestigeCard() {
   $('#pc-gain').textContent = `+${fmt(n)} Moonstones`;
   $('#pc-bar').style.width = `${Math.max(0, Math.min(1, (G.runValue() - lo) / (hi - lo))) * 100}%`;
   const meadow = G.state.locs.meadow.unlocked;
-  $('#pc-next').textContent = G.hasBuff('bloodmoon') || G.state.blood.pending > 0 ? 'Wait for the Blood Moon to set.'
+  $('#pc-next').textContent = G.state.gates.visit || G.state.blood.pending > 0 ? 'Finish your castle visit first.'
     : !meadow ? 'Unlock the Starfall Meadow to begin a new night.'
     : n < 1 ? 'Gather a little more to earn your first Moonstone.'
     : `Next Moonstone at ${Math.round(((G.runValue() - lo) / (hi - lo)) * 100)}%`;
@@ -1401,9 +1549,10 @@ function onPurchase(rerenderPanel = false) {
 }
 
 function renderAll() {
-  if (bloodView && !G.hasBuff('bloodmoon')) bloodView = false;
+  if (bloodView && !G.visitActive()) bloodView = false;
+  if (gateView && !G.state.gates.owned) gateView = false;
   document.body.classList.toggle('blood', G.hasBuff('bloodmoon'));
-  A.setLocation(bloodView ? 'courtyard' : G.state.active);
+  A.setLocation(bloodView ? 'courtyard' : gateView ? 'gates' : G.state.active);
   updateMuteBtn();
   renderResBar();
   renderLocTabs();
@@ -1478,7 +1627,18 @@ function tick(now) {
       uiAccum = 0;
       updateEvents();
       updateMoonBtn();
-      if (bloodView) updateBloodPanel();
+      if (bloodView) { updateBloodPanel(); updateSceneRate(); }
+      if (gateView) updateGates();
+      if (G.checkVisitEnd()) onVisitEnd();
+      else if (G.state.gates.owned && !G.state.gates.visit) {
+        // Let the player know when a gate comes off cooldown.
+        const ready = GATES.some((g) => !g.soon && G.canEnterGate(g.id));
+        const tabEl = $('.loc-tab.gates');
+        if (tabEl && tabEl.classList.contains('ready') !== ready) {
+          tabEl.classList.toggle('ready', ready);
+          if (ready) toast('🌀 The Crimson Gate is ready again');
+        }
+      }
       if (!$('#shrine').hidden) updatePrestigeCard();
       if (!G.state.prestige.hinted && G.canPrestige()) {
         G.state.prestige.hinted = true;

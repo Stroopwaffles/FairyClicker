@@ -223,6 +223,14 @@ export function draculaHit() {
   [62, 65, 69, 74].forEach((m, i) => tone({ freq: mtof(m), type: 'sawtooth', start: 0.15 + i * 0.07, decay: 0.6, peak: 0.04, wet: 0.6 }));
 }
 
+// Stepping through a portal: a rising whoosh with a shimmer.
+export function portal() {
+  if (!ready()) return;
+  noise({ dur: 0.9, peak: 0.12, type: 'bandpass', freq: 300, to: 3000, q: 1.5, wet: 0.6 });
+  tone({ freq: 220, to: 880, glide: 0.8, type: 'triangle', attack: 0.1, decay: 0.9, peak: 0.08, wet: 0.7 });
+  [84, 88, 91, 96].forEach((m, i) => tone({ freq: mtof(m), start: 0.5 + i * 0.06, decay: 0.8, peak: 0.05, wet: 0.8 }));
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));
@@ -341,6 +349,13 @@ const AMBIENCES = {
     layers: [wind, crickets],
   },
   courtyard: { custom: castleTheme },
+  gates: {
+    // Mysterious whole-tone shimmer for the hall of portals
+    chords: [[48, 55, 62, 66], [46, 53, 60, 64], [44, 51, 58, 62], [46, 53, 60, 64]],
+    scale: [72, 74, 76, 78, 80, 82, 84, 86],
+    padType: 'sine', cutoff: 1400, sparkleEvery: [1.5, 3.5],
+    layers: [hum, shimmer],
+  },
 };
 
 export function setLocation(id) {

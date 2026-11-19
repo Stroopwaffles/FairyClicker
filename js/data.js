@@ -205,7 +205,7 @@ export const EVENTS = [
   { id: 'meteor',     name: 'Meteor Shower',     icon: '🌠', desc: 'Tap the shooting stars for Stardust',     dur: 30,  weight: 1, req: { loc: 'meadow' }, effects: [], special: 'meteor' },
   { id: 'owlcouncil', name: 'Owl Council',       icon: '🦉', desc: 'Helpers cost 25% less',                    dur: 120, weight: 1, req: { loc: 'oak' }, effects: [{ t: 'helperDiscount', x: 0.75 }] },
   { id: 'fog',        name: 'Mischief Fog',      icon: '🌫️', desc: 'Taps ×3 · helpers ×½',                     dur: 60,  weight: 0.8, req: { loc: 'grotto' }, effects: [{ t: 'tapMult', loc: '*', x: 3 }, { t: 'helperMult', loc: '*', x: 0.5 }] },
-  { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Tap the blood pool in the castle courtyard', dur: 75, weight: 0.12, req: { loc: 'mushroom' }, effects: [], special: 'bloodmoon' },
+  { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Crimson Gate cooldown −15 min · castle visits give ×2 Blood Drops', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'bloodmoon' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
 // Blood Moon exchange: when it sets, each Blood Drop becomes the larger of
@@ -289,7 +289,7 @@ export const HAND_RATES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];   // taps per sec
 export const CRIT_MULT = 10;
 export const STREAK_MAX = [1, 1.5, 2, 2.5];                       // combo cap at levels 0–3
 
-export const WORKSHOP_GROUPS = ['Tapping', 'Helpers', 'Events & surprises', 'Comfort'];
+export const WORKSHOP_GROUPS = ['Tapping', 'Helpers', 'Events & surprises', 'Gateways', 'Comfort'];
 export const WORKSHOP = [
   { id: 'hand', group: 'Tapping', icon: '✋', name: 'Enchanted Hand', max: 10, value: 300, growth: 6,
     desc: (l) => l ? `Taps along with you ${HAND_RATES[l - 1]}× a second` : 'A magic hand follows you and taps what you tap',
@@ -321,6 +321,9 @@ export const WORKSHOP = [
   { id: 'bell', group: 'Events & surprises', icon: '🔔', name: 'Fairy Bell', max: 1, value: 1e6, growth: 1, tier: 2,
     desc: () => 'The Wandering Fairy stays twice as long and offers a 4th gift', next: () => 'A longer visit and a new gift' },
 
+  { id: 'gateway', group: 'Gateways', icon: '🌀', name: 'Moonlit Gateway', max: 1, value: 5e6, growth: 1, tier: 3, keep: true,
+    desc: (l) => l ? 'The Gate Room is open. Visit it from the place tabs' : 'Opens a Gate Room of portals to other worlds. Stays through prestiges',
+    next: () => 'Open the Gate Room' },
   { id: 'lantern', group: 'Comfort', icon: '🏮', name: 'Moon Lantern', max: 3, value: 50000, growth: 8,
     desc: (l) => l ? `Offline earnings last ${l * 2} hours longer, with a summary by place` : 'Longer offline earnings and a summary by place',
     next: (l) => `+${(l + 1) * 2} hours` },
@@ -328,3 +331,15 @@ export const WORKSHOP = [
 export const LOTUS_EVERY = [300, 240, 190, 150, 120]; // seconds of play between lotuses at levels 1–5
 export const WORKSHOP_BY_ID = byId(WORKSHOP);
 export const RES_ORDER = ['dewdrops', 'glowspores', 'ambersap', 'moonshards', 'stardust'];
+
+// ---------- Gateways: portals to other worlds, opened from the Gate Room ----------
+// Visits and cooldowns run on real time, so cooldowns finish even while the game is closed.
+export const GATES = [
+  { id: 'castle', name: 'Crimson Gate', world: 'Crimson Castle', icon: '🏰', color: '#d0283c',
+    blurb: 'A vampire’s castle under a red moon. Tap the blood pool for Blood Drops and watch the windows…',
+    visitSec: 75, cooldownMin: 30 },
+  { id: 'soon1', soon: true, name: 'Sealed Gate', icon: '🔒', color: '#5a6aa8' },
+  { id: 'soon2', soon: true, name: 'Sealed Gate', icon: '🔒', color: '#4a8a6a' },
+];
+export const GATE_BY_ID = byId(GATES);
+export const BLOOD_MOON_COOLDOWN_CUT_MIN = 15;
