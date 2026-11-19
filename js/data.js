@@ -220,6 +220,8 @@ export const FAIRY_GIFTS = [
   { id: 'bounty',  name: 'Dew of Plenty',   icon: '🎁', desc: 'Instantly gain 10 minutes of production of everything' },
   { id: 'wings',   name: 'Quickened Wings', icon: '🦋', desc: 'All helpers ×3 for 60 seconds', dur: 60, effects: [{ t: 'helperMult', loc: '*', x: 3 }] },
   { id: 'fingers', name: 'Starlit Fingers', icon: '✨', desc: 'All taps ×10 for 45 seconds',   dur: 45, effects: [{ t: 'tapMult', loc: '*', x: 10 }] },
+  // Only offered with the Fairy Bell from the Workshop
+  { id: 'moonbeam', name: 'Moonbeam Blessing', icon: '🌕', desc: 'Everything ×4 for 40 seconds', dur: 40, bell: true, effects: [{ t: 'globalMult', x: 4 }] },
 ];
 
 export const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x]));
@@ -234,7 +236,7 @@ export const GIFT_BY_ID = byId(FAIRY_GIFTS);
 // Run value: each resource's earnings this run are weighted, then turned into Moonstones.
 export const RESOURCE_WEIGHT = { dewdrops: 1, glowspores: 2, ambersap: 10, moonshards: 40, stardust: 150 };
 export const STONE_SCALE = 1e10;         // run value that gives the first few stones
-export const STONE_FACTOR = 3.5;           // stones = floor(FACTOR * (value / SCALE) ^ EXP)
+export const STONE_FACTOR = 1.5;           // stones = floor(FACTOR * (value / SCALE) ^ EXP)
 export const STONE_EXP = 0.4;
 export const STONE_BONUS = 0.01;         // each unspent Moonstone: +1% to everything
 export const FINALE_PRESTIGE = 5;        // the soft ending happens on this prestige
@@ -278,3 +280,51 @@ export const SHRINE = [
   { id: 'fullmoon', path: 'capstone', name: 'Call of the Full Moon', desc: 'Everything ×5. The full moon is ready to rise.', cost: 150, minPrestige: 4, effects: [{ t: 'globalMult', x: 5 }] },
 ];
 export const SHRINE_BY_ID = byId(SHRINE);
+
+// ---------- Workshop: realm-wide upgrades (reset on prestige) ----------
+// `value` is the price of level 1 in Dewdrop-equivalents (see RESOURCE_WEIGHT);
+// each level costs `growth` times more. Higher levels also ask for later resources;
+// `tier` sets how many resource types even level 1 needs.
+export const HAND_RATES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];   // taps per second at levels 1–10
+export const CRIT_MULT = 10;
+export const STREAK_MAX = [1, 1.5, 2, 2.5];                       // combo cap at levels 0–3
+
+export const WORKSHOP_GROUPS = ['Tapping', 'Helpers', 'Events & surprises', 'Comfort'];
+export const WORKSHOP = [
+  { id: 'hand', group: 'Tapping', icon: '✋', name: 'Enchanted Hand', max: 10, value: 300, growth: 6,
+    desc: (l) => l ? `Taps along with you ${HAND_RATES[l - 1]}× a second` : 'A magic hand follows you and taps what you tap',
+    next: (l) => `${HAND_RATES[l]} taps a second` },
+  { id: 'twinhand', group: 'Tapping', icon: '🤲', name: 'Twin Hand', max: 1, value: 2e8, growth: 1, tier: 3, req: { hand: 5 },
+    desc: () => 'A second enchanted hand joins the first', next: () => 'Two hands tapping' },
+  { id: 'clover', group: 'Tapping', icon: '🍀', name: 'Lucky Clover', max: 5, value: 5000, growth: 8,
+    desc: (l) => l ? `${l * 2}% chance for a critical tap worth ×${CRIT_MULT}` : `Taps can be critical: worth ×${CRIT_MULT}`,
+    next: (l) => `${(l + 1) * 2}% chance` },
+  { id: 'streak', group: 'Tapping', icon: '🔥', name: 'Tap Streak', max: 3, value: 2000, growth: 12,
+    desc: (l) => l ? `Keep tapping to build a combo up to ×${STREAK_MAX[l]}` : 'Keep tapping to build a combo meter',
+    next: (l) => `Combo up to ×${STREAK_MAX[l + 1]}` },
+
+  { id: 'steward', group: 'Helpers', icon: '🧹', name: 'Helper Steward', max: 1, value: 10000, growth: 1,
+    desc: () => 'Recruits helpers for you at the place you’re viewing', next: () => 'Automatic recruiting' },
+  { id: 'almanac', group: 'Helpers', icon: '📖', name: 'Fairy Almanac', max: 1, value: 3000, growth: 1,
+    desc: () => 'Marks which helper is the best value. The Steward can follow it', next: () => 'Best-value advice' },
+  { id: 'whistle', group: 'Helpers', icon: '📯', name: 'Fairy Whistle', max: 10, value: 1000, growth: 4,
+    desc: (l) => l ? `All helpers +${l * 10}%` : 'All helpers gather more', next: (l) => `+${(l + 1) * 10}%` },
+
+  { id: 'lotus', group: 'Events & surprises', icon: '🪷', name: 'Golden Lotus', max: 5, value: 20000, growth: 6,
+    desc: (l) => l ? `A golden lotus drifts by about every ${Math.round(LOTUS_EVERY[l - 1] / 60)} min. Tap it for a burst` : 'A rare golden lotus drifts by. Tap it for a burst',
+    next: (l) => `About every ${Math.round(LOTUS_EVERY[l] / 60)} min, bigger bursts` },
+  { id: 'magnet', group: 'Events & surprises', icon: '🧲', name: 'Star Magnet', max: 1, value: 5e8, growth: 1, tier: 5,
+    desc: () => 'Shooting stars are caught automatically', next: () => 'Catch every shooting star' },
+  { id: 'chalice', group: 'Events & surprises', icon: '🍷', name: 'Vampire’s Chalice', max: 3, value: 1e5, growth: 10, tier: 2,
+    desc: (l) => l ? `Blood Drops worth +${l * 50}% and +${l} per tap` : 'Better Blood Moon hauls and exchange rates',
+    next: (l) => `+${(l + 1) * 50}% value, +${l + 1} per tap` },
+  { id: 'bell', group: 'Events & surprises', icon: '🔔', name: 'Fairy Bell', max: 1, value: 1e6, growth: 1, tier: 2,
+    desc: () => 'The Wandering Fairy stays twice as long and offers a 4th gift', next: () => 'A longer visit and a new gift' },
+
+  { id: 'lantern', group: 'Comfort', icon: '🏮', name: 'Moon Lantern', max: 3, value: 50000, growth: 8,
+    desc: (l) => l ? `Offline earnings last ${l * 2} hours longer, with a summary by place` : 'Longer offline earnings and a summary by place',
+    next: (l) => `+${(l + 1) * 2} hours` },
+];
+export const LOTUS_EVERY = [300, 240, 190, 150, 120]; // seconds of play between lotuses at levels 1–5
+export const WORKSHOP_BY_ID = byId(WORKSHOP);
+export const RES_ORDER = ['dewdrops', 'glowspores', 'ambersap', 'moonshards', 'stardust'];

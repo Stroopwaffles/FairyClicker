@@ -5,6 +5,7 @@ import {
   LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID, EVENT_BY_ID, GIFT_BY_ID,
   RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
   SHRINE, SHRINE_BY_ID, BLOOD_RATE_SECONDS, BLOOD_RATE_TAPS,
+  WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
 } from './data.js';
 import { ACHIEVEMENTS } from './achievements.js';
 
@@ -31,9 +32,11 @@ export function freshState() {
     buffs: [],                // [{ id, kind: 'event'|'gift', ends }]
     ev: { next: FIRST_EVENT_AT, nextId: null, lastId: null, count: 0, seen: {} },
     achievements: {},         // id -> timestamp earned
-    blood: { drops: 0, pending: 0, total: 0, best: 0 }, // Blood Moon
+    blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
+    workshop: {},             // id -> level (resets on prestige)
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
-    settings: { buyAmt: 1 },
+    settings: { buyAmt: 1, steward: true, stewardMode: 'cheapest' },
+    stats2: { crits: 0, lotuses: 0, handTaps: 0 },
     prestige: { count: 0, stones: 0, lifetimeStones: 0, shrine: {}, finaleSeen: false, runStart: now, fastestRunMs: 0, hinted: false },
   };
 }
@@ -92,6 +95,10 @@ function collectEffects() {
   }
   const shrine = shrineEffects();
   fx.push(...shrine);
+  const whistle = wl('whistle');
+  if (whistle) fx.push({ t: 'helperMult', loc: '*', x: 1 + whistle * 0.1 });
+  const lantern = wl('lantern');
+  if (lantern) fx.push({ t: 'offlineHours', x: lantern * 2 });
   const noHarm = shrine.some((e) => e.t === 'noHarm');
   for (const b of state.buffs) {
     for (const e of buffEffects(b)) {
@@ -145,6 +152,14 @@ function derive() {
       case 'eventPreview': out.eventPreview = true; break;
     }
   }
+  // Workshop
+  const hand = wl('hand');
+  out.hands = hand ? (wl('twinhand') ? 2 : 1) : 0;
+  out.handRate = hand ? HAND_RATES[hand - 1] : 0;
+  out.critChance = wl('clover') * 0.02;
+  out.streakMax = STREAK_MAX[wl('streak')];
+  out.bloodMult = 1 + wl('chalice') * 0.5;
+  out.bloodPerTap = 1 + wl('chalice');
   out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
   out.stoneMult = 1 + state.prestige.stones * STONE_BONUS;
   const g = out.globalMult * out.achievementMult * out.stoneMult;
@@ -221,14 +236,17 @@ export function gain(resource, amt) {
 }
 
 // Returns { value, echo } — echo means the tap counted twice.
-export function tap(locId) {
-  let v = d().tapValue[locId];
+// Returns { value, echo, crit }. `mult` is the tap-streak combo from the UI.
+export function tap(locId, mult = 1) {
+  let v = d().tapValue[locId] * mult;
   const echo = Math.random() < d().tapEcho;
   if (echo) { v *= 2; state.stats.echoes++; }
+  const crit = Math.random() < d().critChance;
+  if (crit) { v *= CRIT_MULT; state.stats2.crits++; }
   gain(LOCATION_BY_ID[locId].resource, v);
   state.locs[locId].taps++;
   state.stats.taps++;
-  return { value: v, echo };
+  return { value: v, echo, crit };
 }
 
 export function buyAmountFor(h) {
@@ -345,7 +363,7 @@ export const hasBuff = (id) => state.buffs.some((b) => b.id === id);
 
 function startEvent(id) {
   const e = EVENT_BY_ID[id];
-  const dur = e.dur * d().eventDuration;
+  const dur = e.dur * d().eventDuration * (id === 'fairy' && wl('bell') ? 2 : 1);
   state.buffs.push({ id, kind: 'event', ends: state.clock + dur, dur });
   state.ev.count++;
   state.ev.seen[id] = (state.ev.seen[id] || 0) + 1;
@@ -390,12 +408,23 @@ export function advance(sec) {
 
 export function tapBlood() {
   const echo = Math.random() < d().tapEcho;
-  const v = echo ? 2 : 1;
+  const crit = Math.random() < d().critChance;
+  const v = d().bloodPerTap * (echo ? 2 : 1) * (crit ? CRIT_MULT : 1);
   if (echo) state.stats.echoes++;
+  if (crit) state.stats2.crits++;
   state.blood.drops += v;
   state.blood.total += v;
   state.stats.taps++;
-  return { value: v, echo };
+  return { value: v, echo, crit };
+}
+
+// Tapping Dracula in a castle window: a big burst of drops.
+export function biteBack() {
+  const v = 40 * d().bloodPerTap;
+  state.blood.drops += v;
+  state.blood.total += v;
+  state.blood.draculas++;
+  return v;
 }
 
 function endBloodMoon() {
@@ -411,7 +440,7 @@ export function bloodRates() {
   const out = {};
   for (const l of LOCATIONS) {
     if (!state.locs[l.id].unlocked) continue;
-    const per = Math.max(dd.locRate[l.id] * BLOOD_RATE_SECONDS, dd.tapValue[l.id] * BLOOD_RATE_TAPS, 1);
+    const per = Math.max(dd.locRate[l.id] * BLOOD_RATE_SECONDS, dd.tapValue[l.id] * BLOOD_RATE_TAPS, 1) * dd.bloodMult;
     out[l.resource] = Math.max(out[l.resource] || 0, per);
   }
   return out;
@@ -463,6 +492,104 @@ export function applyGift(id) {
   return {};
 }
 
+// ---------- Workshop ----------
+
+export const wl = (id) => state.workshop[id] || 0; // workshop level
+
+// Cost of buying level `level + 1`. Higher levels also ask for later resources.
+export function workshopCost(id, level = wl(id)) {
+  const w = WORKSHOP_BY_ID[id];
+  const value = w.value * Math.pow(w.growth, level);
+  const allowed = RES_ORDER.slice(0, Math.min(RES_ORDER.length, Math.max(w.tier || 1, 1 + Math.floor(level / 2))));
+  const cost = {};
+  for (const r of allowed) {
+    const raw = value / RESOURCE_WEIGHT[r] / allowed.length;
+    const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(raw)) - 1));
+    cost[r] = Math.max(1, Math.round(raw / mag) * mag); // two significant digits
+  }
+  return cost;
+}
+
+export function workshopAvailable(id) {
+  const w = WORKSHOP_BY_ID[id];
+  if (wl(id) >= w.max) return false;
+  if (w.req?.hand && wl('hand') < w.req.hand) return false;
+  return true;
+}
+
+export function buyWorkshop(id) {
+  if (!workshopAvailable(id)) return false;
+  const cost = workshopCost(id);
+  if (!canAfford(cost)) return false;
+  pay(cost);
+  state.workshop[id] = wl(id) + 1;
+  invalidate();
+  return true;
+}
+
+// Production gained per weighted cost for buying one more of a helper.
+function helperValue(h) {
+  const ls = state.locs[h.loc];
+  const n = ls.helpers[h.id] || 0;
+  const dd = d();
+  const per = dd.helperRate[h.id] / milestoneMult(n); // rate without milestone bonus
+  const gainRate = per * (milestoneMult(n + 1) * (n + 1) - milestoneMult(n) * n);
+  const cost = helperCost(h, n, 1);
+  const wcost = Object.entries(cost).reduce((a, [r, x]) => a + x * RESOURCE_WEIGHT[r], 0);
+  return { gain: gainRate * RESOURCE_WEIGHT[LOCATION_BY_ID[h.loc].resource], wcost, cost };
+}
+
+// Helpers the player can see (the next one is revealed once the previous is owned).
+export function revealedHelpers(locId) {
+  const list = HELPERS.filter((h) => h.loc === locId);
+  const ls = state.locs[locId];
+  return list.filter((h, i) => i === 0 || (ls.helpers[list[i - 1].id] || 0) > 0 || (ls.helpers[h.id] || 0) > 0);
+}
+
+// The Fairy Almanac's pick: best production per cost at a place.
+export function almanacPick(locId) {
+  let best = null, bv = -1;
+  for (const h of revealedHelpers(locId)) {
+    const { gain: g, wcost } = helperValue(h);
+    const v = g / wcost;
+    if (v > bv) { bv = v; best = h; }
+  }
+  return best;
+}
+
+// The Helper Steward recruits one helper if it can. Returns the helper or null.
+export function stewardTick(locId) {
+  if (!wl('steward') || !state.settings.steward || !state.locs[locId]?.unlocked) return null;
+  let pick;
+  if (state.settings.stewardMode === 'almanac' && wl('almanac')) {
+    pick = almanacPick(locId); // waits and saves up for the Almanac's choice
+  } else {
+    let low = Infinity;
+    for (const h of revealedHelpers(locId)) {
+      const { wcost } = helperValue(h);
+      if (wcost < low) { low = wcost; pick = h; }
+    }
+  }
+  if (!pick) return null;
+  const owned = state.locs[locId].helpers[pick.id] || 0;
+  const cost = helperCost(pick, owned, 1);
+  if (!canAfford(cost)) return null;
+  pay(cost);
+  state.locs[locId].helpers[pick.id] = owned + 1;
+  invalidate();
+  return pick;
+}
+
+// Golden Lotus burst at a place.
+export function catchLotus(locId) {
+  const dd = d();
+  const L = Math.max(1, wl('lotus'));
+  const amt = Math.max(dd.locRate[locId] * 60, dd.tapValue[locId] * 150) * (1 + (L - 1) * 0.5);
+  gain(LOCATION_BY_ID[locId].resource, amt);
+  state.stats2.lotuses++;
+  return amt;
+}
+
 // ---------- prestige ----------
 
 export function runValue() {
@@ -505,7 +632,7 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, settings: state.settings, blood: state.blood,
+    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood,
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

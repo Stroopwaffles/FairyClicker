@@ -24,7 +24,12 @@ function weightedRate(tapLoc) {
   const d = G.d();
   let v = 0;
   for (const [r, rate] of Object.entries(d.resRate)) v += rate * W[r];
-  if (tapLoc) v += TAPS * d.tapValue[tapLoc] * W[D.LOCATION_BY_ID[tapLoc].resource];
+  if (tapLoc) {
+    // Player taps (with a typical streak) plus Enchanted Hand taps, with expected crits.
+    const crit = 1 + d.critChance * (D.CRIT_MULT - 1);
+    const taps = TAPS * (1 + (d.streakMax - 1) * 0.6) + d.hands * d.handRate;
+    v += taps * crit * d.tapValue[tapLoc] * W[D.LOCATION_BY_ID[tapLoc].resource];
+  }
   return v;
 }
 const wCost = (cost) => Object.entries(cost).reduce((a, [r, x]) => a + x * W[r], 0);
@@ -64,6 +69,11 @@ function candidates() {
     if (!s.locs[f.loc].unlocked || s.locs[f.loc].features[f.id] || !G.featureAvailable(f)) continue;
     // Features with non-production effects get a flat bonus so they're still bought eventually.
     out.push({ kind: 'feature', cost: G.featureCost(f), buy: () => G.buildFeature(f), apply: () => { s.locs[f.loc].features[f.id] = true; }, undo: () => { delete s.locs[f.loc].features[f.id]; }, name: f.name });
+  }
+  for (const w of D.WORKSHOP) {
+    if (!G.workshopAvailable(w.id)) continue;
+    const lvl = G.wl(w.id);
+    out.push({ kind: 'workshop', cost: G.workshopCost(w.id), buy: () => G.buyWorkshop(w.id), apply: () => { s.workshop[w.id] = lvl + 1; }, undo: () => { if (lvl) s.workshop[w.id] = lvl; else delete s.workshop[w.id]; }, name: w.name });
   }
   return out;
 }
@@ -149,7 +159,11 @@ for (let day = 0; day < DAYS; day++) {
       now += 1000;
       const loc = bestTapLoc();
       G.produce(1);
-      for (let k = 0; k < TAPS; k++) G.tap(loc);
+      for (let k = 0; k < TAPS; k++) G.tap(loc, 1 + (G.d().streakMax - 1) * 0.6);
+      const dd = G.d();
+      const handTaps = dd.hands * dd.handRate;
+      for (let k = 0; k < Math.floor(handTaps); k++) G.tap(loc);
+      if (Math.random() < handTaps % 1) G.tap(loc);
       G.state.stats.playMs += 1000;
       G.advance(1);
       if (t % 5 === 0) shop(loc);

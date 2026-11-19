@@ -403,6 +403,24 @@ const meadow = () => `
   <g data-sprites></g>
 </svg>`;
 
+// Window positions in the courtyard: [x, y, width, height]
+export const CASTLE_WINDOWS = [[500, 215, 56, 80], [265, 262, 36, 54], [730, 292, 34, 50]];
+
+// Count Dracula, peering out of a window.
+function draculaFace() {
+  return `
+    <circle class="drac-hit" r="34" fill="transparent"/>
+    <path d="M-20 24 L-15 2 L0 16 L15 2 L20 24 Z" fill="#7a0016"/>
+    <path d="M-15 2 L-9 10 L0 16 L9 10 L15 2 L13 12 L0 20 L-13 12 Z" fill="#1a0610"/>
+    <ellipse cx="0" cy="0" rx="10.5" ry="13.5" fill="#e6dce6"/>
+    <path d="M-11 -2 Q-12 -15 0 -16 Q12 -15 11 -2 Q8 -9 4 -9 L0 -4 L-4 -9 Q-8 -9 -11 -2z" fill="#140810"/>
+    <path d="M-7.5 -4 L-2 -2.5 M7.5 -4 L2 -2.5" stroke="#140810" stroke-width="1.6" stroke-linecap="round"/>
+    <ellipse cx="-4.2" cy="0" rx="2.2" ry="1.3" fill="#ff2a3a"/><ellipse cx="4.2" cy="0" rx="2.2" ry="1.3" fill="#ff2a3a"/>
+    <path d="M-1 3 L0 6 L1 3" fill="none" stroke="#b8a8b8" stroke-width=".8"/>
+    <path d="M-4.5 8.5 Q0 10.5 4.5 8.5" stroke="#5a0010" stroke-width="1.4" fill="none"/>
+    <path d="M-2.6 9 L-2 11.6 L-1.3 9.3 Z M2.6 9 L2 11.6 L1.3 9.3 Z" fill="#fff"/>`;
+}
+
 // The Blood Moon's castle courtyard (only reachable during the event).
 const courtyard = () => `
 <svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -438,9 +456,13 @@ const courtyard = () => `
     <path d="M800 440 V270 l22 -45 l22 45 V440z"/>
   </g>
   <g fill="#ffb35a" class="pulse">
-    <rect x="490" y="190" width="20" height="34" rx="10"/><rect x="255" y="230" width="12" height="22" rx="6"/>
-    <rect x="723" y="250" width="12" height="22" rx="6"/><rect x="400" y="340" width="10" height="18" rx="5"/><rect x="590" y="340" width="10" height="18" rx="5"/>
+    <rect x="400" y="340" width="10" height="18" rx="5"/><rect x="590" y="340" width="10" height="18" rx="5"/>
   </g>
+  <!-- Arched windows: Dracula peers out of one now and then -->
+  ${CASTLE_WINDOWS.map(([x, y, w, h], i) => `
+    <path class="win" data-win="${i}" d="M${x - w / 2} ${y + h / 2} V${y - h / 2 + w / 2} a${w / 2} ${w / 2} 0 0 1 ${w} 0 V${y + h / 2} Z" fill="#ffb35a"/>
+    <line x1="${x}" y1="${y - h / 2 + 2}" x2="${x}" y2="${y + h / 2}" stroke="#0c0610" stroke-width="2"/>
+    <g class="dracula" data-drac="${i}" transform="translate(${x} ${y + h * 0.08}) scale(${(w / 40).toFixed(2)})">${draculaFace()}</g>`).join('')}
   <!-- bats circling the towers -->
   <g fill="#0c0610">
     ${[[300, 120, 0], [600, 90, 1.2], [820, 200, 2.1], [380, 200, 3]].map(([x, y, d]) => `<g class="bat" style="animation-delay:-${d}s"><path transform="translate(${x} ${y})" d="M0 0 q-8 -8 -18 -2 q6 0 6 6 q4 -4 6 0 q2 -4 6 0 q0 -6 6 -6 q-10 -6 -18 2z"/></g>`).join('')}

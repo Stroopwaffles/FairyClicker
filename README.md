@@ -71,6 +71,27 @@ python3 -m http.server 8000
   - Moonlit Pond: bouncy marimba pop · Mushroom Ring: funky clavinet groove · Ancient Oak: a fiddle jig in 6/8 · Crystal Grotto: sparkly synth-pop · Starfall Meadow: uplifting chiptune
 - The Blood Moon always plays its castle theme
 
+### Version 3.3: the Workshop
+
+A new **Workshop** tab of realm-wide upgrades (they reset when you prestige):
+
+| Upgrade | Levels | Effect |
+|---|---|---|
+| ✋ Enchanted Hand | 10 | A magic hand follows you and taps what you tap, from 1 to 10 times a second |
+| 🤲 Twin Hand | 1 | A second hand (needs Enchanted Hand level 5) |
+| 🍀 Lucky Clover | 5 | 2–10% chance for a critical tap worth ×10 |
+| 🔥 Tap Streak | 3 | Keep tapping to build a combo up to ×1.5 / ×2 / ×2.5 |
+| 🧹 Helper Steward | 1 | Recruits helpers at the place you're viewing; switch on/off; can follow the Almanac |
+| 📖 Fairy Almanac | 1 | Marks the best-value helper |
+| 📯 Fairy Whistle | 10 | All helpers +10% per level |
+| 🪷 Golden Lotus | 5 | A golden lotus drifts by now and then; tap it for a burst |
+| 🧲 Star Magnet | 1 | Shooting stars are caught automatically |
+| 🍷 Vampire's Chalice | 3 | Blood Drops worth more, and more per tap |
+| 🔔 Fairy Bell | 1 | The fairy stays twice as long and offers a 4th gift (Moonbeam Blessing) |
+| 🏮 Moon Lantern | 3 | Longer offline earnings and a summary by place |
+
+During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him before he vanishes for a big burst of Blood Drops. Five new achievements go with these.
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:

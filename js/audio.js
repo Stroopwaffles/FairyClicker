@@ -192,6 +192,37 @@ export function bloodTap(echo = false) {
   if (Math.random() < 0.3 || echo) tone({ freq: 900 * v, to: 1500 * v, glide: 0.04, start: 0.09, decay: 0.12, peak: 0.06, wet: 0.6 });
 }
 
+// Critical tap: a bright sparkle burst.
+export function crit() {
+  if (!ready()) return;
+  [91, 95, 98, 103].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.03, decay: 0.3, peak: 0.07, wet: 0.6, pan: rnd(-0.5, 0.5) }));
+  noise({ dur: 0.12, peak: 0.05, type: 'highpass', freq: 5000 });
+}
+
+// Golden Lotus: a soft harp glissando when it appears, a chime when caught.
+export function lotusAppear() {
+  if (!ready()) return;
+  [72, 76, 79, 83, 86, 88].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.06, decay: 0.7, peak: 0.05, wet: 0.7 }));
+}
+export function lotus() {
+  if (!ready()) return;
+  [84, 88, 91, 96].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.05, decay: 1.2, peak: 0.1, wet: 0.7 }));
+  tone({ freq: mtof(72), type: 'triangle', decay: 1.4, peak: 0.08, wet: 0.5 });
+}
+
+// Dracula: a creepy organ swell when he appears; a bat-shriek and stab when tapped.
+export function draculaAppear() {
+  if (!ready()) return;
+  [50, 53, 56, 59].forEach((m) => tone({ freq: mtof(m), type: 'sawtooth', attack: 0.15, decay: 0.9, peak: 0.025, wet: 0.7 }));
+  tone({ freq: mtof(38), type: 'square', attack: 0.1, decay: 1, peak: 0.03, wet: 0.4 });
+}
+export function draculaHit() {
+  if (!ready()) return;
+  tone({ freq: 3200, to: 1800, glide: 0.15, type: 'square', decay: 0.16, peak: 0.03, wet: 0.5 });
+  tone({ freq: 3600, to: 2100, glide: 0.12, type: 'square', start: 0.1, decay: 0.12, peak: 0.025, wet: 0.5 });
+  [62, 65, 69, 74].forEach((m, i) => tone({ freq: mtof(m), type: 'sawtooth', start: 0.15 + i * 0.07, decay: 0.6, peak: 0.04, wet: 0.6 }));
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));

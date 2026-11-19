@@ -62,6 +62,13 @@ add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 
 add({ id: 'stars25', group: 'Events', name: 'Star Catcher', desc: 'Catch 25 shooting stars', check: (s) => s.stats.starsCaught >= 25 });
 add({ id: 'fairy5', group: 'Events', name: 'Fairy Friend', desc: 'Catch the wandering fairy 5 times', check: (s) => s.stats.fairiesCaught >= 5 });
 
+// Workshop
+add({ id: 'handy', group: 'Workshop', name: 'Lend a Hand', desc: 'Get the Enchanted Hand', check: (s) => (s.workshop.hand || 0) >= 1 });
+add({ id: 'masterhand', group: 'Workshop', name: 'Sleight of Hand', desc: 'Raise the Enchanted Hand to level 10', check: (s) => (s.workshop.hand || 0) >= 10 });
+add({ id: 'crits100', group: 'Workshop', name: 'Four-Leaf Fortune', desc: 'Land 100 critical taps', check: (s) => s.stats2.crits >= 100 });
+add({ id: 'lotus10', group: 'Workshop', name: 'Lotus Gatherer', desc: 'Catch 10 Golden Lotuses', check: (s) => s.stats2.lotuses >= 10 });
+add({ id: 'bitebak', group: 'Events', name: 'Bite Back', desc: 'Tap Dracula in the castle window 5 times', check: (s) => s.blood.draculas >= 5 });
+
 // The Moon
 add({ id: 'newmoon', group: 'The Moon', name: 'New Moon', desc: 'Prestige for the first time', check: (s) => s.prestige.count >= 1 });
 add({ id: 'halfmoon', group: 'The Moon', name: 'Half Moon', desc: 'Prestige 3 times', check: (s) => s.prestige.count >= 3 });
@@ -79,4 +86,4 @@ add({ id: 'nightowl', group: 'Secrets', secret: true, name: 'Night Owl', desc: '
 add({ id: 'patience', group: 'Secrets', secret: true, name: 'Patience of the Moon', desc: 'Return after your helpers have worked the full offline time', check: (s) => s.stats.fullOffline });
 
 export const ACHIEVEMENTS = list;
-export const ACHIEVEMENT_GROUPS = ['Tapping', 'Gathering', 'Helpers', 'Places', 'Events', 'The Moon', 'Secrets'];
+export const ACHIEVEMENT_GROUPS = ['Tapping', 'Gathering', 'Helpers', 'Places', 'Events', 'Workshop', 'The Moon', 'Secrets'];

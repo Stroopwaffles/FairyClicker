@@ -3,10 +3,11 @@ import {
   RESOURCES, LOCATIONS, HELPERS, UPGRADES, FEATURES, LOCATION_BY_ID,
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
+  WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY,
 } from './data.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js';
 import * as G from './game.js';
-import { SCENES } from './scenes.js';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js';
 import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER } from './sprites.js';
 import * as A from './audio.js';
 
@@ -76,8 +77,10 @@ function renderTitle() {
   $('#btn-new').classList.toggle('primary', !has);
   const card = $('#away-card');
   if (offlineSummary) {
+    const byPlace = G.wl('lantern') > 0;
+    const placeOf = (r) => LOCATIONS.find((l) => l.resource === r);
     const rows = Object.entries(offlineSummary.gained).map(([r, amt]) =>
-      `<div class="row"><span>${icon(r)} ${RESOURCES[r].name}</span><span>+${fmt(amt)}</span></div>`).join('');
+      `<div class="row"><span>${icon(r)} ${byPlace ? `${placeOf(r).name} · ` : ''}${RESOURCES[r].name}</span><span>+${fmt(amt)}</span></div>`).join('');
     card.innerHTML = `<h2>While you were away (${fmtDuration(offlineSummary.awayMs)})</h2>${rows}
       ${offlineSummary.capped ? `<div class="note">Your helpers rest after ${fmtDuration(offlineSummary.usedMs)} away.${G.state.locs.pond.features.reedchimes ? '' : ' Build Reed Chimes at the pond to extend it.'}</div>` : ''}`;
     card.hidden = false;
@@ -180,6 +183,7 @@ function renderScene() {
   tapEl.addEventListener('pointerdown', onTap);
   updateSceneFeatures();
   updateSprites(true);
+  requestAnimationFrame(placeHandsAtRest);
 
   const hint = $('#tap-hint');
   hint.textContent = l.tapVerb;
@@ -301,11 +305,14 @@ function onTap(e) {
   doTap(id, e.currentTarget, e.clientX, e.clientY);
 }
 
-function doTap(id, target, clientX, clientY) {
+function doTap(id, target, clientX, clientY, byHand = false) {
   const blood = id === 'courtyard';
-  const { value: v, echo } = blood ? G.tapBlood() : G.tap(id);
-  if (blood) A.bloodTap(echo); else A.tap(id, echo);
-  trackFrenzy();
+  if (!byHand) buildStreak();
+  const { value: v, echo, crit } = blood ? G.tapBlood() : G.tap(id, streakMult());
+  // Hand taps are quieter so a fast hand doesn't drown everything out.
+  if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else A.tap(id, echo); }
+  if (crit) A.crit();
+  if (byHand) G.state.stats2.handTaps++; else trackFrenzy();
   target.classList.remove('bump');
   void target.getBoundingClientRect();
   target.classList.add('bump');
@@ -317,13 +324,19 @@ function doTap(id, target, clientX, clientY) {
   const f = document.createElement('div');
   f.className = 'floater';
   f.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
-  f.textContent = `+${fmt(v, 100)}${echo ? ' ×2' : ''}`;
+  f.textContent = `+${fmt(v, 100)}${echo ? ' ×2' : ''}${crit ? ' ✦' : ''}`;
   if (echo) f.classList.add('echo');
-  const rp = document.createElement('div');
-  rp.className = 'ripple';
-  rp.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
-  layer.append(f, rp);
-  setTimeout(() => { f.remove(); rp.remove(); }, 1000);
+  if (crit) f.classList.add('crit');
+  if (byHand) f.classList.add('by-hand');
+  layer.append(f);
+  let rp = null;
+  if (!byHand) {
+    rp = document.createElement('div');
+    rp.className = 'ripple';
+    rp.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
+    layer.append(rp);
+  }
+  setTimeout(() => { f.remove(); rp?.remove(); }, 1000);
   // Keep the DOM light under very fast multi-finger tapping.
   while (layer.childElementCount > 60) layer.firstElementChild.remove();
 
@@ -348,15 +361,17 @@ function renderPanel() {
   if (bloodView) { renderBloodPanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
-  if (tab !== 'settings' && tab !== 'awards' && !ls.unlocked) {
+  if (!['settings', 'awards', 'workshop'].includes(tab) && !ls.unlocked) {
     body.innerHTML = `<div class="empty">Unlock ${LOCATION_BY_ID[id].name} to see its ${tab}.</div>`;
     return;
   }
-  ({ helpers: renderHelpers, upgrades: renderUpgrades, features: renderFeatures, awards: renderAwards, settings: renderSettings })[tab](body);
+  ({ helpers: renderHelpers, upgrades: renderUpgrades, features: renderFeatures, workshop: renderWorkshop, awards: renderAwards, settings: renderSettings })[tab](body);
   updatePanel();
 }
 
+let almanacId = null;
 function updatePanel() {
+  almanacId = G.wl('almanac') && G.state.locs[G.state.active]?.unlocked ? G.almanacPick(G.state.active)?.id : null;
   for (const u of panelUpdaters) u();
   updateTabDots();
 }
@@ -367,6 +382,7 @@ function updateTabDots() {
   const dots = {
     upgrades: ls.unlocked && UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.upgradeAvailable(u) && G.canAfford(G.upgradeCost(u))),
     features: ls.unlocked && FEATURES.some((f) => f.loc === id && !ls.features[f.id] && G.featureAvailable(f) && G.canAfford(G.featureCost(f))),
+    workshop: WORKSHOP.some((w) => G.workshopAvailable(w.id) && G.canAfford(G.workshopCost(w.id))),
   };
   for (const b of $$('.ptab')) {
     const want = !!dots[b.dataset.tab];
@@ -406,14 +422,14 @@ function renderHelpers(body) {
       card.className = 'card';
       card.innerHTML = `
         <div>
-          <div class="name">${h.name} <span class="owned"></span><span class="perks"></span></div>
+          <div class="name">${h.name} <span class="owned"></span><span class="perks"></span><span class="best" hidden>📖 Best value</span></div>
           <div class="desc">${h.desc}</div>
           <div class="meta"></div>
           <div class="ms-wrap"><div class="ms-bar"><i></i></div><div class="ms-label"></div></div>
         </div>
         <button class="buy"><span class="lbl"></span><span class="cost"></span></button>`;
       refs = { owned: $('.owned', card), meta: $('.meta', card), btn: $('.buy', card), lbl: $('.lbl', card), cost: $('.cost', card),
-        perks: $('.perks', card), bar: $('.ms-bar i', card), msLabel: $('.ms-label', card) };
+        perks: $('.perks', card), bar: $('.ms-bar i', card), msLabel: $('.ms-label', card), best: $('.best', card) };
       refs.btn.addEventListener('click', () => {
         const before = G.state.locs[id].helpers[h.id] || 0;
         const nm = G.nextMilestone(before);
@@ -473,6 +489,8 @@ function renderHelpers(body) {
       }
       refs.btn.disabled = !G.canAfford(cost);
       refreshCost(refs.btn);
+      refs.best.hidden = almanacId !== h.id;
+      card.classList.toggle('best-card', almanacId === h.id);
     };
     panelUpdaters.push(update);
   });
@@ -800,7 +818,7 @@ function onFairyTap(e) {
   const m = $('#modal');
   m.innerHTML = `<div class="modal-card gift-card" role="dialog" aria-modal="true">
     <h2>🧚 A gift from the fairy</h2><p>She offers you one of three gifts. Choose wisely!</p>
-    <div class="gifts">${FAIRY_GIFTS.map((g) => `<button class="gift" data-gift="${g.id}"><span class="gift-icon">${g.icon}</span><b>${g.name}</b><span>${g.desc}</span></button>`).join('')}</div></div>`;
+    <div class="gifts">${FAIRY_GIFTS.filter((g) => !g.bell || G.wl('bell')).map((g) => `<button class="gift" data-gift="${g.id}"><span class="gift-icon">${g.icon}</span><b>${g.name}</b><span>${g.desc}</span></button>`).join('')}</div></div>`;
   m.hidden = false;
   for (const b of $$('.gift', m)) {
     b.addEventListener('click', () => {
@@ -834,17 +852,27 @@ function spawnMeteors(dt) {
   const dist = w * (0.5 + Math.random() * 0.3);
   m.style.cssText = `left:${sx}px;top:${sy}px;--mx:${-dist}px;--my:${dist * 0.45}px;--md:${(2.6 + Math.random()).toFixed(2)}s`;
   m.innerHTML = '<span class="trail"></span><span class="head">✦</span>';
-  m.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); e.stopPropagation();
+  const catchIt = (cx, cy) => {
+    if (!m.isConnected) return;
     const amt = G.catchStar();
     A.starCatch();
     const r = wrap.getBoundingClientRect();
-    floatText(e.clientX - r.left, e.clientY - r.top, `+${fmt(amt)} ✦`, RESOURCES.stardust.color);
+    floatText(cx - r.left, cy - r.top, `+${fmt(amt)} ✦`, RESOURCES.stardust.color);
     m.remove();
     updateResBar();
-  });
+  };
+  m.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); catchIt(e.clientX, e.clientY); });
   m.addEventListener('animationend', () => m.remove());
   $('#event-layer').append(m);
+  // Star Magnet: the star is pulled in and caught on its own.
+  if (G.wl('magnet')) {
+    setTimeout(() => {
+      if (!m.isConnected) return;
+      const b = m.getBoundingClientRect();
+      m.classList.add('magnet');
+      setTimeout(() => catchIt(b.left + b.width / 2, b.top + b.height / 2), 250);
+    }, 600 + Math.random() * 700);
+  }
 }
 
 function floatText(x, y, text, color) {
@@ -856,12 +884,246 @@ function floatText(x, y, text, color) {
   setTimeout(() => f.remove(), 1000);
 }
 
+// ---------- Workshop ----------
+
+function renderWorkshop(body) {
+  body.innerHTML = `<div class="section-head"><h3>Realm-wide upgrades · reset when you prestige</h3></div>` +
+    WORKSHOP_GROUPS.map((g) => `<div class="ws-group"><h4>${g}</h4>${WORKSHOP.filter((w) => w.group === g).map((w) => `<div class="card ws" data-ws="${w.id}"></div>`).join('')}</div>`).join('');
+  for (const w of WORKSHOP) {
+    const card = $(`[data-ws="${w.id}"]`, body);
+    const draw = () => {
+      const l = G.wl(w.id);
+      const maxed = l >= w.max;
+      const locked = !maxed && !G.workshopAvailable(w.id);
+      card.className = 'card ws' + (maxed ? ' done' : locked ? ' locked' : '');
+      const lvl = w.max > 1 ? `<span class="lvl">Lv ${l}/${w.max}</span>` : l ? '<span class="lvl">Owned</span>' : '';
+      const req = locked && w.req?.hand ? `<div class="meta"><span class="ms">Needs Enchanted Hand level ${w.req.hand}</span></div>` : '';
+      const next = !maxed && l > 0 ? `<div class="meta">Next: ${w.next(l)}</div>` : '';
+      let extra = '';
+      if (w.id === 'steward' && l) {
+        const st = G.state.settings;
+        extra = `<div class="ws-controls">
+          <button class="toggle ${st.steward ? 'on' : ''}" data-act="steward">${st.steward ? 'On' : 'Off'}</button>
+          <div class="seg" role="group" aria-label="Steward mode">
+            <button data-mode="cheapest" class="${st.stewardMode !== 'almanac' ? 'on' : ''}">Cheapest</button>
+            <button data-mode="almanac" class="${st.stewardMode === 'almanac' ? 'on' : ''}" ${G.wl('almanac') ? '' : 'disabled title="Needs the Fairy Almanac"'}>📖 Follow the Almanac</button>
+          </div></div>`;
+      }
+      card.innerHTML = `<div class="ws-main"><div class="ws-icon">${w.icon}</div><div>
+          <div class="name">${w.name} ${lvl}</div><div class="desc">${w.desc(l)}</div>${next}${req}${extra}</div></div>
+        ${maxed ? '<div class="check">✓ Maxed</div>' : `<button class="buy"><span class="lbl">${l ? 'Upgrade' : 'Buy'}</span>${costHTML(G.workshopCost(w.id))}</button>`}`;
+      const btn = $('.buy', card);
+      if (btn) btn.addEventListener('click', () => {
+        if (!G.buyWorkshop(w.id)) return;
+        A.build();
+        toast(`${w.icon} ${w.name}${w.max > 1 ? ` level ${G.wl(w.id)}` : ''}!`);
+        G.save();
+        renderPanel(); // other cards can depend on this one (e.g. Almanac → Steward)
+        renderHands();
+        updateResBar();
+        updateSceneRate();
+        updatePanel();
+        const fresh = G.checkAchievements();
+        if (fresh.length) onAchievements(fresh);
+      });
+      const tog = $('[data-act="steward"]', card);
+      if (tog) tog.addEventListener('click', () => { G.state.settings.steward = !G.state.settings.steward; draw(); });
+      for (const mb of $$('[data-mode]', card)) mb.addEventListener('click', () => { G.state.settings.stewardMode = mb.dataset.mode; draw(); });
+    };
+    draw();
+    panelUpdaters.push(() => {
+      const btn = $('.buy', card);
+      if (btn) { btn.disabled = !G.workshopAvailable(w.id) || !G.canAfford(G.workshopCost(w.id)); refreshCost(btn); }
+    });
+  }
+}
+
+// --- Enchanted Hand(s): tap what you're tapping, wherever you are ---
+const HAND_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
+  <defs><radialGradient id="hand-g" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#fff6ff"/><stop offset="1" stop-color="#c9a7ff"/></radialGradient></defs>
+  <circle cx="32" cy="34" r="26" fill="#c9a7ff" opacity=".25"/>
+  <path d="M28 6 a4 4 0 0 1 8 0 V28 l2 -1 a4 4 0 0 1 7 1 l1 1 a4 4 0 0 1 7 2 l0 2 a4 4 0 0 1 7 3 V44 q0 14 -14 16 H32 q-10 0 -14 -9 L10 36 a4 4 0 0 1 6 -5 l8 8 Z" fill="url(#hand-g)" stroke="#8f6ee6" stroke-width="2"/>
+  <g fill="#fff8c0"><circle cx="12" cy="12" r="2"/><circle cx="52" cy="14" r="1.5"/><circle cx="56" cy="50" r="1.8"/></g>
+</svg>`;
+
+function renderHands() {
+  const layer = $('#hands');
+  const n = started ? G.d().hands : 0;
+  if (layer.childElementCount === n) { placeHandsAtRest(); return; }
+  layer.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const h = document.createElement('div');
+    h.className = 'hand' + (i ? ' twin' : '');
+    h.innerHTML = HAND_SVG;
+    layer.append(h);
+  }
+  placeHandsAtRest();
+}
+
+function tapTargetBox() {
+  const t = $('#scene [data-tap]');
+  if (!t) return null;
+  const wr = $('#scene-wrap').getBoundingClientRect();
+  const b = t.getBoundingClientRect();
+  return { t, x: b.left - wr.left, y: b.top - wr.top, w: b.width, h: b.height, wr };
+}
+
+function placeHandsAtRest() {
+  const box = tapTargetBox();
+  if (!box) return;
+  $$('#hands .hand').forEach((h, i) => {
+    const x = box.x + box.w * (i ? 0.75 : 0.3), y = box.y + box.h * 0.6;
+    h.style.transform = `translate(${x - 26}px, ${y - 4}px)${i ? ' scaleX(-1)' : ''}`;
+  });
+}
+
+let handAccum = 0, handTurn = 0;
+function tickHands(dt) {
+  const dd = G.d();
+  if (!dd.hands || !$('#modal').hidden || !$('#shrine').hidden) return;
+  const id = viewId();
+  if (id === 'courtyard' ? !G.hasBuff('bloodmoon') : !G.state.locs[id]?.unlocked) return;
+  handAccum += dt * dd.handRate * dd.hands;
+  let n = 0;
+  while (handAccum >= 1 && n++ < 6) {
+    handAccum -= 1;
+    const box = tapTargetBox();
+    if (!box) return;
+    // Tap somewhere in the middle of the target.
+    const x = box.x + box.w * (0.3 + Math.random() * 0.4), y = box.y + box.h * (0.4 + Math.random() * 0.35);
+    const hands = $$('#hands .hand');
+    const hand = hands[handTurn++ % hands.length];
+    if (hand) {
+      const twin = hand.classList.contains('twin');
+      hand.style.transform = `translate(${x - 26}px, ${y - 4}px)${twin ? ' scaleX(-1)' : ''}`;
+      hand.classList.remove('tapping'); void hand.offsetWidth; hand.classList.add('tapping');
+    }
+    doTap(id, box.t, box.wr.left + x, box.wr.top + y, true);
+  }
+}
+window.addEventListener('resize', () => { if (started) placeHandsAtRest(); });
+
+// --- Tap Streak: tap steadily to build a combo ---
+let combo = 0, lastPlayerTap = 0;
+function buildStreak() {
+  if (!G.wl('streak')) return;
+  const now = performance.now();
+  combo = now - lastPlayerTap < 1000 ? combo + 1 : 1;
+  lastPlayerTap = now;
+}
+function streakMult() {
+  const max = G.d().streakMax;
+  return max > 1 ? Math.min(max, 1 + combo * 0.02) : 1;
+}
+function tickStreak(dt) {
+  const el = $('#streak');
+  const max = G.d().streakMax;
+  if (max <= 1) { el.hidden = true; return; }
+  if (performance.now() - lastPlayerTap > 1200) combo = Math.max(0, combo - dt * 40);
+  const m = streakMult();
+  el.hidden = m < 1.04;
+  if (!el.hidden) {
+    $('.streak-label', el).textContent = `🔥 Streak ×${m.toFixed(2)}`;
+    $('.streak-bar i', el).style.width = `${((m - 1) / (max - 1)) * 100}%`;
+    el.classList.toggle('full', m >= max);
+  }
+}
+
+// --- Golden Lotus: drifts across now and then ---
+let lotusTimer = 60;
+function tickLotus(dt) {
+  const L = G.wl('lotus');
+  if (!L || bloodView || $('#event-layer .lotus')) return;
+  lotusTimer -= dt;
+  if (lotusTimer > 0) return;
+  lotusTimer = LOTUS_EVERY[L - 1] * (0.7 + Math.random() * 0.6);
+  const wrap = $('#scene-wrap');
+  const el = document.createElement('button');
+  el.className = 'lotus';
+  el.setAttribute('aria-label', 'Golden lotus');
+  el.style.setProperty('--ly', `${20 + Math.random() * 45}%`);
+  el.innerHTML = `<svg viewBox="-30 -24 60 44"><circle r="22" fill="#ffd24d" opacity=".25"/>
+    ${[-60, -30, 0, 30, 60].map((a) => `<ellipse rx="6" ry="16" fill="#ffe27a" stroke="#d9a520" stroke-width="1" transform="rotate(${a}) translate(0 -8)"/>`).join('')}
+    <circle r="5" fill="#fff6c8"/><ellipse cy="12" rx="20" ry="4" fill="#3f8f5e"/></svg>`;
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (bloodView) return;
+    const amt = G.catchLotus(G.state.active);
+    A.lotus();
+    const r = wrap.getBoundingClientRect();
+    floatText(e.clientX - r.left, e.clientY - r.top, `🪷 +${fmt(amt)}`, '#ffd24d');
+    toast(`🪷 Golden Lotus! +${fmt(amt)} ${RESOURCES[LOCATION_BY_ID[G.state.active].resource].name}`);
+    el.remove();
+    updateResBar();
+  });
+  el.addEventListener('animationend', () => el.remove());
+  $('#event-layer').append(el);
+  A.lotusAppear();
+}
+
+// --- Helper Steward: recruits at the place you're viewing ---
+let stewardAccum = 0;
+function tickSteward(dt) {
+  if (!G.wl('steward') || !G.state.settings.steward || bloodView) return;
+  stewardAccum += dt;
+  if (stewardAccum < 2) return;
+  stewardAccum = 0;
+  const h = G.stewardTick(G.state.active);
+  if (h) {
+    if (Math.random() < 0.5) A.buy();
+    updateSprites();
+    updateSceneRate();
+    updateResBar();
+    if (tab === 'helpers') updatePanel();
+  }
+}
+
+// --- Dracula peers out of the castle windows during the Blood Moon ---
+let draculaTimer = 5, draculaHide = null;
+function setupDracula() {
+  draculaTimer = 3 + Math.random() * 4;
+  for (const g of $$('#scene .dracula')) {
+    g.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!g.classList.contains('show')) return;
+      const v = G.biteBack();
+      A.draculaHit();
+      hideDracula();
+      const r = $('#scene-wrap').getBoundingClientRect();
+      floatText(e.clientX - r.left, e.clientY - r.top, `🩸 +${fmt(v)}`, '#ff4a5a');
+      toast(`🧛 You startled Dracula! +${fmt(v)} Blood Drops`);
+      updateSceneRate();
+      updateBloodPanel();
+    });
+  }
+}
+function hideDracula() {
+  clearTimeout(draculaHide);
+  $$('#scene .dracula.show').forEach((g) => g.classList.remove('show'));
+  $$('#scene .win.red').forEach((w) => w.classList.remove('red'));
+}
+function tickDracula(dt) {
+  if (!bloodView || !G.hasBuff('bloodmoon') || $('#scene .dracula.show')) return;
+  draculaTimer -= dt;
+  if (draculaTimer > 0) return;
+  draculaTimer = 6 + Math.random() * 6;
+  const i = Math.floor(Math.random() * CASTLE_WINDOWS.length);
+  const g = $(`#scene .dracula[data-drac="${i}"]`);
+  if (!g) return;
+  g.classList.add('show');
+  $(`#scene .win[data-win="${i}"]`)?.classList.add('red');
+  A.draculaAppear();
+  draculaHide = setTimeout(hideDracula, 1700);
+}
+
 // ---------- Blood Moon ----------
 
 let bloodView = false; // showing the Crimson Courtyard
 
 function renderCourtyard() {
   $('#scene').innerHTML = SCENES.courtyard();
+  setupDracula();
+  requestAnimationFrame(placeHandsAtRest);
   $('#scene-name').textContent = 'Crimson Courtyard';
   $('[data-tap]', $('#scene')).addEventListener('pointerdown', onTap);
   const hint = $('#tap-hint');
@@ -1149,6 +1411,7 @@ function renderAll() {
   renderPanel();
   renderEvents();
   renderMoonBtn();
+  renderHands();
 }
 
 function updateMuteBtn() {
@@ -1200,6 +1463,11 @@ function tick(now) {
     if (happened.started.length || happened.ended.length) onEventsChanged(happened);
     moveFairy(now);
     spawnMeteors(dt);
+    tickHands(dt);
+    tickStreak(dt);
+    tickLotus(dt);
+    tickSteward(dt);
+    tickDracula(dt);
     uiAccum += dt; saveAccum += dt; achAccum += dt;
     if (achAccum >= 1) {
       achAccum = 0;
@@ -1253,6 +1521,11 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('pagehide', () => { if (started) G.save(); });
+
+// Test hook: only with ?debug in the URL.
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__fc = { lotusNow: () => { lotusTimer = 0; }, draculaNow: () => { draculaTimer = 0; } };
+}
 
 // ---------- boot ----------
 
