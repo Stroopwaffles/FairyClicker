@@ -4,7 +4,7 @@ import {
   RESOURCES, LOCATIONS, HELPERS, FEATURES, EVENTS, FIRST_EVENT_AT, EVENT_GAP,
   LOCATION_BY_ID, UPGRADE_BY_ID, FEATURE_BY_ID, EVENT_BY_ID, GIFT_BY_ID,
   RESOURCE_WEIGHT, STONE_SCALE, STONE_FACTOR, STONE_EXP, STONE_BONUS, FINALE_PRESTIGE, PRESTIGE_REQ_LOC,
-  SHRINE, SHRINE_BY_ID, BLOOD_RATE_SECONDS, BLOOD_RATE_TAPS,
+  SHRINE, SHRINE_BY_ID, BLOOD_SECONDS, BLOOD_EXP, BLOOD_TAP_EQUIV, CHALICE_VALUE_PER_LEVEL,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
 } from './data.js';
@@ -160,7 +160,7 @@ function derive() {
   out.handRate = hand ? HAND_RATES[hand - 1] : 0;
   out.critChance = wl('clover') * 0.02;
   out.streakMax = STREAK_MAX[wl('streak')];
-  out.bloodMult = 1 + wl('chalice') * 0.5;
+  out.bloodMult = 1 + wl('chalice') * CHALICE_VALUE_PER_LEVEL;
   out.bloodPerTap = 1 + wl('chalice');
   out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
   out.stoneMult = 1 + state.prestige.stones * STONE_BONUS;
@@ -470,22 +470,31 @@ export function checkVisitEnd(now = Date.now()) {
   return true;
 }
 
-// How much one Blood Drop is worth in each unlocked resource.
-export function bloodRates() {
+// How many seconds of a place's output a haul of drops is worth (diminishing returns).
+export function bloodSeconds(drops) {
+  if (drops <= 0) return 0;
+  return BLOOD_SECONDS * Math.pow(drops, BLOOD_EXP) * d().bloodMult;
+}
+
+// What a haul of drops would become in each unlocked resource: { res: { amount, seconds } }.
+export function bloodPreview(drops) {
   const dd = d();
+  const secs = bloodSeconds(drops);
   const out = {};
   for (const l of LOCATIONS) {
     if (!state.locs[l.id].unlocked) continue;
-    const per = Math.max(dd.locRate[l.id] * BLOOD_RATE_SECONDS, dd.tapValue[l.id] * BLOOD_RATE_TAPS, 1) * dd.bloodMult;
-    out[l.resource] = Math.max(out[l.resource] || 0, per);
+    const perSec = Math.max(dd.locRate[l.id], dd.tapValue[l.id] * BLOOD_TAP_EQUIV, 1);
+    const amount = perSec * secs;
+    if (!out[l.resource] || amount > out[l.resource].amount) out[l.resource] = { amount, seconds: secs };
   }
   return out;
 }
 
 export function convertBlood(resource) {
-  const rate = bloodRates()[resource];
-  if (!rate || state.blood.pending <= 0) return 0;
-  const amt = state.blood.pending * rate;
+  if (state.blood.pending <= 0) return 0;
+  const p = bloodPreview(state.blood.pending)[resource];
+  if (!p) return 0;
+  const amt = p.amount;
   gain(resource, amt);
   state.blood.pending = 0;
   return amt;

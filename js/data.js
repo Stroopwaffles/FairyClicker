@@ -208,10 +208,14 @@ export const EVENTS = [
   { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Crimson Gate cooldown −15 min · castle visits give ×2 Blood Drops', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'bloodmoon' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
-// Blood Moon exchange: when it sets, each Blood Drop becomes the larger of
-// BLOOD_RATE_SECONDS of that place's production or BLOOD_RATE_TAPS of its taps.
-export const BLOOD_RATE_SECONDS = 6;
-export const BLOOD_RATE_TAPS = 15;
+// Blood Drop exchange. Drops have diminishing returns: a haul is worth
+//   BLOOD_SECONDS × drops^BLOOD_EXP  seconds of the chosen place's output
+// (output = its helpers per second, or BLOOD_TAP_EQUIV taps a second if that's more),
+// times the Vampire's Chalice bonus. ~400 drops ≈ 1.5 min; ~27,000 ≈ 25 min.
+export const BLOOD_SECONDS = 2.5;
+export const BLOOD_EXP = 0.6;
+export const BLOOD_TAP_EQUIV = 3;
+export const CHALICE_VALUE_PER_LEVEL = 0.2;
 export const FIRST_EVENT_AT = 90;           // seconds of play before the first event
 export const EVENT_GAP = [120, 240];        // seconds between events
 
@@ -316,8 +320,8 @@ export const WORKSHOP = [
   { id: 'magnet', group: 'Events & surprises', icon: '🧲', name: 'Star Magnet', max: 1, value: 5e8, growth: 1, tier: 5,
     desc: () => 'Shooting stars are caught automatically', next: () => 'Catch every shooting star' },
   { id: 'chalice', group: 'Events & surprises', icon: '🍷', name: 'Vampire’s Chalice', max: 3, value: 1e5, growth: 10, tier: 2,
-    desc: (l) => l ? `Blood Drops worth +${l * 50}% and +${l} per tap` : 'Better Blood Moon hauls and exchange rates',
-    next: (l) => `+${(l + 1) * 50}% value, +${l + 1} per tap` },
+    desc: (l) => l ? `Blood Drop hauls worth +${l * 20}% and +${l} drop per tap` : 'Bigger castle hauls and better exchanges',
+    next: (l) => `+${(l + 1) * 20}% value, +${l + 1} per tap` },
   { id: 'bell', group: 'Events & surprises', icon: '🔔', name: 'Fairy Bell', max: 1, value: 1e6, growth: 1, tier: 2,
     desc: () => 'The Wandering Fairy stays twice as long and offers a 4th gift', next: () => 'A longer visit and a new gift' },
 

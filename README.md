@@ -104,6 +104,12 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 
 - **Settings → Display → Helpers on screen:** *Lively* shows up to 10 of each helper; *Less busy* shows up to 5. It's remembered on each device, and helpers off screen still gather
 
+### Version 3.6: Blood Drop rebalance
+
+- Blood Drops now have **diminishing returns**: a haul is worth about 1.5 minutes of a place's gathering for ~400 drops, rising to about 20–30 minutes for a fully upgraded Blood Moon visit (before, big hauls were worth 100+ hours)
+- The Vampire's Chalice gives +20% value per level (was +50%); its extra drops per tap are unchanged
+- The exchange shows each total and how much gathering time it equals
+
 ## Balancing tool
 
 `tools/sim.mjs` plays the game headlessly as a casual player and logs when each place unlocks and when each prestige happens:

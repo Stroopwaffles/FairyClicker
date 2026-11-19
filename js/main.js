@@ -1316,7 +1316,7 @@ function renderBloodPanel(body) {
     <div class="buff-bar"><i id="bp-bar"></i></div>
     <div class="bp-time" id="bp-time"></div>
     <p id="bp-moon"></p>
-    <p>Tap the blood pool and watch the windows. When the gate pulls you home, you choose which resource your drops become, at a generous rate. Right now one drop is worth:</p>
+    <p>Tap the blood pool and watch the windows. When the gate pulls you home, you choose which resource your drops become. Right now they'd be worth:</p>
     <div class="bp-rates" id="bp-rates"></div>
   </div>`;
   updateBloodPanel();
@@ -1333,21 +1333,22 @@ function updateBloodPanel() {
     $('#bp-time').textContent = `The gate pulls you home in ${fmtClock(left)}`;
   }
   $('#bp-moon').textContent = G.hasBuff('bloodmoon') ? '🩸 The Blood Moon is up: every drop counts double!' : '';
-  const rates = G.bloodRates();
-  $('#bp-rates').innerHTML = Object.entries(rates).map(([r, x]) =>
-    `<div>${icon(r)} ${fmt(x, 100)} ${RESOURCES[r].name}</div>`).join('');
+  const prev = G.bloodPreview(G.state.blood.drops);
+  $('#bp-rates').innerHTML = Object.entries(prev).map(([r, x]) =>
+    `<div>${icon(r)} ${fmt(x.amount)} ${RESOURCES[r].name}</div>`).join('') +
+    (G.state.blood.drops ? `<div class="bp-note">≈ ${fmtDuration(Object.values(prev)[0].seconds * 1000)} of that place's gathering</div>` : '');
 }
 
 function showBloodExchange() {
   const pending = G.state.blood.pending;
   if (pending <= 0) return;
   const m = $('#modal');
-  const rates = G.bloodRates();
+  const prev = G.bloodPreview(pending);
   m.innerHTML = `<div class="modal-card blood-card" role="dialog" aria-modal="true">
     <h2>🌀 Back through the gate</h2>
     <p>You gathered <b>${fmt(pending)}</b> Blood Drops. Choose what they become:</p>
-    <div class="blood-choices">${Object.entries(rates).map(([r, x]) => `
-      <button class="blood-choice" data-r="${r}">${icon(r)}<span><b>+${fmt(pending * x)}</b> ${RESOURCES[r].name}<small>1 drop = ${fmt(x, 100)}</small></span></button>`).join('')}
+    <div class="blood-choices">${Object.entries(prev).map(([r, x]) => `
+      <button class="blood-choice" data-r="${r}">${icon(r)}<span><b>+${fmt(x.amount)}</b> ${RESOURCES[r].name}<small>≈ ${fmtDuration(x.seconds * 1000)} of ${LOCATIONS.find((l) => l.resource === r).name}'s gathering</small></span></button>`).join('')}
     </div></div>`;
   m.hidden = false;
   for (const b of $$('.blood-choice', m)) {
