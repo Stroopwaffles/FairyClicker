@@ -582,7 +582,129 @@ const clockworks = () => `
   <g data-sprites></g>
 </svg>`;
 
-export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks };
+// The Sunken Palace: an undersea palace with a giant clam.
+const palace = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="u-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a7aa8"/><stop offset=".55" stop-color="#0e4a78"/><stop offset="1" stop-color="#082a4a"/></linearGradient>
+    <linearGradient id="u-ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6fbff" stop-opacity=".35"/><stop offset="1" stop-color="#e6fbff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="u-sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8d6a8"/><stop offset="1" stop-color="#b89a68"/></linearGradient>
+    <linearGradient id="u-stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ad8e8"/><stop offset="1" stop-color="#4a8aa8"/></linearGradient>
+    <radialGradient id="u-shell" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#ffd6e8"/><stop offset=".6" stop-color="#e89ac0"/><stop offset="1" stop-color="#a85a88"/></radialGradient>
+    <radialGradient id="u-pearl" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#eef4ff"/><stop offset="1" stop-color="#c8d4f0"/></radialGradient>
+    <radialGradient id="u-glow"><stop offset="0" stop-color="#e6fbff" stop-opacity=".5"/><stop offset="1" stop-color="#e6fbff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#u-sea)"/>
+  <g class="rays">${[[300, 120], [480, 160], [660, 110], [820, 140]].map(([x, w], i) => `<path class="ray" style="animation-delay:-${i * 1.3}s" d="M${x} 0 L${x + w} 0 L${x + w * 2.2} 700 L${x - w * 0.6} 700 Z" fill="url(#u-ray)"/>`).join('')}</g>
+  <!-- palace in the distance -->
+  <g fill="url(#u-stone)" opacity=".5">
+    <rect x="300" y="200" width="400" height="230"/>
+    ${[320, 400, 480, 560, 640].map((x) => `<rect x="${x}" y="230" width="22" height="200" fill="#6aa8c8"/>`).join('')}
+    <path d="M280 205 L500 120 L720 205 Z"/>
+    <path d="M440 120 a60 60 0 0 1 120 0 Z"/><rect x="496" y="40" width="8" height="40"/>
+    <path d="M200 430 V260 a40 40 0 0 1 80 0 V430 Z M720 430 V260 a40 40 0 0 1 80 0 V430 Z"/>
+    <path d="M240 220 l0 -50 M760 220 l0 -50" stroke="#9ad8e8" stroke-width="6"/>
+  </g>
+  <path d="M0 520 Q250 470 500 500 Q750 470 1000 520 V700 H0 Z" fill="url(#u-sand)"/>
+  <!-- coral -->
+  ${[[110, 560, '#ff7a8a'], [210, 600, '#ffb35a'], [820, 570, '#c06bff'], [900, 610, '#ff7a8a']].map(([x, y, c]) => `
+    <g fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round"><path d="M${x} ${y} v-70 M${x} ${y - 30} l-26 -30 M${x} ${y - 50} l24 -34 M${x - 26} ${y - 60} v-20"/></g>`).join('')}
+  <!-- seaweed (the mermaid hides behind the left clump) -->
+  ${[[60, 0], [190, 1], [760, 2], [940, 3], [310, 4]].map(([x, i]) => `
+    <path class="weed" style="animation-delay:-${i * 0.7}s" d="M${x} 640 q-24 -60 0 -120 q24 -60 0 -120 q-20 -50 4 -100" fill="none" stroke="#2f9a6a" stroke-width="16" stroke-linecap="round"/>`).join('')}
+
+  <!-- the mermaid: peeks out from the seaweed -->
+  <g class="popup mermaid" transform="translate(255 470)">
+    <circle class="popup-hit" r="60" fill="transparent"/>
+    <g class="peek">
+      <path d="M-30 30 Q-34 -26 0 -32 Q34 -26 30 30 Z" fill="#ff7a8a"/>
+      <circle cx="0" cy="-8" r="22" fill="#ffe3cf"/>
+      <path d="M-24 -6 Q-26 -36 0 -36 Q26 -36 24 -6 Q18 -24 0 -24 Q-18 -24 -24 -6 Z" fill="#ff7a8a"/>
+      <circle cx="-8" cy="-8" r="3.4" fill="#1b1030"/><circle cx="8" cy="-8" r="3.4" fill="#1b1030"/>
+      <circle cx="-9" cy="-9.5" r="1.2" fill="#fff"/><circle cx="7" cy="-9.5" r="1.2" fill="#fff"/>
+      <path d="M-5 3 Q0 7 5 3" stroke="#b05a6a" stroke-width="2" fill="none"/>
+      <g fill="#ffd6e8"><circle cx="-14" cy="-32" r="5"/><circle cx="0" cy="-36" r="5"/><circle cx="14" cy="-32" r="5"/></g>
+      <path d="M-26 30 Q0 22 26 30 L22 44 Q0 38 -22 44 Z" fill="#3ab0a0"/>
+      <path d="M20 10 q24 -6 30 -22" stroke="#ffe3cf" stroke-width="7" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+
+  <!-- bubbles -->
+  ${Array.from({ length: 14 }, (_, i) => `<circle class="bubble" style="animation-delay:-${(i * 0.83).toFixed(2)}s;--bx:${(i % 2 ? 12 : -10)}px" cx="${80 + ((i * 137) % 860)}" cy="690" r="${4 + (i % 4) * 2}" fill="none" stroke="#e6fbff" stroke-opacity=".7" stroke-width="2"/>`).join('')}
+
+  <!-- the giant clam (tap target) -->
+  <g data-tap class="tap-target clam-target">
+    <circle cx="520" cy="500" r="200" fill="url(#u-glow)" class="pulse"/>
+    <ellipse cx="520" cy="612" rx="190" ry="24" fill="#000" opacity=".25"/>
+    <path d="M340 560 Q520 650 700 560 Q690 610 520 620 Q350 610 340 560 Z" fill="url(#u-shell)" stroke="#a85a88" stroke-width="3"/>
+    <path d="M350 560 Q520 520 690 560 Q520 610 350 560 Z" fill="#a8326a"/>
+    <circle cx="520" cy="548" r="40" fill="url(#u-pearl)" class="pearl"/>
+    <circle cx="506" cy="534" r="10" fill="#fff" opacity=".8"/>
+    <path class="clam-lid" d="M340 556 Q350 380 520 360 Q690 380 700 556 Q520 500 340 556 Z" fill="url(#u-shell)" stroke="#a85a88" stroke-width="3"/>
+    <g stroke="#a85a88" stroke-width="3" fill="none" opacity=".6" class="clam-lid">
+      ${[-100, -50, 0, 50, 100].map((dx) => `<path d="M520 530 Q${520 + dx * 0.8} 460 ${520 + dx * 1.15} ${400 + Math.abs(dx) * 0.45}"/>`).join('')}
+    </g>
+  </g>
+
+  <g data-sprites></g>
+</svg>`;
+
+// The Cloud Isles: floating islands and a rainbow cloud.
+const clouds = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="s2-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fc8ff"/><stop offset=".6" stop-color="#ffd0e8"/><stop offset="1" stop-color="#ffe8c8"/></linearGradient>
+    <radialGradient id="s2-sun"><stop offset="0" stop-color="#fffbe0"/><stop offset=".4" stop-color="#ffe88a" stop-opacity=".8"/><stop offset="1" stop-color="#ffe88a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="s2-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ad870"/><stop offset="1" stop-color="#5aa850"/></linearGradient>
+    <linearGradient id="s2-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8a888"/><stop offset="1" stop-color="#8a6a58"/></linearGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#s2-sky)"/>
+  <circle cx="830" cy="110" r="150" fill="url(#s2-sun)" class="pulse"/>
+  <!-- distant clouds drifting -->
+  ${[[120, 120, 1], [420, 70, 0.8], [700, 200, 1.1]].map(([x, y, k], i) => `<g class="drift-cloud" style="animation-delay:-${i * 9}s"><g transform="translate(${x} ${y}) scale(${k})" fill="#fff" opacity=".85">
+    <ellipse cx="0" cy="0" rx="70" ry="26"/><circle cx="-30" cy="-14" r="28"/><circle cx="18" cy="-22" r="34"/><circle cx="48" cy="-6" r="22"/></g></g>`).join('')}
+
+  <!-- floating islands -->
+  ${[[180, 330, 0.8, 0], [830, 400, 0.9, 1], [520, 210, 0.55, 2]].map(([x, y, k, i]) => `<g class="isle" style="animation-delay:-${i * 1.4}s"><g transform="translate(${x} ${y}) scale(${k})">
+    <path d="M-110 0 Q-70 120 0 150 Q70 120 110 0 Z" fill="url(#s2-rock)"/>
+    <ellipse cx="0" cy="0" rx="112" ry="22" fill="url(#s2-grass)"/>
+    <path d="M-40 -6 v-46" stroke="#8a5d34" stroke-width="8"/><circle cx="-40" cy="-62" r="26" fill="#ff9fcf"/><circle cx="-24" cy="-50" r="18" fill="#ffb3d9"/>
+    <path d="M50 -4 l-12 -26 l24 0 z" fill="#fff6c8"/><path d="M30 -2 q6 -16 14 -4" stroke="#5aa850" stroke-width="4" fill="none"/>
+    <path d="M-80 120 q-6 30 4 50 M70 110 q8 30 -2 54" stroke="#5aa850" stroke-width="4" fill="none" opacity=".7"/></g></g>`).join('')}
+
+  <!-- the cloud whale: drifts across now and then -->
+  <g class="popup whale">
+    <g class="whale-body">
+      <circle class="popup-hit" cx="0" cy="0" r="80" fill="transparent"/>
+      <path d="M-90 0 Q-80 -50 -10 -50 Q60 -50 80 -10 Q90 20 50 34 Q-40 50 -90 0 Z" fill="#ffffff" stroke="#c8d8f0" stroke-width="3"/>
+      <path d="M-90 0 Q-120 -30 -136 -20 Q-118 0 -136 22 Q-118 20 -90 6 Z" fill="#ffffff" stroke="#c8d8f0" stroke-width="3"/>
+      <circle cx="44" cy="-10" r="5" fill="#3a4a7a"/><path d="M40 8 q12 8 26 -2" stroke="#8aa0d0" stroke-width="3" fill="none"/>
+      <ellipse cx="34" cy="2" rx="9" ry="5" fill="#ffb3d9" opacity=".7"/>
+      <g fill="#fff"><circle cx="10" cy="-66" r="8"/><circle cx="20" cy="-82" r="6"/><circle cx="2" cy="-86" r="5"/></g>
+    </g>
+  </g>
+
+  <!-- the rainbow cloud (tap target) -->
+  <g data-tap class="tap-target cloud-target">
+    <circle cx="500" cy="470" r="230" fill="url(#s2-sun)" opacity=".5" class="pulse"/>
+    <g fill="none" stroke-width="20" stroke-linecap="round">
+      ${['#ff8a9a', '#ffb35a', '#ffe27a', '#9ae87a', '#8fd8ff', '#b79cff'].map((c, i) => `<path d="M${330 + i * 18} 500 A${170 - i * 18} ${170 - i * 18} 0 0 1 ${670 - i * 18} 500" stroke="${c}"/>`).join('')}
+    </g>
+    <g fill="#ffffff" stroke="#e0e8f8" stroke-width="3">
+      <ellipse cx="350" cy="520" rx="90" ry="50"/><circle cx="320" cy="490" r="50"/><circle cx="380" cy="480" r="44"/>
+      <ellipse cx="650" cy="520" rx="90" ry="50"/><circle cx="620" cy="482" r="46"/><circle cx="680" cy="490" r="50"/>
+      <ellipse cx="500" cy="560" rx="200" ry="50"/>
+    </g>
+    <g fill="#fff"><ellipse cx="350" cy="522" rx="86" ry="46"/><ellipse cx="650" cy="522" rx="86" ry="46"/><ellipse cx="500" cy="558" rx="196" ry="46"/></g>
+    <g fill="#ffb3d9" opacity=".6"><ellipse cx="460" cy="560" rx="10" ry="6"/><ellipse cx="540" cy="560" rx="10" ry="6"/></g>
+    <g fill="#3a4a7a"><circle cx="470" cy="542" r="5"/><circle cx="530" cy="542" r="5"/></g>
+    <path d="M490 556 q10 8 20 0" stroke="#3a4a7a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <g data-sprites></g>
+</svg>`;
+
+export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks, palace, clouds };
 
 // Sprite colour per location (helpers drawn as drifting motes).
 export const SPRITE_COLORS = { pond: '#fff3a0', mushroom: '#c8ff9a', oak: '#ffc35a', grotto: '#d6c8ff', meadow: '#fff8c8' };

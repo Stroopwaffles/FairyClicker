@@ -207,6 +207,8 @@ export const EVENTS = [
   { id: 'fog',        name: 'Mischief Fog',      icon: '🌫️', desc: 'Taps ×3 · helpers ×½',                     dur: 60,  weight: 0.8, req: { loc: 'grotto' }, effects: [{ t: 'tapMult', loc: '*', x: 3 }, { t: 'helperMult', loc: '*', x: 0.5 }] },
   { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Crimson Gate cooldown −15 min · castle visits give ×2 Blood Drops', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'bloodmoon' },
   { id: 'chimes',     name: 'Midnight Chimes',   icon: '🕛', desc: 'Cuckoo Gate cooldown −15 min · clock visits give ×2 Seconds', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'chimes' },
+  { id: 'hightide',   name: 'High Tide',         icon: '🌊', desc: 'Tide Gate cooldown −15 min · palace visits give ×2 Pearls', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'hightide' },
+  { id: 'rainbow',    name: 'Rainbow Day',       icon: '🌈', desc: 'Sky Gate cooldown −15 min · cloud visits give ×2 Sunbeams', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'rainbow' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
 // Blood Drop exchange. Drops have diminishing returns: a haul is worth
@@ -346,7 +348,12 @@ export const GATES = [
   { id: 'clock', name: 'Cuckoo Gate', world: 'Cuckoo Clockworks', icon: '⏰', color: '#e0a040',
     blurb: 'Inside a giant cuckoo clock. Tap the clock to collect Seconds, then spend them as Borrowed Time: everything ×2 for that long.',
     visitSec: 60, cooldownMin: 45 },
-  { id: 'soon2', soon: true, name: 'Sealed Gate', icon: '🔒', color: '#4a8a6a' },
+  { id: 'palace', name: 'Tide Gate', world: 'Sunken Palace', icon: '🐚', color: '#3ab0d0',
+    blurb: 'An undersea palace. Tap the giant clam for Pearls; they’re strung into a necklace that boosts everything forever.',
+    visitSec: 60, cooldownMin: 60 },
+  { id: 'clouds', name: 'Sky Gate', world: 'Cloud Isles', icon: '☁️', color: '#ffb3e0',
+    blurb: 'Floating islands above the clouds. Tap the rainbow cloud for Sunbeams; they make your next time away earn double.',
+    visitSec: 60, cooldownMin: 45 },
 ];
 export const GATE_BY_ID = byId(GATES);
 export const BLOOD_MOON_COOLDOWN_CUT_MIN = 15;
@@ -358,6 +365,23 @@ export const BORROWED_CAP_SEC = 30 * 60;
 export const CLOCK_CRIT_SECS = 5;      // a critical tap gives this many seconds
 export const CUCKOO_SECS = 30;         // tapping the cuckoo bird
 export const CHIMES_COOLDOWN_CUT_MIN = 15;
+// Gate events: which gate each one helps (cooldown cut, ×2 haul while it lasts).
+export const GATE_EVENTS = { bloodmoon: 'castle', chimes: 'clock', hightide: 'palace', rainbow: 'clouds' };
+export const GATE_EVENT_CUT_MIN = 15;
+
+// Sunken Palace and Cloud Isles share one set of rules: tap for a currency,
+// catch the pop-up visitor for a bonus, then the haul becomes the world's reward.
+export const SIMPLE_WORLDS = {
+  palace: { currency: 'Pearls', icon: '🦪', color: '#e6f4ff', critAmt: 5, popupAmt: 25, popup: 'mermaid', event: 'hightide', scene: 'palace' },
+  clouds: { currency: 'Sunbeams', icon: '☀️', color: '#ffe27a', critAmt: 5, popupAmt: 25, popup: 'whale', event: 'rainbow', scene: 'clouds' },
+};
+// Pearl Necklace: strand n needs PEARL_STRAND_STEP × n more pearls; each strand is +2% to everything, forever.
+export const PEARL_STRAND_STEP = 50;
+export const PEARL_STRAND_BONUS = 0.02;
+// Sunbeams: each stores this many seconds of double offline earnings, up to the cap.
+export const SUN_SECS_PER_BEAM = 30;
+export const SUN_BANK_CAP_H = 12;
+
 export const TIME_BUFF = { id: 'borrowed', name: 'Borrowed Time', icon: '⏳', desc: `Everything ×${BORROWED_MULT}` };
 
 // ---------- Fairy wardrobe (purely cosmetic) ----------
@@ -412,10 +436,16 @@ export const COSTUMES = [
   { id: 'rose', slot: 'held', name: 'Midnight Rose', from: { place: 'castle' } },
   { id: 'cuckoo_hat', slot: 'head', name: 'Cuckoo Hat', from: { place: 'clock' } },
   { id: 'clock_coat', slot: 'outfit', name: 'Clockmaker’s Coat', from: { place: 'clock' } },
+  { id: 'shell_crown', slot: 'head', name: 'Seashell Crown', from: { place: 'palace' } },
+  { id: 'mermaid_gown', slot: 'outfit', name: 'Mermaid Gown', from: { place: 'palace' } },
+  { id: 'trident', slot: 'held', name: 'Little Trident', from: { place: 'palace' } },
+  { id: 'rainbow_band', slot: 'head', name: 'Rainbow Headband', from: { place: 'clouds' } },
+  { id: 'cloud_dress', slot: 'outfit', name: 'Cloud Puff Dress', from: { place: 'clouds' } },
+  { id: 'parasol', slot: 'held', name: 'Sky Parasol', from: { place: 'clouds' } },
   { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);
-export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks' };
+export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks', palace: 'Sunken Palace', clouds: 'Cloud Isles' };
 
 // How to unlock an item, in words (for locked items in the wardrobe).
 export function costumeHint(c) {

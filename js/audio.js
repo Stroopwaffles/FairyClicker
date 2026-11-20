@@ -252,6 +252,35 @@ export function cuckoo() {
   });
 }
 
+// Sunken Palace / Cloud Isles taps and visitors.
+export function worldTap(gate, echo = false) {
+  if (!ready() || prefs.sfx === 0) return;
+  const now = performance.now();
+  if (now - lastTapAt < 35) return;
+  lastTapAt = now;
+  const v = rnd(0.9, 1.12);
+  if (gate === 'palace') {
+    // a bubbly "bloop"
+    tone({ freq: 300 * v, to: 900 * v, glide: 0.1, decay: 0.14, peak: 0.22, wet: 0.5 });
+    tone({ freq: 1400 * v, start: 0.05, decay: 0.12, peak: 0.04, wet: 0.7 });
+  } else {
+    // a soft harp pluck chord
+    const base = pick([72, 74, 77, 79]);
+    [0, 4, 7].forEach((st, i) => tone({ freq: mtof(base + st), type: 'triangle', start: i * 0.02, decay: 0.5, peak: 0.07, wet: 0.6 }));
+  }
+  if (echo) tone({ freq: rnd(1800, 2400), start: 0.12, decay: 0.3, peak: 0.04, wet: 0.9 });
+}
+
+export function visitor(gate) {
+  if (!ready()) return;
+  if (gate === 'palace') {
+    [67, 71, 74, 79, 83, 86, 91].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.05, decay: 0.9, peak: 0.06, wet: 0.8 }));
+  } else {
+    tone({ freq: 180, to: 320, glide: 0.6, type: 'sine', attack: 0.15, decay: 1.2, peak: 0.12, wet: 0.8 });
+    tone({ freq: 320, to: 220, glide: 0.5, type: 'sine', start: 0.8, attack: 0.1, decay: 1, peak: 0.1, wet: 0.8 });
+  }
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));
@@ -301,6 +330,13 @@ export function eventStart(id) {
         tone({ freq: 523, start: i * 0.22, decay: 1.2, peak: 0.07, wet: 0.7 });
         tone({ freq: 523 * 2.76, start: i * 0.22, decay: 0.5, peak: 0.02, wet: 0.8 });
       }
+      break;
+    case 'hightide':
+      noise({ dur: 2.2, peak: 0.14, type: 'lowpass', freq: 200, to: 1200, wet: 0.6 });
+      noise({ start: 1, dur: 1.6, peak: 0.1, type: 'lowpass', freq: 1200, to: 200, wet: 0.6 });
+      break;
+    case 'rainbow':
+      [72, 76, 79, 83, 86, 88, 91].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.08, decay: 1, peak: 0.06, wet: 0.7 }));
       break;
     case 'fairy':
       for (let i = 0; i < 10; i++) tone({ freq: mtof(pick([88, 91, 93, 95, 98, 100])), start: i * 0.06, decay: 0.4, peak: 0.05, wet: 0.8, pan: rnd(-0.8, 0.8) });
@@ -378,6 +414,14 @@ const AMBIENCES = {
   },
   courtyard: { custom: castleTheme },
   clockworks: { custom: (c) => playSong(MUSIC_BOX, c) },
+  palace: {
+    // Dreamy undersea: soft lydian chords, lapping water and rising bubbles
+    chords: [[50, 57, 64, 68], [52, 59, 66, 69], [47, 54, 61, 66], [49, 56, 63, 68]],
+    scale: [74, 76, 78, 80, 81, 83, 85, 88],
+    padType: 'sine', cutoff: 900, sparkleEvery: [2, 5],
+    layers: [water, bubbles],
+  },
+  clouds: { custom: (c) => playSong(SKY_SONG, c) },
   gates: {
     // Mysterious whole-tone shimmer for the hall of portals
     chords: [[48, 55, 62, 66], [46, 53, 60, 64], [44, 51, 58, 62], [46, 53, 60, 64]],
@@ -922,4 +966,33 @@ const MUSIC_BOX = {
   bass: 'pluck', bassPattern: [0, R, 7, R, 7, R], bassPeak: 0.1,
   arp: 'bell', arpPattern: [R, R, 1, R, 2, R], arpPeak: 0.035, arpOct: 12,
   drums: { wood: [0, 2, 4], shaker: [1, 3, 5] },
+};
+
+function bubbles({ out, verb, every }) {
+  every(() => {
+    if (ctx.state !== 'running') return;
+    const f = rnd(500, 900), n = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) tone({ freq: f * (1 + i * 0.2), to: f * 2.2, glide: 0.06, start: i * 0.09, attack: 0.003, decay: 0.08, peak: 0.03, dest: out, wet: 0.8, verb, pan: rnd(-0.7, 0.7) });
+  }, [0.8, 2.5]);
+}
+
+// The Cloud Isles: a light, floaty pop tune (original).
+const SKY_SONG = {
+  bpm: 104, stepsPerBar: 16,
+  chords: [[65, 69, 72, 76], [62, 65, 69, 72], [70, 74, 77, 81], [72, 76, 79], [65, 69, 72, 76], [69, 72, 76], [70, 74, 77], [72, 76, 79, 82]],
+  roots: [41, 38, 46, 48, 41, 45, 46, 48],
+  melody: [
+    [[81, 4], [79, 2], [77, 2], [76, 4], [77, 4]],
+    [[74, 6], [72, 2], [69, 8]],
+    [[77, 4], [79, 2], [81, 2], [82, 4], [81, 4]],
+    [[79, 12], [R, 4]],
+    [[84, 4], [81, 2], [79, 2], [77, 4], [81, 4]],
+    [[79, 6], [76, 2], [72, 8]],
+    [[74, 4], [77, 4], [81, 4], [79, 4]],
+    [[77, 12], [R, 4]],
+  ],
+  lead: 'glass', leadPeak: 0.07,
+  bass: 'pluck', bassPattern: [0, R, R, R, R, R, 7, R, 12, R, R, R, 7, R, R, R], bassPeak: 0.13,
+  arp: 'bell', arpPattern: [0, R, 1, R, 2, R, 3, R, 2, R, 1, R, 2, R, 3, R], arpPeak: 0.028, arpOct: 12,
+  drums: { kick: [0, 10], shaker: [2, 6, 10, 14], wood: [4, 12] },
 };

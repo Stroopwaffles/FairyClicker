@@ -129,6 +129,16 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 - **🕛 Midnight Chimes** (new event): cuts 15 minutes off the Cuckoo Gate's rest, and clock visits give ×2 Seconds
 - A clockmaker costume (cuckoo hat, clockmaker's coat, pocket watch), a music-box waltz, and three new achievements
 
+### Version 3.9: the Sunken Palace and the Cloud Isles
+
+The Gate Room now has four portals.
+
+- **🐚 Tide Gate → Sunken Palace** (60-second visit, 60-minute rest): tap the giant clam for **Pearls**, and catch the mermaid when she peeks out of the seaweed (+25). Pearls are strung onto your **📿 Pearl Necklace**: every strand is **+2% to everything, forever**, even through prestiges. Strand *n* needs 50 × *n* more pearls
+- **☁️ Sky Gate → Cloud Isles** (60-second visit, 45-minute rest): tap the rainbow cloud for **Sunbeams**, and catch the cloud whale as it drifts by (+25). Each Sunbeam stores **30 seconds of double offline earnings** (up to 12 hours), used up the next time you're away
+- New events **🌊 High Tide** and **🌈 Rainbow Day** each cut 15 minutes off their gate's rest and double that world's haul
+- Costumes: seashell crown, mermaid gown, little trident; rainbow headband, cloud puff dress, sky parasol
+- Undersea ambience with bubbles, a floaty Cloud Isles song, and four new achievements
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

@@ -611,6 +611,44 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .clock-card .small { font-size: .85rem; }
 .clock-card .row { justify-content: center; }
 
+/* ---------- Sunken Palace & Cloud Isles ---------- */
+.ray { animation: rayShift 7s ease-in-out infinite alternate; }
+@keyframes rayShift { from { opacity: .4; } to { opacity: 1; } }
+.weed { animation: sway 4s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom center; }
+.bubble { animation: bubbleUp 7s linear infinite; }
+@keyframes bubbleUp { from { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } to { transform: translate(var(--bx, 10px), -680px); opacity: 0; } }
+.pearl { animation: pulse 2.6s ease-in-out infinite; }
+.clam-target.bump .clam-lid { animation: clamLid .18s ease-out; transform-box: view-box; transform-origin: 520px 556px; }
+@keyframes clamLid { 50% { transform: rotate(-4deg) translateY(-6px); } }
+.drift-cloud { animation: cloudDrift 40s linear infinite alternate; }
+@keyframes cloudDrift { from { transform: translateX(-60px); } to { transform: translateX(80px); } }
+.isle { animation: bob 5s ease-in-out infinite; }
+.popup { pointer-events: none; }
+.popup.show { pointer-events: auto; cursor: pointer; }
+.mermaid .peek { transform: translate(-50px, 30px); opacity: 0; transition: transform .45s cubic-bezier(.3, 1.4, .5, 1), opacity .3s; }
+.mermaid.show .peek { transform: translate(0, 0); opacity: 1; }
+.whale { opacity: 0; }
+.whale.show { opacity: 1; animation: whaleSwim 4.5s linear forwards; }
+@keyframes whaleSwim { from { transform: translate(1150px, 240px); } to { transform: translate(-200px, 180px); } }
+.whale-body { animation: bob 1.6s ease-in-out infinite; }
+.loc-tab.world-palace { background: linear-gradient(180deg, #1a7aa8, #0e4a78); border-color: #8fd8ff; animation: pulse 2.4s ease-in-out infinite; }
+.loc-tab.world-clouds { background: linear-gradient(180deg, #ff9fcf, #c87ab8); border-color: #ffe0f0; animation: pulse 2.4s ease-in-out infinite; }
+.loc-tab.world-palace.active, .loc-tab.world-clouds.active { animation: none; filter: brightness(1.15); }
+.world-panel.palace { background: linear-gradient(180deg, #0e4a78, #082a4a); border-color: #3ab0d0; }
+.world-panel.clouds { background: linear-gradient(180deg, #7a5aa8, #4a3a7a); border-color: #ffb3e0; }
+.world-panel h3 { color: #e6f4ff; }
+.world-panel .blood-count b { color: #fff6c8; }
+.world-panel .buff-bar i { background: linear-gradient(90deg, #8fd8ff, #ffb3e0); }
+.world-panel p, .world-panel .bp-time { color: #e0eaff; }
+.necklace { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin: 8px 0; }
+.necklace i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #c8d4f0); box-shadow: 0 0 4px rgba(255, 255, 255, .6); }
+.world-card { text-align: center; }
+.world-card.palace { border-color: #3ab0d0; background: linear-gradient(180deg, #0e4a78, #082a4a); }
+.world-card.clouds { border-color: #ffb3e0; background: linear-gradient(180deg, #6a4a98, #3a2a6a); }
+.world-card .big-line { font-size: 1.2rem; color: #fff; }
+.world-card .big-line b { color: #fff6c8; }
+.world-card .row { justify-content: center; }
+
 /* ---------- panel ---------- */
 .panel-tabs { display: grid; grid-template-columns: repeat(5, 1fr) 46px; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
 .ptab {

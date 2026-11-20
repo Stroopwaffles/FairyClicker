@@ -5,14 +5,15 @@ import {
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
-} from './data.js?v=3.8';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.8';
-import * as G from './game.js?v=3.8';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.8';
+  SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
+} from './data.js?v=3.9';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.9';
+import * as G from './game.js?v=3.9';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.9';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js?v=3.8';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.8';
+} from './avatar.js?v=3.9';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.9';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -20,7 +21,7 @@ const display = { lessBusy: false, hideFairy: false };
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.8';
+import * as A from './audio.js?v=3.9';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -94,6 +95,7 @@ function renderTitle() {
     const rows = Object.entries(offlineSummary.gained).map(([r, amt]) =>
       `<div class="row"><span>${icon(r)} ${byPlace ? `${placeOf(r).name} · ` : ''}${RESOURCES[r].name}</span><span>+${fmt(amt)}</span></div>`).join('');
     card.innerHTML = `<h2>While you were away (${fmtDuration(offlineSummary.awayMs)})</h2>${rows}
+      ${offlineSummary.sunSec ? `<div class="note">☀️ Sunbeams doubled ${fmtDuration(offlineSummary.sunSec * 1000)} of it</div>` : ''}
       ${offlineSummary.capped ? `<div class="note">Your helpers rest after ${fmtDuration(offlineSummary.usedMs)} away.${G.state.locs.pond.features.reedchimes ? '' : ' Build Reed Chimes at the pond to extend it.'}</div>` : ''}`;
     card.hidden = false;
   } else {
@@ -171,8 +173,9 @@ function renderLocTabs() {
     nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab gates${gateView ? ' active' : ''}${ready ? ' ready' : ''}" data-loc="gates">🌀 Gate Room</button>`);
   }
   if (G.visitActive()) {
-    const clock = visitGate() === 'clock';
-    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab ${clock ? 'clockworks' : 'courtyard'}${bloodView ? ' active' : ''}" data-loc="world">${clock ? '⏰ Cuckoo Clockworks' : '🏰 Crimson Castle'}</button>`);
+    const g = GATE_BY_ID[visitGate()];
+    const cls = { castle: 'courtyard', clock: 'clockworks' }[g.id] || `world-${g.id}`;
+    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab ${cls}${bloodView ? ' active' : ''}" data-loc="world">${g.icon} ${g.world}</button>`);
   }
   for (const b of $$('.loc-tab', nav)) b.addEventListener('click', () => switchLocation(b.dataset.loc));
   updateLocTabs();
@@ -204,7 +207,11 @@ function switchLocation(id) {
 }
 
 function renderScene() {
-  if (bloodView) { if (visitGate() === 'clock') renderClockworks(); else renderCourtyard(); return; }
+  if (bloodView) {
+    const g = visitGate();
+    if (g === 'clock') renderClockworks(); else if (SIMPLE_WORLDS[g]) renderSimpleWorld(g); else renderCourtyard();
+    return;
+  }
   if (gateView) { renderGateRoom(); return; }
   const id = G.state.active;
   const l = LOCATION_BY_ID[id];
@@ -247,9 +254,11 @@ function renderScene() {
 }
 function updateSceneRate() {
   if (bloodView) {
-    $('#scene-rate').innerHTML = visitGate() === 'clock'
-      ? `⏳ ${fmt(G.state.clockw.secs)} Seconds · back in ${fmtClock(G.visitLeftMs() / 1000)}`
-      : `🩸 ${fmt(G.state.blood.drops)} Blood Drops · back in ${fmtClock(G.visitLeftMs() / 1000)}`;
+    const g = visitGate(), back = `back in ${fmtClock(G.visitLeftMs() / 1000)}`;
+    const W = SIMPLE_WORLDS[g];
+    $('#scene-rate').innerHTML = g === 'clock' ? `⏳ ${fmt(G.state.clockw.secs)} Seconds · ${back}`
+      : W ? `${W.icon} ${fmt(G.state.wv[g].amt)} ${W.currency} · ${back}`
+      : `🩸 ${fmt(G.state.blood.drops)} Blood Drops · ${back}`;
     return;
   }
   if (gateView) {
@@ -331,8 +340,9 @@ window.addEventListener('pointercancel', stopHold);
 
 // Which other world is being visited (if any), and the view id to tap in.
 const visitGate = () => G.state.gates.visit?.gate || null;
-const worldId = () => (visitGate() === 'clock' ? 'clockworks' : 'courtyard');
-const isWorld = (id) => id === 'courtyard' || id === 'clockworks';
+const WORLD_VIEW = { castle: 'courtyard', clock: 'clockworks', palace: 'palace', clouds: 'clouds' };
+const worldId = () => WORLD_VIEW[visitGate()] || 'courtyard';
+const isWorld = (id) => Object.values(WORLD_VIEW).includes(id);
 const viewId = () => (bloodView ? worldId() : gateView ? 'gates' : G.state.active);
 
 function onTap(e) {
@@ -353,11 +363,11 @@ function onTap(e) {
 }
 
 function doTap(id, target, clientX, clientY, byHand = false) {
-  const blood = id === 'courtyard', clock = id === 'clockworks';
+  const blood = id === 'courtyard', clock = id === 'clockworks', simple = SIMPLE_WORLDS[id] ? id : null;
   if (!byHand) { buildStreak(); fairyCast(); }
-  const { value: v, echo, crit } = blood ? G.tapBlood() : clock ? G.tapClock() : G.tap(id, streakMult());
+  const { value: v, echo, crit } = blood ? G.tapBlood() : clock ? G.tapClock() : simple ? G.tapWorld(simple) : G.tap(id, streakMult());
   // Hand taps are quieter so a fast hand doesn't drown everything out.
-  if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else if (clock) A.tick(echo); else A.tap(id, echo); }
+  if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else if (clock) A.tick(echo); else if (simple) A.worldTap(simple, echo); else A.tap(id, echo); }
   if (crit) A.crit();
   if (byHand) G.state.stats2.handTaps++; else trackFrenzy();
   target.classList.remove('bump');
@@ -366,7 +376,7 @@ function doTap(id, target, clientX, clientY, byHand = false) {
 
   const wrap = $('#scene-wrap').getBoundingClientRect();
   const x = clientX - wrap.left, y = clientY - wrap.top;
-  const color = blood ? '#ff4a5a' : clock ? '#ffd27a' : RESOURCES[LOCATION_BY_ID[id].resource].color;
+  const color = blood ? '#ff4a5a' : clock ? '#ffd27a' : simple ? SIMPLE_WORLDS[simple].color : RESOURCES[LOCATION_BY_ID[id].resource].color;
   const layer = $('#floaters');
   const f = document.createElement('div');
   f.className = 'floater';
@@ -389,6 +399,7 @@ function doTap(id, target, clientX, clientY, byHand = false) {
 
   if (blood) { updateSceneRate(); updateBloodPanel(); return; }
   if (clock) { updateSceneRate(); updateClockPanel(); return; }
+  if (simple) { updateSceneRate(); updateWorldPanel(); return; }
   if (G.state.locs[id].taps === 31) $('#tap-hint').classList.add('faded');
   updateResBar();
 }
@@ -406,7 +417,11 @@ function renderPanel() {
   for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView && !gateView);
   const body = $('#panel-body');
   panelUpdaters = [];
-  if (bloodView) { if (visitGate() === 'clock') renderClockPanel(body); else renderBloodPanel(body); return; }
+  if (bloodView) {
+    const g = visitGate();
+    if (g === 'clock') renderClockPanel(body); else if (SIMPLE_WORLDS[g]) renderWorldPanel(body, g); else renderBloodPanel(body);
+    return;
+  }
   if (gateView) { renderGatePanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
@@ -674,6 +689,8 @@ function renderSettings(body) {
         <span>Events seen</span><span>${fmt(s.ev.count)}</span>
         <span>Shooting stars caught</span><span>${fmt(s.stats.starsCaught)}</span>
         <span>Achievements</span><span>${G.achievementCount()} / ${ACHIEVEMENTS.length}</span>
+        <span>Pearl Necklace</span><span>${G.pearlStrands()} strands (+${Math.round(G.pearlStrands() * PEARL_STRAND_BONUS * 100)}%)</span>
+        <span>Sunny time stored</span><span>${fmtDuration(G.state.wv.clouds.bank * 1000)}</span>
         <span>Nights completed (prestiges)</span><span>${s.prestige.count}</span>
         <span>Moonstones earned</span><span>${fmt(s.prestige.lifetimeStones)}</span>
         ${s.prestige.fastestRunMs ? `<span>Fastest night</span><span>${fmtDuration(s.prestige.fastestRunMs)}</span>` : ''}
@@ -1196,7 +1213,7 @@ function tickDracula(dt) {
 let gateView = false; // showing the Gate Room
 
 function gateSceneSVG() {
-  const slots = [[285, 'clock'], [500, 'castle'], [715, 'soon2']];
+  const slots = [[228, 'clouds'], [409, 'clock'], [591, 'castle'], [772, 'palace']];
   const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 1000}" cy="${(i * 53) % 260}" r="${(i % 3) * 0.6 + 0.6}" fill="#fff" opacity=".6"/>`).join('');
   return `<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
@@ -1204,6 +1221,8 @@ function gateSceneSVG() {
       <linearGradient id="gr-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2550"/><stop offset="1" stop-color="#110e2a"/></linearGradient>
       <radialGradient id="gr-castle"><stop offset="0" stop-color="#ff6a7a"/><stop offset=".55" stop-color="#a0142e"/><stop offset="1" stop-color="#3a0814"/></radialGradient>
       <radialGradient id="gr-clock"><stop offset="0" stop-color="#ffe08a"/><stop offset=".55" stop-color="#c07a20"/><stop offset="1" stop-color="#4a2a08"/></radialGradient>
+      <radialGradient id="gr-palace"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#2a8ac0"/><stop offset="1" stop-color="#08304a"/></radialGradient>
+      <radialGradient id="gr-clouds"><stop offset="0" stop-color="#fff6ff"/><stop offset=".55" stop-color="#ffb3e0"/><stop offset="1" stop-color="#7a5aa8"/></radialGradient>
       <radialGradient id="gr-sealed"><stop offset="0" stop-color="#3a3a6a"/><stop offset="1" stop-color="#14122e"/></radialGradient>
       <radialGradient id="gr-glow"><stop offset="0" stop-color="#c9a7ff" stop-opacity=".5"/><stop offset="1" stop-color="#c9a7ff" stop-opacity="0"/></radialGradient>
     </defs>
@@ -1221,19 +1240,22 @@ function gateSceneSVG() {
       const sealed = g.soon;
       return `<g class="portal${sealed ? ' sealed' : ''}" data-gate="${id}">
         <circle cx="${x}" cy="380" r="170" fill="url(#gr-glow)" class="${sealed ? '' : 'pulse'}"/>
-        <path d="M${x - 88} 560 V330 a88 88 0 0 1 176 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
-        <path class="portal-face" d="M${x - 72} 556 V334 a72 72 0 0 1 144 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
+        <path d="M${x - 78} 560 V340 a78 78 0 0 1 156 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
+        <path class="portal-face" d="M${x - 64} 556 V344 a64 64 0 0 1 128 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
         ${sealed
           ? `<g opacity=".75"><path d="M${x - 14} 418 v-12 a14 14 0 0 1 28 0 v12" fill="none" stroke="#7a72c8" stroke-width="5"/>
                <rect x="${x - 22}" y="416" width="44" height="34" rx="6" fill="#4a4290"/><circle cx="${x}" cy="430" r="5" fill="#14122e"/><rect x="${x - 2}" y="432" width="4" height="9" fill="#14122e"/></g>`
           : `<g fill="none" stroke="#ffd6dc" stroke-opacity=".6">
                <circle class="swirl" cx="${x}" cy="440" r="52" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 440px"/>
                <circle class="swirl rev" cx="${x}" cy="440" r="32" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 440px"/></g>
-             ${id === 'clock'
-               ? `<circle cx="${x}" cy="510" r="22" fill="#fff8e6" opacity=".85"/><path d="M${x} 510 v-14 M${x} 510 h10" stroke="#4a2a08" stroke-width="3" stroke-linecap="round"/>`
-               : `<path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`}`}
+             ${{
+               clock: `<circle cx="${x}" cy="510" r="22" fill="#fff8e6" opacity=".85"/><path d="M${x} 510 v-14 M${x} 510 h10" stroke="#4a2a08" stroke-width="3" stroke-linecap="round"/>`,
+               castle: `<path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`,
+               palace: `<path d="M${x - 26} 526 Q${x} 486 ${x + 26} 526 Z" fill="#ffb3d0" opacity=".9"/><circle cx="${x}" cy="514" r="8" fill="#fff"/>`,
+               clouds: `<g fill="#fff" opacity=".95"><ellipse cx="${x}" cy="520" rx="30" ry="12"/><circle cx="${x - 12}" cy="510" r="12"/><circle cx="${x + 10}" cy="506" r="14"/></g>`,
+             }[id] || ''}`}
         <rect class="portal-hit" x="${x - 95}" y="235" width="190" height="325" fill="transparent"/>
-        <text x="${x}" y="592" text-anchor="middle" font-size="19" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
+        <text x="${x}" y="592" text-anchor="middle" font-size="16" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
         <text class="portal-status" x="${x}" y="618" text-anchor="middle" font-size="17" fill="#c9b6ff" font-family="Quicksand, sans-serif"></text>
       </g>`;
     }).join('')}
@@ -1312,6 +1334,7 @@ function onVisitEnd(res) {
   G.save();
   renderAll();
   if (res?.gate === 'clock') showBorrowedTime(res);
+  else if (SIMPLE_WORLDS[res?.gate]) showWorldResult(res);
   else if (G.state.blood.pending > 0) showBloodExchange();
 }
 
@@ -1542,6 +1565,125 @@ function showBorrowedTime(res) {
   updateSceneRate();
 }
 
+// ---------- Sunken Palace & Cloud Isles ----------
+
+function renderSimpleWorld(g) {
+  const W = SIMPLE_WORLDS[g], gate = GATE_BY_ID[g];
+  $('#scene').innerHTML = SCENES[W.scene]();
+  const got = G.grantPlaceCostume(g);
+  if (got.length) setTimeout(() => onCostumes(got), 600);
+  requestAnimationFrame(placeHandsAtRest);
+  $('#scene-name').textContent = gate.world;
+  $('[data-tap]', $('#scene')).addEventListener('pointerdown', onTap);
+  const pop = $('#scene .popup');
+  pop.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!pop.classList.contains('show')) return;
+    const v = G.catchVisitor(g);
+    A.visitor(g);
+    hideVisitor();
+    const r = $('#scene-wrap').getBoundingClientRect();
+    floatText(e.clientX - r.left, e.clientY - r.top, `${W.icon} +${v}`, W.color);
+    toast(g === 'palace' ? `🧜 The mermaid gives you ${v} Pearls!` : `🐋 The cloud whale showers you with ${v} Sunbeams!`);
+    updateSceneRate();
+    updateWorldPanel();
+  });
+  visitorTimer = 4 + Math.random() * 3;
+  const hint = $('#tap-hint');
+  hint.textContent = g === 'palace' ? 'Tap the giant clam' : 'Tap the rainbow cloud';
+  hint.classList.remove('faded');
+  $('#lock-overlay').hidden = true;
+  updateSceneRate();
+}
+
+let visitorTimer = 5, visitorHide = null;
+function hideVisitor() {
+  clearTimeout(visitorHide);
+  $('#scene .popup')?.classList.remove('show');
+}
+function tickVisitor(dt) {
+  const g = visitGate();
+  if (!bloodView || !SIMPLE_WORLDS[g] || !G.visitActive() || $('#scene .popup.show')) return;
+  visitorTimer -= dt;
+  if (visitorTimer > 0) return;
+  visitorTimer = 8 + Math.random() * 6;
+  const pop = $('#scene .popup');
+  if (!pop) return;
+  pop.classList.add('show');
+  A.visitor(g);
+  visitorHide = setTimeout(hideVisitor, g === 'clouds' ? 4500 : 2000);
+}
+
+function renderWorldPanel(body, g) {
+  const W = SIMPLE_WORLDS[g], gate = GATE_BY_ID[g];
+  const explain = g === 'palace'
+    ? `Tap the clam and catch the mermaid when she peeks out. When the gate pulls you home, your Pearls are strung onto your <b>Pearl Necklace</b>. Every strand is <b>+${Math.round(PEARL_STRAND_BONUS * 100)}% to everything, forever</b>, even through prestiges.`
+    : `Tap the rainbow cloud and catch the cloud whale as it drifts by. Each Sunbeam stores <b>${SUN_SECS_PER_BEAM} seconds of double offline earnings</b> (up to ${SUN_BANK_CAP_H} hours), used up the next time you're away.`;
+  body.innerHTML = `<div class="blood-panel world-panel ${g}" data-world="${g}">
+    <h3>${gate.icon} The ${gate.world}</h3>
+    <div class="blood-count"><b id="wp-amt">0</b> ${W.currency} collected</div>
+    <div class="buff-bar"><i id="wp-bar"></i></div>
+    <div class="bp-time" id="wp-time"></div>
+    <p id="wp-event"></p>
+    <p>${explain}</p>
+    <div class="bp-rates"><div id="wp-preview"></div></div>
+  </div>`;
+  updateWorldPanel();
+}
+
+function updateWorldPanel() {
+  const panel = $('.world-panel');
+  if (!panel) return;
+  const g = panel.dataset.world, W = G.state.wv[g];
+  $('#wp-amt').textContent = fmt(W.amt);
+  const v = G.state.gates.visit;
+  if (v) {
+    const left = G.visitLeftMs() / 1000;
+    $('#wp-bar').style.width = `${(left / GATE_BY_ID[v.gate].visitSec) * 100}%`;
+    $('#wp-time').textContent = `The gate pulls you home in ${fmtClock(left)}`;
+  }
+  const ev = SIMPLE_WORLDS[g].event;
+  $('#wp-event').textContent = G.hasBuff(ev) ? `${EVENT_BY_ID[ev].icon} ${EVENT_BY_ID[ev].name}: every ${SIMPLE_WORLDS[g].currency.slice(0, -1)} counts double!` : '';
+  if (g === 'palace') {
+    const now = G.pearlStrands(), after = G.pearlStrands(W.strung + W.amt);
+    const next = G.pearlsForStrands(after + 1) - (W.strung + W.amt);
+    $('#wp-preview').innerHTML = `📿 Necklace: ${now} strand${now === 1 ? '' : 's'} (+${Math.round(now * PEARL_STRAND_BONUS * 100)}%)` +
+      (after > now ? ` → <b>${after}</b> after this visit` : '') + ` · next strand in ${fmt(next)} Pearls`;
+  } else {
+    const bank = Math.min(G.sunBankCap(), W.bank + W.amt * SUN_SECS_PER_BEAM);
+    $('#wp-preview').textContent = `☀️ Sunny time stored: ${fmtDuration(bank * 1000)} of double offline earnings`;
+  }
+}
+
+function showWorldResult(res) {
+  const m = $('#modal');
+  const W = SIMPLE_WORLDS[res.gate];
+  let inner;
+  if (res.gate === 'palace') {
+    const gained = res.after - res.before;
+    const beads = Math.min(res.after, 40);
+    inner = `<h2>📿 Your Pearl Necklace</h2>
+      <p>You gathered <b>${fmt(res.amt)}</b> Pearls in the Sunken Palace.</p>
+      <div class="necklace">${'<i></i>'.repeat(beads)}</div>
+      ${gained > 0
+        ? `<p class="big-line">+${gained} strand${gained === 1 ? '' : 's'}! Everything is now <b>+${Math.round(res.after * PEARL_STRAND_BONUS * 100)}%</b>, forever</p>`
+        : `<p class="big-line">${res.after} strand${res.after === 1 ? '' : 's'} (+${Math.round(res.after * PEARL_STRAND_BONUS * 100)}%)</p>
+           <p class="small">${fmt(G.pearlsForStrands(res.after + 1) - G.state.wv.palace.strung)} more Pearls for the next strand.</p>`}`;
+  } else {
+    inner = `<h2>☀️ Sunny Days Ahead</h2>
+      <p>You gathered <b>${fmt(res.amt)}</b> Sunbeams on the Cloud Isles.</p>
+      <p class="big-line">Your next <b>${fmtDuration(res.bank * 1000)}</b> away earns <b>double</b></p>
+      ${res.added < res.amt * SUN_SECS_PER_BEAM ? `<p class="small">Sunny time is capped at ${SUN_BANK_CAP_H} hours.</p>` : ''}`;
+  }
+  m.innerHTML = `<div class="modal-card world-card ${res.gate}" role="dialog" aria-modal="true">${inner}
+    <div class="row"><button class="btn primary" data-ok>Lovely!</button></div></div>`;
+  m.hidden = false;
+  if (res.amt > 0) A.fanfare();
+  $('[data-ok]', m).addEventListener('click', () => { m.hidden = true; m.innerHTML = ''; });
+  updateResBar();
+  updateSceneRate();
+}
+
 // ---------- Blood Moon ----------
 
 let bloodView = false; // visiting the Crimson Castle (courtyard scene)
@@ -1744,7 +1886,7 @@ function updatePrestigeCard() {
   $('#pc-gain').textContent = `+${fmt(n)} Moonstones`;
   $('#pc-bar').style.width = `${Math.max(0, Math.min(1, (G.runValue() - lo) / (hi - lo))) * 100}%`;
   const meadow = G.state.locs.meadow.unlocked;
-  $('#pc-next').textContent = G.state.gates.visit || G.state.blood.pending > 0 ? 'Finish your castle visit first.'
+  $('#pc-next').textContent = G.state.gates.visit || G.state.blood.pending > 0 ? 'Finish your gate visit first.'
     : !meadow ? 'Unlock the Starfall Meadow to begin a new night.'
     : n < 1 ? 'Gather a little more to earn your first Moonstone.'
     : `Next Moonstone at ${Math.round(((G.runValue() - lo) / (hi - lo)) * 100)}%`;
@@ -1903,6 +2045,7 @@ function tick(now) {
     tickSteward(dt);
     tickDracula(dt);
     tickCuckoo(dt);
+    tickVisitor(dt);
     uiAccum += dt; saveAccum += dt; achAccum += dt;
     if (achAccum >= 1) {
       achAccum = 0;
@@ -1915,7 +2058,7 @@ function tick(now) {
       uiAccum = 0;
       updateEvents();
       updateMoonBtn();
-      if (bloodView) { updateBloodPanel(); updateClockPanel(); updateSceneRate(); }
+      if (bloodView) { updateBloodPanel(); updateClockPanel(); updateWorldPanel(); updateSceneRate(); }
       if (gateView) updateGates();
       const ended = G.checkVisitEnd();
       if (ended) onVisitEnd(ended);
@@ -1963,7 +2106,7 @@ document.addEventListener('visibilitychange', () => {
     last = performance.now();
     if (sum) {
       const parts = Object.entries(sum.gained).map(([r, a]) => `+${fmt(a)} ${RESOURCES[r].name}`).join(', ');
-      toast(`Welcome back! Your helpers gathered ${parts}`);
+      toast(`Welcome back! Your helpers gathered ${parts}${sum.sunSec ? ` (☀️ ${fmtDuration(sum.sunSec * 1000)} doubled by Sunbeams)` : ''}`);
     }
     G.save();
     updateResBar();

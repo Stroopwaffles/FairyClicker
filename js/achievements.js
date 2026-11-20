@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.8';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.9';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
@@ -61,6 +61,10 @@ add({ id: 'bloodmoon1', group: 'Events', name: 'Once in a Blood Moon', desc: 'Wi
 add({ id: 'clock1', group: 'Events', name: 'Time Traveller', desc: 'Visit the Cuckoo Clockworks', check: (s) => (s.gates.visits.clock || 0) >= 1 });
 add({ id: 'clock600', group: 'Events', name: 'Ten Minutes to Spare', desc: 'Collect 600 Seconds in one clock visit', check: (s) => s.clockw.best >= 600 });
 add({ id: 'cuckoo10', group: 'Events', name: 'Cuckoo!', desc: 'Catch the cuckoo bird 10 times', check: (s) => s.clockw.cuckoos >= 10 });
+add({ id: 'palace1', group: 'Events', name: 'Under the Sea', desc: 'Visit the Sunken Palace', check: (s) => (s.gates.visits.palace || 0) >= 1 });
+add({ id: 'strands10', group: 'Events', name: 'String of Pearls', desc: 'Have 10 strands in your Pearl Necklace', check: (s) => s.wv.palace.strung >= 2750 });
+add({ id: 'clouds1', group: 'Events', name: 'Head in the Clouds', desc: 'Visit the Cloud Isles', check: (s) => (s.gates.visits.clouds || 0) >= 1 });
+add({ id: 'whale10', group: 'Events', name: 'Whale Watcher', desc: 'Catch the cloud whale 10 times', check: (s) => s.wv.clouds.pops >= 10 });
 add({ id: 'gateway', group: 'Events', name: 'Between Worlds', desc: 'Open the Moonlit Gateway', check: (s) => s.gates.owned });
 add({ id: 'castle10', group: 'Events', name: 'Frequent Guest', desc: 'Visit the Crimson Castle 10 times', check: (s) => (s.gates.visits.castle || 0) >= 10 });
 add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single castle visit', check: (s) => s.blood.best >= 300 });

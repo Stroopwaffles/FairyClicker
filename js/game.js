@@ -8,9 +8,10 @@ import {
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
-} from './data.js?v=3.8';
-import { DEFAULT_LOOK } from './avatar.js?v=3.8';
-import { ACHIEVEMENTS } from './achievements.js?v=3.8';
+  GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
+} from './data.js?v=3.9';
+import { DEFAULT_LOOK } from './avatar.js?v=3.9';
+import { ACHIEVEMENTS } from './achievements.js?v=3.9';
 
 // ---------- state ----------
 
@@ -37,6 +38,8 @@ export function freshState() {
     achievements: {},         // id -> timestamp earned
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
     clockw: { secs: 0, total: 0, best: 0, cuckoos: 0, borrowed: 0 },   // Cuckoo Clockworks
+    // Sunken Palace (strung = pearls in the necklace) and Cloud Isles (bank = seconds of ×2 offline)
+    wv: { palace: { amt: 0, total: 0, best: 0, pops: 0, strung: 0 }, clouds: { amt: 0, total: 0, best: 0, pops: 0, bank: 0, used: 0 } },
     workshop: {},             // id -> level (resets on prestige)
     gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
     // The player's fairy (permanent): how she looks, which clothes she owns, which are new.
@@ -168,9 +171,10 @@ function derive() {
   out.streakMax = STREAK_MAX[wl('streak')];
   out.bloodMult = 1 + wl('chalice') * CHALICE_VALUE_PER_LEVEL;
   out.bloodPerTap = 1 + wl('chalice');
+  out.pearlMult = 1 + pearlStrands() * PEARL_STRAND_BONUS;
   out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
   out.stoneMult = 1 + state.prestige.stones * STONE_BONUS;
-  const g = out.globalMult * out.achievementMult * out.stoneMult;
+  const g = out.globalMult * out.achievementMult * out.stoneMult * out.pearlMult;
 
   const helperRate = {};
   const locRate = {};
@@ -385,6 +389,11 @@ function startEvent(id) {
     const cd = state.gates.cd.clock || 0;
     state.gates.cd.clock = Math.max(Date.now(), cd - CHIMES_COOLDOWN_CUT_MIN * 60000);
   }
+  if (id === 'hightide' || id === 'rainbow') {
+    const gate = GATE_EVENTS[id];
+    const cd = state.gates.cd[gate] || 0;
+    state.gates.cd[gate] = Math.max(Date.now(), cd - GATE_EVENT_CUT_MIN * 60000);
+  }
   invalidate();
 }
 
@@ -491,6 +500,40 @@ function grantBorrowedTime(secs) {
   return total - left;
 }
 
+// ---------- Sunken Palace & Cloud Isles ----------
+
+// Pearl Necklace: strands needed for n strands = STEP × n(n+1)/2 pearls in total.
+export function pearlStrands(strung = state.wv?.palace.strung || 0) {
+  return Math.floor((-1 + Math.sqrt(1 + (8 * strung) / PEARL_STRAND_STEP)) / 2);
+}
+export const pearlsForStrands = (n) => (PEARL_STRAND_STEP * n * (n + 1)) / 2;
+export const sunBankCap = () => SUN_BANK_CAP_H * 3600;
+
+const inWorld = (g) => visitActive() && state.gates.visit.gate === g;
+const worldEventMult = (g) => (hasBuff(SIMPLE_WORLDS[g].event) ? 2 : 1);
+
+export function tapWorld(g) {
+  if (!inWorld(g)) return { value: 0, echo: false, crit: false };
+  const echo = Math.random() < d().tapEcho;
+  const crit = Math.random() < d().critChance;
+  const v = (crit ? SIMPLE_WORLDS[g].critAmt : 1) * (echo ? 2 : 1) * worldEventMult(g);
+  if (echo) state.stats.echoes++;
+  if (crit) state.stats2.crits++;
+  const W = state.wv[g];
+  W.amt += v; W.total += v;
+  state.stats.taps++;
+  return { value: v, echo, crit };
+}
+
+// Tapping the world's visitor (the mermaid or the cloud whale).
+export function catchVisitor(g) {
+  if (!inWorld(g)) return 0;
+  const v = SIMPLE_WORLDS[g].popupAmt * worldEventMult(g);
+  const W = state.wv[g];
+  W.amt += v; W.total += v; W.pops++;
+  return v;
+}
+
 // ---------- Gateways ----------
 
 export const visitActive = () => !!state.gates.visit && Date.now() < state.gates.visit.ends;
@@ -509,6 +552,7 @@ export function enterGate(id) {
   state.gates.visits[id] = (state.gates.visits[id] || 0) + 1;
   state.blood.drops = 0;
   state.clockw.secs = 0;
+  if (state.wv[id]) state.wv[id].amt = 0;
   return true;
 }
 
@@ -519,7 +563,25 @@ export function checkVisitEnd(now = Date.now()) {
   if (!v || now < v.ends) return null;
   const g = GATE_BY_ID[v.gate];
   const out = { gate: v.gate };
-  if (v.gate === 'clock') {
+  if (v.gate === 'palace') {
+    const W = state.wv.palace;
+    W.best = Math.max(W.best, W.amt);
+    out.amt = W.amt;
+    out.before = pearlStrands();
+    W.strung += W.amt;
+    out.after = pearlStrands();
+    W.amt = 0;
+    invalidate();
+  } else if (v.gate === 'clouds') {
+    const W = state.wv.clouds;
+    W.best = Math.max(W.best, W.amt);
+    out.amt = W.amt;
+    const before = W.bank;
+    W.bank = Math.min(sunBankCap(), W.bank + W.amt * SUN_SECS_PER_BEAM);
+    out.added = W.bank - before;
+    out.bank = W.bank;
+    W.amt = 0;
+  } else if (v.gate === 'clock') {
     const C = state.clockw;
     C.best = Math.max(C.best, C.secs);
     out.secs = C.secs;
@@ -744,7 +806,7 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar, clockw: state.clockw,
+    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar, clockw: state.clockw, wv: state.wv,
     buffs: state.buffs.filter((b) => b.kind === 'time'), // Borrowed Time carries over
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
@@ -860,11 +922,21 @@ export function applyOffline(now = Date.now()) {
   const capMs = d().offlineHours * 3600_000;
   const usedMs = Math.min(awayMs, capMs);
   const gained = produce(usedMs / 1000);
+  // Cloud Isles Sunbeams: part of the time away earns double.
+  let sunSec = 0;
+  const C = state.wv.clouds;
+  if (C.bank > 0) {
+    sunSec = Math.min(C.bank, usedMs / 1000);
+    const extra = produce(sunSec);
+    for (const [r, a] of Object.entries(extra)) gained[r] = (gained[r] || 0) + a;
+    C.bank -= sunSec;
+    C.used += sunSec;
+  }
   if (hadBuffs) { state.buffs = saved; invalidate(); }
   state.lastSaved = now;
   if (awayMs >= capMs) state.stats.fullOffline = true;
   if (!Object.keys(gained).length) return null;
-  return { awayMs, usedMs, capped: awayMs > capMs, gained };
+  return { awayMs, usedMs, capped: awayMs > capMs, gained, sunSec };
 }
 
 // ---------- persistence ----------

@@ -124,6 +124,11 @@ export const ITEMS = {
     <rect x="76" y="44" width="52" height="8" fill="#3a2478"/><rect x="96" y="43" width="10" height="10" rx="2" fill="#ffd24d"/>` },
   cuckoo_hat: { front: `<path d="M64 66 Q66 30 100 26 Q134 30 136 66 Q100 58 64 66 Z" fill="#6b3e1c"/><path d="M60 68 L100 34 L140 68" fill="none" stroke="#3f8f5e" stroke-width="6" stroke-linecap="round"/>
     <rect x="90" y="40" width="20" height="18" rx="3" fill="#3a2010"/><g transform="translate(110 46)"><ellipse rx="10" ry="7" fill="#4a9ad8"/><circle cx="7" cy="-5" r="5.5" fill="#5ab0ea"/><path d="M12 -6 L19 -4 L12 -2 Z" fill="#ffb03a"/><circle cx="8" cy="-6" r="1.4" fill="#1b1030"/></g>` },
+  shell_crown: { front: `<path d="M64 66 Q100 48 136 66" stroke="#ffd6e8" stroke-width="5" fill="none"/>
+    <g transform="translate(100 46)"><path d="M-16 8 Q-18 -14 0 -18 Q18 -14 16 8 Z" fill="#ffb3d0" stroke="#e07aa8" stroke-width="2"/>${[-8, -3, 3, 8].map((x) => `<path d="M0 6 L${x} -14" stroke="#e07aa8" stroke-width="1.5"/>`).join('')}</g>
+    <circle cx="78" cy="60" r="5" fill="#f4f8ff"/><circle cx="122" cy="60" r="5" fill="#f4f8ff"/>` },
+  rainbow_band: { front: `${['#ff8a9a', '#ffb35a', '#ffe27a', '#9ae87a', '#8fd8ff', '#b79cff'].map((c, i) => `<path d="M${62 + i * 2} 70 Q100 ${38 + i * 3} ${138 - i * 2} 70" stroke="${c}" stroke-width="3.2" fill="none"/>`).join('')}
+    <g fill="#fff"><circle cx="64" cy="70" r="8"/><circle cx="58" cy="64" r="6"/><circle cx="136" cy="70" r="8"/><circle cx="142" cy="64" r="6"/></g>` },
   halo: { front: `<ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff3a0" stroke-width="5" opacity=".9"/><ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff" stroke-width="1.5"/>` },
 
   // Outfits
@@ -150,6 +155,15 @@ export const ITEMS = {
     <path d="M86 132 L100 152 L114 132" fill="#f4f1ea"/><g fill="#d9a530" stroke="#a87418">${[160, 176, 192].map((y) => `<circle cx="106" cy="${y}" r="3"/>`).join('')}</g>
     <circle cx="86" cy="186" r="9" fill="#e8d6a8" stroke="#a87418" stroke-width="2"/><path d="M86 186 v-6 M86 186 h4" stroke="#3a2010" stroke-width="1.5"/>
     <path d="M70 214 L64 222 L136 222 L130 214 Z" fill="#5a3216"/>` },
+  mermaid_gown: { front: `<path d="M80 132 Q100 124 120 132 L120 150 L80 150 Z" fill="#ffb3d0"/>
+    <path d="M80 148 Q74 190 84 214 Q92 228 88 236 L112 236 Q108 228 116 214 Q126 190 120 148 Z" fill="#3ab0a0"/>
+    <g fill="none" stroke="#2a8a80" stroke-width="1.5">${[160, 176, 192, 208].map((y) => `<path d="M86 ${y} q5 5 10 0 q5 5 10 0 q5 5 10 0"/>`).join('')}</g>
+    <path d="M88 236 Q70 248 66 242 Q82 236 92 230 Z M112 236 Q130 248 134 242 Q118 236 108 230 Z" fill="#5ad0c0"/>
+    <g fill="#f4f8ff"><circle cx="88" cy="134" r="2.4"/><circle cx="96" cy="137" r="2.4"/><circle cx="104" cy="137" r="2.4"/><circle cx="112" cy="134" r="2.4"/></g>` },
+  cloud_dress: { front: `${bodice('#8fd8ff')}
+    <g fill="#ffffff" stroke="#d8e4f8" stroke-width="2"><circle cx="72" cy="186" r="16"/><circle cx="90" cy="194" r="18"/><circle cx="110" cy="194" r="18"/><circle cx="128" cy="186" r="16"/>
+      <circle cx="82" cy="170" r="14"/><circle cx="100" cy="168" r="16"/><circle cx="118" cy="170" r="14"/></g>
+    <path d="M86 186 q14 -10 28 0" stroke="#ffb3d9" stroke-width="3" fill="none"/>` },
   tinker_apron: { front: `<path d="M80 132 L120 132 L122 188 L78 188 Z" fill="#5a8ad0"/><path d="M86 140 L114 140 L118 198 L82 198 Z" fill="#b5773e"/>
     <rect x="92" y="170" width="16" height="12" rx="2" fill="#9a6232"/><path d="M104 168 L110 156" stroke="#9aa3b8" stroke-width="3" stroke-linecap="round"/>
     <path d="M86 140 L80 132 M114 140 L120 132" stroke="#8a5d34" stroke-width="2"/>` },
@@ -173,6 +187,12 @@ export const ITEMS = {
   pocket_watch: { front: `<path d="M134 176 Q140 168 146 160" stroke="#d9a530" stroke-width="2" fill="none" stroke-dasharray="3 2"/>
     <circle cx="150" cy="150" r="13" fill="#d9a530" stroke="#a87418" stroke-width="2"/><circle cx="150" cy="150" r="10" fill="#fff8e6"/>
     <path d="M150 150 V143 M150 150 L155 152" stroke="#2a1608" stroke-width="1.6" stroke-linecap="round"/><rect x="147" y="134" width="6" height="4" rx="1" fill="#d9a530"/>` },
+  trident: { front: `<line x1="134" y1="206" x2="150" y2="120" stroke="#e8c870" stroke-width="4" stroke-linecap="round"/>
+    <path d="M140 122 L144 100 L148 120 M150 120 L152 96 L156 122 M160 124 L162 104 L164 126" stroke="#e8c870" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <path d="M140 124 Q152 132 164 126" stroke="#e8c870" stroke-width="3.5" fill="none"/><circle cx="148" cy="134" r="3.5" fill="#8fd8ff"/>` },
+  parasol: { front: `<line x1="134" y1="178" x2="146" y2="110" stroke="#c9a46a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M106 112 Q146 70 186 112 Q176 104 166 112 Q156 104 146 112 Q136 104 126 112 Q116 104 106 112 Z" fill="#ffb3d9" stroke="#e07aa8" stroke-width="2"/>
+    <path d="M146 76 Q140 94 146 112 M146 76 Q126 92 126 112 M146 76 Q166 92 166 112" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/>` },
   rose: { front: `<path d="M134 178 Q144 160 146 146" stroke="#3f8f5e" stroke-width="3" fill="none"/><path d="M144 160 q8 -2 8 -8" stroke="#3f8f5e" stroke-width="2.5" fill="none"/>
     <circle cx="147" cy="142" r="8" fill="#c8102e"/><path d="M142 140 q5 -5 10 0 q-5 3 -10 0" fill="#8a0a20"/>` },
 };
