@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.12';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.13';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);

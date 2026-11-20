@@ -6,15 +6,15 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.12';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.12';
-import * as G from './game.js?v=3.12';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.12';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.12';
+} from './data.js?v=3.13';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.13';
+import * as G from './game.js?v=3.13';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.13';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.13';
 import {
-  avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS,
-} from './avatar.js?v=3.12';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.12';
+  avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
+} from './avatar.js?v=3.13';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.13';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.12';
+import * as A from './audio.js?v=3.13';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -1450,6 +1450,7 @@ function renderWardrobe() {
       <h4>Skin</h4>${swatches('skin', SKINS)}
       <h4>Hair</h4>${styles('hair', HAIR_STYLES, CROPS.hair)}${swatches('hairColor', HAIR_COLORS)}
       <h4>Eyes</h4>${styles('eyes', EYE_STYLES, CROPS.eyes)}${swatches('eyeColor', EYE_COLORS)}
+      <h4>Expression</h4>${styles('mouth', MOUTHS, CROPS.face)}
       <h4>Wings</h4>${styles('wings', WING_STYLES, CROPS.wings)}${swatches('wingColor', WING_COLORS)}
       <h4>Ears</h4>${styles('ears', EAR_STYLES, CROPS.ears)}
       <h4>Extras</h4><div class="wd-toggles">
@@ -1508,6 +1509,7 @@ function surpriseMe() {
     skin: idx(SKINS), hair: pick(HAIR_STYLES), hairColor: idx(HAIR_COLORS), eyes: pick(EYE_STYLES), eyeColor: idx(EYE_COLORS),
     wings: pick(WING_STYLES), wingColor: idx(WING_COLORS), ears: pick(EAR_STYLES), blush: Math.random() < 0.7, freckles: Math.random() < 0.3,
     paint: Math.random() < 0.4 ? pick(FACE_PAINTS) : 'none',
+    mouth: Math.random() < 0.5 ? 'smile' : pick(MOUTHS),
   });
   for (const slot of COSTUME_SLOTS) {
     const owned = COSTUMES.filter((c) => c.slot === slot.id && G.state.avatar.owned[c.id] && !c.id.startsWith('none'));

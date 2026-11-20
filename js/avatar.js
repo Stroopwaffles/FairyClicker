@@ -10,14 +10,16 @@ export const WING_COLORS = ['#c9a7ff', '#ffb3e0', '#8fd8ff', '#9dffb0', '#ffe27a
 
 export const HAIR_STYLES = ['long', 'bob', 'pigtails', 'bun', 'pixie', 'curly', 'afro', 'braids', 'ponytail', 'dreads'];
 export const FACE_PAINTS = ['none', 'hearts', 'stars', 'whiskers', 'butterfly', 'rainbow', 'moon', 'flowers', 'glitter'];
-export const EYE_STYLES = ['round', 'sparkly', 'sleepy', 'happy'];
+export const EYE_STYLES = ['round', 'sparkly', 'sleepy', 'happy', 'wink', 'starry', 'hearts', 'cat', 'lashes', 'fierce', 'teary', 'dizzy'];
+export const MOUTHS = ['smile', 'grin', 'tongue', 'ooh', 'smirk', 'kitty', 'pout', 'laugh', 'fang', 'flat'];
 export const WING_STYLES = ['butterfly', 'dragonfly', 'moth', 'leaf', 'crystal'];
 export const EAR_STYLES = ['pointy', 'round'];
 
 export const NAMES = {
   long: 'Long', bob: 'Bob', pigtails: 'Pigtails', bun: 'Bun', pixie: 'Pixie', curly: 'Curly', afro: 'Afro', braids: 'Braids', ponytail: 'Ponytail', dreads: 'Locs & beads',
   none: 'None', hearts: 'Hearts', stars: 'Stars', whiskers: 'Whiskers', rainbow: 'Rainbow', moon: 'Moon', flowers: 'Flowers', glitter: 'Glitter',
-  round: 'Round', sparkly: 'Sparkly', sleepy: 'Sleepy', happy: 'Happy',
+  round: 'Round', sparkly: 'Sparkly', sleepy: 'Sleepy', happy: 'Happy', wink: 'Wink', starry: 'Starry', cat: 'Cat', lashes: 'Lashes', fierce: 'Fierce', teary: 'Teary', dizzy: 'Dizzy',
+  smile: 'Smile', grin: 'Grin', tongue: 'Silly', ooh: 'Ooh!', smirk: 'Smirk', kitty: 'Kitty', pout: 'Pout', laugh: 'Laugh', fang: 'Fang', flat: 'Unimpressed',
   butterfly: 'Butterfly', dragonfly: 'Dragonfly', moth: 'Moth', leaf: 'Leaf', crystal: 'Crystal',
   pointy: 'Pointy',
 };
@@ -26,7 +28,7 @@ export const DEFAULT_LOOK = {
   skin: 0, hair: 'long', hairColor: 0, eyes: 'sparkly', eyeColor: 0,
   wings: 'butterfly', wingColor: 0, ears: 'pointy', blush: true, freckles: false,
   head: 'flower_clip', outfit: 'leaf_dress', feet: 'slippers', held: 'wand',
-  familiar: 'pet_bunny', paint: 'none',
+  familiar: 'pet_bunny', paint: 'none', mouth: 'smile',
 };
 
 const mirror = (inner) => `<g transform="translate(200 0) scale(-1 1)">${inner}</g>`;
@@ -107,15 +109,46 @@ function eyes(style, color, skin) {
       case 'sleepy': return `<ellipse cx="${x}" cy="97" rx="7.5" ry="7" fill="#fff"/><circle cx="${x}" cy="99" r="5" fill="${color}"/><circle cx="${x}" cy="99" r="2.4" fill="#1b1030"/>
         <path d="M${x - 8.5} 97 Q${x} 87 ${x + 8.5} 97 L${x + 8.5} 89 L${x - 8.5} 89 Z" fill="${skin}"/><path d="M${x - 8} 96.5 Q${x} 92 ${x + 8} 96.5" stroke="#1b1030" stroke-width="2" fill="none"/>`;
       case 'happy': return `<path d="M${x - 7} 99 Q${x} 89 ${x + 7} 99" stroke="#1b1030" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      case 'starry': return `<ellipse cx="${x}" cy="96" rx="8" ry="9.5" fill="#1b1030"/><ellipse cx="${x}" cy="97" rx="6.5" ry="7.5" fill="${color}"/>${star(x, 97, 5.5, '#fff6c8')}<circle cx="${x - 3}" cy="92" r="1.5" fill="#fff"/>`;
+      case 'hearts': return `<path transform="translate(${x} 97) scale(1.5)" d="M0 4 C-7 -1 -5 -7 0 -3.5 C5 -7 7 -1 0 4 Z" fill="#ff4a7a"/><circle cx="${x - 3}" cy="93" r="1.5" fill="#fff"/>`;
+      case 'cat': return `<ellipse cx="${x}" cy="96" rx="8" ry="9" fill="${color}"/><ellipse cx="${x}" cy="96" rx="2" ry="7.5" fill="#1b1030"/><circle cx="${x - 3}" cy="92.5" r="1.6" fill="#fff"/>
+        <path d="M${x - 9} 92 Q${x} 84 ${x + 9} 92" stroke="#1b1030" stroke-width="2" fill="none"/>`;
+      case 'lashes': return `<ellipse cx="${x}" cy="96" rx="7.5" ry="9" fill="#1b1030"/><ellipse cx="${x}" cy="98" rx="6" ry="6.5" fill="${color}"/><circle cx="${x - 2.5}" cy="93" r="2.3" fill="#fff"/>
+        <path d="M${x - 8} 90 Q${x} 84 ${x + 8} 90" stroke="#1b1030" stroke-width="2.4" fill="none"/>
+        <path d="M${x + (x < 100 ? -8 : 8)} 90 l${x < 100 ? -4 : 4} -3 M${x + (x < 100 ? -6 : 6)} 87.5 l${x < 100 ? -3 : 3} -4" stroke="#1b1030" stroke-width="1.8" stroke-linecap="round"/>`;
+      case 'fierce': return `<ellipse cx="${x}" cy="97" rx="7" ry="7.5" fill="#fff"/><circle cx="${x + (x < 100 ? 1.5 : -1.5)}" cy="98" r="4.8" fill="${color}"/><circle cx="${x + (x < 100 ? 1.5 : -1.5)}" cy="98" r="2.2" fill="#1b1030"/>
+        <path d="M${x - 9} ${x < 100 ? 87 : 92} L${x + 9} ${x < 100 ? 92 : 87}" stroke="#1b1030" stroke-width="3" stroke-linecap="round"/>`;
+      case 'teary': return `<ellipse cx="${x}" cy="96" rx="8" ry="9.5" fill="#1b1030"/><ellipse cx="${x}" cy="98" rx="6.5" ry="7" fill="${color}"/>
+        <circle cx="${x - 2.5}" cy="93" r="2.6" fill="#fff"/><circle cx="${x + 2.5}" cy="99" r="1.6" fill="#fff"/><ellipse cx="${x}" cy="104" rx="7" ry="2.2" fill="#bfefff" opacity=".85"/>
+        <path d="M${x + (x < 100 ? -6 : 6)} 105 q-2 5 0 7 q2 -2 0 -7" fill="#8fd8ff"/>`;
+      case 'dizzy': return `<path d="M${x} 96 m-6 0 a6 6 0 1 1 6 6 a4 4 0 1 1 -4 -4 a2 2 0 1 1 2 2" stroke="#1b1030" stroke-width="2" fill="none"/>`;
     }
     return '';
   };
+  if (style === 'wink') return eyes('sparkly', color, skin).split('<ellipse cx="116"')[0] + `<path d="M109 97 Q116 91 123 97" stroke="#1b1030" stroke-width="3" fill="none" stroke-linecap="round"/>`;
   return one(84) + one(116);
 }
 
 function ears(style, skin) {
   if (style === 'round') return `<circle cx="60" cy="98" r="9" fill="${skin}"/><circle cx="140" cy="98" r="9" fill="${skin}"/>`;
   return both(`<path d="M64 92 L42 76 L60 108 Z" fill="${skin}"/><path d="M60 94 L48 84 L58 102 Z" fill="#000" opacity=".06"/>`);
+}
+
+// ---------- mouths (expressions) ----------
+function mouth(kind) {
+  const ink = '#b05a6a';
+  switch (kind) {
+    case 'grin': return `<path d="M91 108 Q100 120 109 108 Z" fill="#7a2a3a"/><path d="M92.5 108.5 H107.5 L106 111 H94 Z" fill="#fff"/>`;
+    case 'tongue': return `<path d="M93 109 Q100 114 107 109" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M98 111 q3 7 7 0 Z" fill="#ff7a9a"/>`;
+    case 'ooh': return `<ellipse cx="100" cy="112" rx="4" ry="5" fill="#7a2a3a"/>`;
+    case 'smirk': return `<path d="M94 112 Q103 113 108 107" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    case 'kitty': return `<path d="M92 109 q4 5 8 0 q4 5 8 0" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+    case 'pout': return `<path d="M95 113 Q100 108 105 113" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    case 'laugh': return `<path d="M89 107 Q100 124 111 107 Z" fill="#7a2a3a"/><path d="M95 116 Q100 112 105 116 Q100 120 95 116 Z" fill="#ff7a9a"/>`;
+    case 'fang': return `<path d="M93 109 Q100 115 107 109" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M96 111 l1.5 3.5 l1.5 -2.5 Z" fill="#fff"/>`;
+    case 'flat': return `<path d="M94 111 H106" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>`;
+  }
+  return `<path d="M94 110 Q100 115.5 106 110" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
 }
 
 // ---------- face paint (drawn on the face, under the eyes) ----------
@@ -295,7 +328,7 @@ export function avatarSVG(look, opts = {}) {
     <circle cx="100" cy="90" r="40" fill="${skin}"/>
     ${facePaint(L.paint)}
     ${eyes(L.eyes, eyeC, skin)}
-    <path d="M94 110 Q100 115.5 106 110" stroke="#b05a6a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    ${mouth(L.mouth)}
     ${L.blush ? '<ellipse cx="76" cy="108" rx="7" ry="4" fill="#ff8fa3" opacity=".5"/><ellipse cx="124" cy="108" rx="7" ry="4" fill="#ff8fa3" opacity=".5"/>' : ''}
     ${L.freckles ? '<g fill="#a0603a" opacity=".55"><circle cx="78" cy="104" r="1.2"/><circle cx="82" cy="107" r="1.2"/><circle cx="76" cy="109" r="1.1"/><circle cx="122" cy="104" r="1.2"/><circle cx="118" cy="107" r="1.2"/><circle cx="124" cy="109" r="1.1"/></g>' : ''}
     ${hairFront(L.hair, hairC)}
