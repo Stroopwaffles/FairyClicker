@@ -417,6 +417,7 @@ export const COSTUMES = [
   { id: 'starlight_robe', slot: 'outfit', name: 'Starlight Robe', from: { place: 'meadow' } },
   { id: 'vampire_cape', slot: 'outfit', name: 'Vampire Cape', from: { place: 'castle' } },
   { id: 'tinker_apron', slot: 'outfit', name: 'Tinker’s Apron', from: { ach: 'handy' } },
+  { id: 'couch_potato', slot: 'outfit', name: 'Couch Potato', from: { helper: 'gnome', count: 50 } },
   { id: 'moon_gown', slot: 'outfit', name: 'Full Moon Gown', from: { prestige: 5 } },
 
   { id: 'none_feet', slot: 'feet', name: 'Barefoot', from: 'starter' },

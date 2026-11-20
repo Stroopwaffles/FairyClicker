@@ -8,13 +8,15 @@ export const HAIR_COLORS = ['#f7c96b', '#ffe8a8', '#c0763a', '#7a4a2a', '#2a1c18
 export const EYE_COLORS = ['#5a7fd8', '#3f9a6a', '#8a5a2a', '#9a5ad8', '#d8508a', '#2a2a3a'];
 export const WING_COLORS = ['#c9a7ff', '#ffb3e0', '#8fd8ff', '#9dffb0', '#ffe27a', '#ffb35a', '#f4f1ea', '#ff6a7a'];
 
-export const HAIR_STYLES = ['long', 'bob', 'pigtails', 'bun', 'pixie', 'curly', 'afro'];
+export const HAIR_STYLES = ['long', 'bob', 'pigtails', 'bun', 'pixie', 'curly', 'afro', 'braids', 'ponytail', 'dreads'];
+export const FACE_PAINTS = ['none', 'hearts', 'stars', 'whiskers', 'butterfly', 'rainbow', 'moon', 'flowers', 'glitter'];
 export const EYE_STYLES = ['round', 'sparkly', 'sleepy', 'happy'];
 export const WING_STYLES = ['butterfly', 'dragonfly', 'moth', 'leaf', 'crystal'];
 export const EAR_STYLES = ['pointy', 'round'];
 
 export const NAMES = {
-  long: 'Long', bob: 'Bob', pigtails: 'Pigtails', bun: 'Bun', pixie: 'Pixie', curly: 'Curly', afro: 'Afro',
+  long: 'Long', bob: 'Bob', pigtails: 'Pigtails', bun: 'Bun', pixie: 'Pixie', curly: 'Curly', afro: 'Afro', braids: 'Braids', ponytail: 'Ponytail', dreads: 'Locs & beads',
+  none: 'None', hearts: 'Hearts', stars: 'Stars', whiskers: 'Whiskers', rainbow: 'Rainbow', moon: 'Moon', flowers: 'Flowers', glitter: 'Glitter',
   round: 'Round', sparkly: 'Sparkly', sleepy: 'Sleepy', happy: 'Happy',
   butterfly: 'Butterfly', dragonfly: 'Dragonfly', moth: 'Moth', leaf: 'Leaf', crystal: 'Crystal',
   pointy: 'Pointy',
@@ -24,7 +26,7 @@ export const DEFAULT_LOOK = {
   skin: 0, hair: 'long', hairColor: 0, eyes: 'sparkly', eyeColor: 0,
   wings: 'butterfly', wingColor: 0, ears: 'pointy', blush: true, freckles: false,
   head: 'flower_clip', outfit: 'leaf_dress', feet: 'slippers', held: 'wand',
-  familiar: 'pet_bunny',
+  familiar: 'pet_bunny', paint: 'none',
 };
 
 const mirror = (inner) => `<g transform="translate(200 0) scale(-1 1)">${inner}</g>`;
@@ -48,6 +50,21 @@ function hairBack(style, c) {
       <circle cx="58" cy="96" r="5" fill="#ff7fbf"/><circle cx="142" cy="96" r="5" fill="#ff7fbf"/><path d="M60 86 Q100 40 140 86 Z" fill="${c}"/>`;
     case 'bun': return `<circle cx="100" cy="44" r="17" fill="${c}"/><path d="M60 88 Q100 40 140 88 Z" fill="${c}"/>`;
     case 'pixie': return `<path d="M57 100 Q50 52 78 36 Q98 22 124 32 Q152 46 143 100 Q138 74 100 66 Q62 74 57 100 Z" fill="${c}"/>`;
+    case 'braids': {
+      const braid = (x) => Array.from({ length: 7 }, (_, i) => `<ellipse cx="${x}" cy="${104 + i * 12}" rx="${9 - i * 0.5}" ry="8"/>`).join('') +
+        `<rect x="${x - 5}" y="186" width="10" height="5" rx="2" fill="#ff7fbf"/><path d="M${x - 4} 191 l-2 10 M${x} 191 v11 M${x + 4} 191 l2 10" stroke="${c}" stroke-width="3"/>`;
+      return `<path d="M60 86 Q100 40 140 86 Z" fill="${c}"/><g fill="${c}" stroke="#000" stroke-opacity=".12" stroke-width="1.5">${braid(60)}${braid(140)}</g>`;
+    }
+    case 'ponytail': return `<path d="M60 88 Q100 40 140 88 Z" fill="${c}"/>
+      <path d="M122 54 Q160 52 160 96 Q160 140 140 170 Q148 130 138 104 Q132 80 118 70 Z" fill="${c}"/>
+      <ellipse cx="124" cy="58" rx="9" ry="7" fill="#ff7fbf"/>`;
+    case 'dreads': {
+      const beads = ['#ffd24d', '#ff6a7a', '#8fd8ff', '#9dffb0', '#c9a7ff'];
+      const locks = [[58, 150], [66, 168], [76, 176], [124, 176], [134, 168], [142, 150], [52, 130], [148, 130]];
+      return `<path d="M58 90 Q100 38 142 90 Z" fill="${c}"/>` + locks.map(([x, end], i) =>
+        `<path d="M${x} 70 Q${x + (i % 2 ? 4 : -4)} ${(70 + end) / 2} ${x} ${end}" stroke="${c}" stroke-width="10" stroke-linecap="round" fill="none"/>
+         <circle cx="${x}" cy="${end - 12 - (i % 3) * 10}" r="4.5" fill="${beads[i % 5]}" stroke="#000" stroke-opacity=".2"/>`).join('');
+    }
     case 'afro': return `<g fill="${c}"><circle cx="100" cy="76" r="58"/>${Array.from({ length: 18 }, (_, i) => {
       const a = (i / 18) * Math.PI * 2; return `<circle cx="${(100 + Math.cos(a) * 56).toFixed(1)}" cy="${(76 + Math.sin(a) * 54).toFixed(1)}" r="13"/>`; }).join('')}</g>`;
     case 'curly': return `<g fill="${c}">${[[62, 70], [56, 92], [58, 114], [66, 130], [138, 70], [144, 92], [142, 114], [134, 130], [80, 52], [120, 52], [100, 46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="15"/>`).join('')}</g>`;
@@ -64,6 +81,16 @@ function hairFront(style, c) {
     case 'pixie': return `<path d="M58 94 Q54 54 82 40 Q104 28 126 38 Q148 52 142 90 Q136 70 120 62 Q112 76 92 74 Q76 72 66 80 Q60 86 58 94 Z" fill="${c}"/>
       <path d="M84 40 Q88 22 104 20 Q98 28 100 36 Q108 22 122 26 Q112 30 112 40 Z" fill="${c}"/>
       <path d="M78 52 Q96 44 116 50" stroke="#000" stroke-opacity=".12" stroke-width="2" fill="none"/>`;
+    case 'braids': return `<path d="M60 88 Q60 48 100 46 Q140 48 140 88 Q124 66 102 62 L100 50 L98 62 Q76 66 60 88 Z" fill="${c}"/>`;
+    case 'ponytail': return `<path d="M60 88 Q62 48 100 46 Q138 48 140 88 Q126 60 100 58 Q74 60 60 88 Z" fill="${c}"/>
+      <path d="M72 64 Q100 50 128 60" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none"/>`;
+    case 'dreads': {
+      const beads = ['#ffd24d', '#ff6a7a', '#8fd8ff'];
+      return `<path d="M60 86 Q62 48 100 46 Q138 48 140 86 Q120 66 100 64 Q80 66 60 86 Z" fill="${c}"/>` +
+        [[70, 104], [84, 84], [116, 84], [130, 104]].map(([x, end], i) =>
+          `<path d="M${x} 56 Q${x + (i < 2 ? -3 : 3)} ${(56 + end) / 2} ${x + (i < 2 ? -6 : 6)} ${end}" stroke="${c}" stroke-width="8" stroke-linecap="round" fill="none"/>
+           <circle cx="${x + (i < 2 ? -6 : 6)}" cy="${end - 6}" r="3.6" fill="${beads[i % 3]}" stroke="#000" stroke-opacity=".2"/>`).join('');
+    }
     case 'afro': return `<g fill="${c}">${Array.from({ length: 9 }, (_, i) => {
       const a = Math.PI * (1.08 + (i / 8) * 0.84); return `<circle cx="${(100 + Math.cos(a) * 40).toFixed(1)}" cy="${(90 + Math.sin(a) * 40).toFixed(1)}" r="11"/>`; }).join('')}</g>`;
     case 'curly': return `<g fill="${c}">${[[70, 64], [86, 54], [102, 52], [118, 56], [132, 66]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="13"/>`).join('')}</g>`;
@@ -89,6 +116,30 @@ function eyes(style, color, skin) {
 function ears(style, skin) {
   if (style === 'round') return `<circle cx="60" cy="98" r="9" fill="${skin}"/><circle cx="140" cy="98" r="9" fill="${skin}"/>`;
   return both(`<path d="M64 92 L42 76 L60 108 Z" fill="${skin}"/><path d="M60 94 L48 84 L58 102 Z" fill="#000" opacity=".06"/>`);
+}
+
+// ---------- face paint (drawn on the face, under the eyes) ----------
+function facePaint(kind) {
+  const heart = (x, y, s, c) => `<path transform="translate(${x} ${y}) scale(${s})" d="M0 3 C-6 -2 -4 -7 0 -4 C4 -7 6 -2 0 3 Z" fill="${c}"/>`;
+  switch (kind) {
+    case 'hearts': return heart(74, 110, 1.3, '#ff4a7a') + heart(126, 110, 1.3, '#ff4a7a') + heart(66, 102, 0.7, '#ff8fb3');
+    case 'stars': return star(73, 110, 5, '#ffd24d') + star(127, 110, 5, '#ffd24d') + star(130, 86, 3, '#fff6c8');
+    case 'whiskers': return `<ellipse cx="100" cy="104" rx="4" ry="3" fill="#3a2a3a"/><g stroke="#3a2a3a" stroke-width="1.6" stroke-linecap="round">
+      <path d="M86 106 L66 102 M86 110 L66 112 M114 106 L134 102 M114 110 L134 112"/></g>`;
+    case 'butterfly': return `<g opacity=".75"><path d="M100 96 Q80 72 66 82 Q62 98 80 104 Q66 112 76 120 Q92 118 100 104 Z" fill="#c06bff"/>
+      <path d="M100 96 Q120 72 134 82 Q138 98 120 104 Q134 112 124 120 Q108 118 100 104 Z" fill="#ff7fbf"/></g>
+      <g fill="#fff" opacity=".8"><circle cx="72" cy="88" r="2"/><circle cx="128" cy="88" r="2"/></g>`;
+    case 'rainbow': return `<g fill="none" stroke-width="2.6" stroke-linecap="round">${['#ff6a7a', '#ffb35a', '#ffe27a', '#6ad880', '#6ac0ff', '#b79cff'].map((c, i) =>
+      `<path d="M${116 + i * 0} ${118 - i * 2.6} q10 -14 20 -6" stroke="${c}" transform="translate(${-2 + i * 0.5} ${i * 0})"/>`).join('')}</g>`;
+    case 'moon': return `<path d="M100 60 a8 8 0 1 0 6 13 a6 6 0 1 1 -6 -13 z" fill="#fff6c8" stroke="#d9a520" stroke-width=".8"/>
+      <g fill="#fff6c8"><circle cx="90" cy="70" r="1.4"/><circle cx="112" cy="68" r="1.4"/><circle cx="74" cy="104" r="1.2"/><circle cx="126" cy="104" r="1.2"/></g>`;
+    case 'flowers': return `<path d="M64 76 Q70 92 66 106" stroke="#3f8f5e" stroke-width="1.8" fill="none"/>
+      ${[[64, 76, '#ff9fcf'], [70, 92, '#c9a7ff'], [66, 106, '#ffd24d']].map(([x, y, c]) => `<g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map((a) =>
+        `<circle r="2.4" cy="-3" fill="${c}" transform="rotate(${a})"/>`).join('')}<circle r="1.6" fill="#fff"/></g>`).join('')}`;
+    case 'glitter': return `<g fill="#fff">${[[74, 106, 1.6], [79, 111, 1.1], [70, 112, 1.2], [126, 106, 1.6], [121, 111, 1.1], [130, 112, 1.2], [82, 104, 0.9], [118, 104, 0.9]].map(([x, y, r]) =>
+      `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g><g fill="#ffd6f4">${[[76, 116], [124, 116]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.3"/>`).join('')}</g>`;
+  }
+  return '';
 }
 
 // ---------- clothes ----------
@@ -171,6 +222,17 @@ export const ITEMS = {
     <g fill="#ffffff" stroke="#d8e4f8" stroke-width="2"><circle cx="72" cy="186" r="16"/><circle cx="90" cy="194" r="18"/><circle cx="110" cy="194" r="18"/><circle cx="128" cy="186" r="16"/>
       <circle cx="82" cy="170" r="14"/><circle cx="100" cy="168" r="16"/><circle cx="118" cy="170" r="14"/></g>
     <path d="M86 186 q14 -10 28 0" stroke="#ffb3d9" stroke-width="3" fill="none"/>` },
+  couch_potato: { front: (skin) => `
+    <path d="M70 186 Q68 214 72 240 L96 240 L100 204 L104 240 L128 240 Q132 214 130 186 Z" fill="#9a9aa4"/>
+    <path d="M70 196 L130 196" stroke="#7a7a84" stroke-width="3"/><path d="M98 196 l-3 10 M102 196 l3 10" stroke="#e8e8ee" stroke-width="1.5"/>
+    <path d="M86 218 q4 8 0 16 M116 216 q-3 8 1 16" stroke="#7a7a84" stroke-width="1.5" fill="none"/>
+    <ellipse cx="100" cy="174" rx="42" ry="30" fill="${skin}"/>
+    <path d="M84 130 L80 158 Q60 168 62 182 Q100 196 138 182 Q140 168 120 158 L116 130 Q108 138 100 138 Q92 138 84 130 Z" fill="#f2efe4"/>
+    <path d="M84 130 L80 158 M116 130 L120 158" stroke="#d8d2c0" stroke-width="2"/>
+    <g fill="#b89a5a" opacity=".55"><ellipse cx="90" cy="164" rx="6" ry="4"/><ellipse cx="114" cy="172" rx="4" ry="3"/><circle cx="104" cy="150" r="2.5"/></g>
+    <g fill="#d86a3a" opacity=".5"><ellipse cx="78" cy="176" rx="3.5" ry="2.5"/><circle cx="122" cy="160" r="2"/></g>
+    <path d="M70 186 Q100 204 130 186" fill="none" stroke="${skin}" stroke-width="6"/>
+    <ellipse cx="100" cy="192" rx="2.6" ry="1.8" fill="#000" opacity=".25"/>` },
   tinker_apron: { front: `<path d="M80 132 L120 132 L122 188 L78 188 Z" fill="#5a8ad0"/><path d="M86 140 L114 140 L118 198 L82 198 Z" fill="#b5773e"/>
     <rect x="92" y="170" width="16" height="12" rx="2" fill="#9a6232"/><path d="M104 168 L110 156" stroke="#9aa3b8" stroke-width="3" stroke-linecap="round"/>
     <path d="M86 140 L80 132 M114 140 L120 132" stroke="#8a5d34" stroke-width="2"/>` },
@@ -231,6 +293,7 @@ export function avatarSVG(look, opts = {}) {
     <g class="av-arm-r"><path d="M119 138 Q132 152 134 172" stroke="${skin}" stroke-width="9" stroke-linecap="round" fill="none"/>${part(held, 'front', skin)}</g>
     ${ears(L.ears, skin)}
     <circle cx="100" cy="90" r="40" fill="${skin}"/>
+    ${facePaint(L.paint)}
     ${eyes(L.eyes, eyeC, skin)}
     <path d="M94 110 Q100 115.5 106 110" stroke="#b05a6a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     ${L.blush ? '<ellipse cx="76" cy="108" rx="7" ry="4" fill="#ff8fa3" opacity=".5"/><ellipse cx="124" cy="108" rx="7" ry="4" fill="#ff8fa3" opacity=".5"/>' : ''}
