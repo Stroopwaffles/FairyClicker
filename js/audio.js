@@ -231,6 +231,27 @@ export function portal() {
   [84, 88, 91, 96].forEach((m, i) => tone({ freq: mtof(m), start: 0.5 + i * 0.06, decay: 0.8, peak: 0.05, wet: 0.8 }));
 }
 
+// Clock tap: a crisp tick-tock.
+export function tick(echo = false) {
+  if (!ready() || prefs.sfx === 0) return;
+  const now = performance.now();
+  if (now - lastTapAt < 35) return;
+  lastTapAt = now;
+  const hi = Math.random() < 0.5;
+  noise({ dur: 0.03, peak: 0.14, type: 'bandpass', freq: hi ? 3200 : 2200, q: 6 });
+  tone({ freq: hi ? 1800 : 1350, decay: 0.05, peak: 0.08, wet: 0.2 });
+  if (echo) tone({ freq: 2400, start: 0.1, decay: 0.2, peak: 0.04, wet: 0.7 });
+}
+
+// The cuckoo: the classic falling third, twice.
+export function cuckoo() {
+  if (!ready()) return;
+  [0, 0.55].forEach((t) => {
+    tone({ freq: mtof(76), start: t, attack: 0.02, decay: 0.22, peak: 0.13, wet: 0.4 });
+    tone({ freq: mtof(72), start: t + 0.24, attack: 0.02, decay: 0.3, peak: 0.13, wet: 0.4 });
+  });
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));
@@ -273,6 +294,13 @@ export function eventStart(id) {
         tone({ freq: 98 * 5.4, start: t, decay: 0.9, peak: 0.03, wet: 0.8 });
       });
       [50, 53, 57, 62].forEach((m) => tone({ freq: mtof(m), type: 'sawtooth', start: 0.05, attack: 0.02, decay: 1.6, peak: 0.035, wet: 0.6 }));
+      break;
+    case 'chimes':
+      // Twelve soft bell strokes, sped up
+      for (let i = 0; i < 12; i++) {
+        tone({ freq: 523, start: i * 0.22, decay: 1.2, peak: 0.07, wet: 0.7 });
+        tone({ freq: 523 * 2.76, start: i * 0.22, decay: 0.5, peak: 0.02, wet: 0.8 });
+      }
       break;
     case 'fairy':
       for (let i = 0; i < 10; i++) tone({ freq: mtof(pick([88, 91, 93, 95, 98, 100])), start: i * 0.06, decay: 0.4, peak: 0.05, wet: 0.8, pan: rnd(-0.8, 0.8) });
@@ -349,6 +377,7 @@ const AMBIENCES = {
     layers: [wind, crickets],
   },
   courtyard: { custom: castleTheme },
+  clockworks: { custom: (c) => playSong(MUSIC_BOX, c) },
   gates: {
     // Mysterious whole-tone shimmer for the hall of portals
     chords: [[48, 55, 62, 66], [46, 53, 60, 64], [44, 51, 58, 62], [46, 53, 60, 64]],
@@ -873,3 +902,24 @@ function playSong(song, { out, verb, stops }) {
   }, 50);
   stops.push(() => clearInterval(timer));
 }
+
+// The Clockworks: a music-box waltz in 3/4 with a ticking clock underneath (original).
+const MUSIC_BOX = {
+  bpm: 200, stepsPerBar: 6, // each step is an eighth note: 6 per 3/4 bar
+  chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62], [60, 64, 67], [52, 55, 60], [53, 57, 62], [55, 59, 65]],
+  roots: [36, 33, 41, 43, 36, 40, 38, 43],
+  melody: [
+    [[84, 2], [79, 1], [76, 1], [79, 2]],
+    [[81, 2], [76, 1], [72, 1], [76, 2]],
+    [[77, 1], [81, 1], [84, 2], [81, 2]],
+    [[79, 3], [77, 1], [74, 2]],
+    [[76, 1], [79, 1], [84, 2], [88, 2]],
+    [[86, 2], [84, 1], [83, 1], [84, 2]],
+    [[81, 1], [77, 1], [74, 2], [77, 2]],
+    [[79, 4], [83, 2]],
+  ],
+  lead: 'bell', leadPeak: 0.11,
+  bass: 'pluck', bassPattern: [0, R, 7, R, 7, R], bassPeak: 0.1,
+  arp: 'bell', arpPattern: [R, R, 1, R, 2, R], arpPeak: 0.035, arpOct: 12,
+  drums: { wood: [0, 2, 4], shaker: [1, 3, 5] },
+};

@@ -582,6 +582,35 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
   .wd-fairy { width: auto; height: 26vh; }
 }
 
+/* ---------- Cuckoo Clockworks ---------- */
+.loc-tab.clockworks { background: linear-gradient(180deg, #8a5a1c, #5a3410); border-color: #e0a040; color: #fff1cc; animation: pulse 2.4s ease-in-out infinite; }
+.loc-tab.clockworks.active { background: linear-gradient(180deg, #b87a28, #7a4a14); border-color: #ffd27a; animation: none; }
+.gear { animation: spin 24s linear infinite; transform-box: fill-box; transform-origin: center; }
+.gear.rev { animation-direction: reverse; }
+.gear.fast { animation-duration: 9s; }
+.pendulum { animation: pendulum 1.6s ease-in-out infinite alternate; }
+@keyframes pendulum { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+.hand-min { animation: spin 20s linear infinite; }
+.hand-hr { animation: spin 240s linear infinite; }
+.cuckoo-door { transition: transform .25s ease; transform-box: fill-box; transform-origin: left center; }
+.cuckoo-door.r { transform-origin: right center; }
+.cuckoo-door.open { transform: scaleX(.1); }
+.cuckoo { opacity: 0; pointer-events: none; transition: opacity .2s; }
+.cuckoo > g, .cuckoo > rect { transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); transform: translateX(-60px); }
+.cuckoo.show { opacity: 1; pointer-events: auto; cursor: pointer; }
+.cuckoo.show > g, .cuckoo.show > rect { transform: translateX(-30px); }
+.clock-panel { background: linear-gradient(180deg, #4a2c10, #2a1808); border-color: #c07a20; }
+.clock-panel h3 { color: #ffe0a0; }
+.clock-panel .blood-count b { color: #ffd27a; }
+.clock-panel .buff-bar i { background: linear-gradient(90deg, #ffd27a, #c07a20); }
+.clock-panel .bp-time, .clock-panel p { color: #f0dcb8; }
+.clock-card { border-color: #c07a20; background: linear-gradient(180deg, #3a220c, #1e1206); text-align: center; }
+.clock-card h2 { color: #ffe0a0; }
+.clock-card .big-line { font-size: 1.25rem; color: #fff1cc; }
+.clock-card .big-line b { color: #ffd27a; }
+.clock-card .small { font-size: .85rem; }
+.clock-card .row { justify-content: center; }
+
 /* ---------- panel ---------- */
 .panel-tabs { display: grid; grid-template-columns: repeat(5, 1fr) 46px; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
 .ptab {

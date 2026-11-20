@@ -206,6 +206,7 @@ export const EVENTS = [
   { id: 'owlcouncil', name: 'Owl Council',       icon: '🦉', desc: 'Helpers cost 25% less',                    dur: 120, weight: 1, req: { loc: 'oak' }, effects: [{ t: 'helperDiscount', x: 0.75 }] },
   { id: 'fog',        name: 'Mischief Fog',      icon: '🌫️', desc: 'Taps ×3 · helpers ×½',                     dur: 60,  weight: 0.8, req: { loc: 'grotto' }, effects: [{ t: 'tapMult', loc: '*', x: 3 }, { t: 'helperMult', loc: '*', x: 0.5 }] },
   { id: 'bloodmoon',  name: 'Blood Moon',        icon: '🩸', desc: 'Crimson Gate cooldown −15 min · castle visits give ×2 Blood Drops', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'bloodmoon' },
+  { id: 'chimes',     name: 'Midnight Chimes',   icon: '🕛', desc: 'Cuckoo Gate cooldown −15 min · clock visits give ×2 Seconds', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'chimes' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
 // Blood Drop exchange. Drops have diminishing returns: a haul is worth
@@ -342,11 +343,22 @@ export const GATES = [
   { id: 'castle', name: 'Crimson Gate', world: 'Crimson Castle', icon: '🏰', color: '#d0283c',
     blurb: 'A vampire’s castle under a red moon. Tap the blood pool for Blood Drops and watch the windows…',
     visitSec: 75, cooldownMin: 30 },
-  { id: 'soon1', soon: true, name: 'Sealed Gate', icon: '🔒', color: '#5a6aa8' },
+  { id: 'clock', name: 'Cuckoo Gate', world: 'Cuckoo Clockworks', icon: '⏰', color: '#e0a040',
+    blurb: 'Inside a giant cuckoo clock. Tap the clock to collect Seconds, then spend them as Borrowed Time: everything ×2 for that long.',
+    visitSec: 60, cooldownMin: 45 },
   { id: 'soon2', soon: true, name: 'Sealed Gate', icon: '🔒', color: '#4a8a6a' },
 ];
 export const GATE_BY_ID = byId(GATES);
 export const BLOOD_MOON_COOLDOWN_CUT_MIN = 15;
+
+// Cuckoo Clockworks: Seconds collected become "Borrowed Time", a boost to all
+// production lasting that many seconds of play (added to any time left, up to the cap).
+export const BORROWED_MULT = 2;
+export const BORROWED_CAP_SEC = 30 * 60;
+export const CLOCK_CRIT_SECS = 5;      // a critical tap gives this many seconds
+export const CUCKOO_SECS = 30;         // tapping the cuckoo bird
+export const CHIMES_COOLDOWN_CUT_MIN = 15;
+export const TIME_BUFF = { id: 'borrowed', name: 'Borrowed Time', icon: '⏳', desc: `Everything ×${BORROWED_MULT}` };
 
 // ---------- Fairy wardrobe (purely cosmetic) ----------
 // Drawings live in avatar.js. `from` says how each item is unlocked:
@@ -398,9 +410,12 @@ export const COSTUMES = [
   { id: 'crystal_wand', slot: 'held', name: 'Crystal Wand', from: { place: 'grotto' } },
   { id: 'star_wand', slot: 'held', name: 'Shooting Star Wand', from: { place: 'meadow' } },
   { id: 'rose', slot: 'held', name: 'Midnight Rose', from: { place: 'castle' } },
+  { id: 'cuckoo_hat', slot: 'head', name: 'Cuckoo Hat', from: { place: 'clock' } },
+  { id: 'clock_coat', slot: 'outfit', name: 'Clockmaker’s Coat', from: { place: 'clock' } },
+  { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);
-export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle' };
+export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks' };
 
 // How to unlock an item, in words (for locked items in the wardrobe).
 export function costumeHint(c) {

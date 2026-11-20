@@ -499,7 +499,90 @@ const courtyard = () => `
   <g data-sprites></g>
 </svg>`;
 
-export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard };
+
+// A gear outline centred at 0,0 (radius r, n teeth).
+function gearPath(r, n, tooth = 0.18) {
+  let d = '';
+  for (let i = 0; i < n * 2; i++) {
+    const a0 = (i / (n * 2)) * Math.PI * 2, a1 = ((i + 1) / (n * 2)) * Math.PI * 2;
+    const rr = i % 2 ? r : r * (1 + tooth);
+    d += `${i ? 'L' : 'M'}${(rr * Math.cos(a0)).toFixed(1)} ${(rr * Math.sin(a0)).toFixed(1)} L${(rr * Math.cos(a1)).toFixed(1)} ${(rr * Math.sin(a1)).toFixed(1)} `;
+  }
+  return d + 'Z';
+}
+
+// The Cuckoo Clockworks: inside a giant cuckoo clock.
+const clockworks = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="k-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1608"/><stop offset="1" stop-color="#4a2a12"/></linearGradient>
+    <linearGradient id="k-wood" x1="0" x2="1"><stop offset="0" stop-color="#6b3e1c"/><stop offset=".5" stop-color="#8a5228"/><stop offset="1" stop-color="#5a3216"/></linearGradient>
+    <radialGradient id="k-face" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#fff8e6"/><stop offset="1" stop-color="#e8d6a8"/></radialGradient>
+    <linearGradient id="k-brass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset=".5" stop-color="#d9a530"/><stop offset="1" stop-color="#a87418"/></linearGradient>
+    <radialGradient id="k-glow"><stop offset="0" stop-color="#ffd27a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#k-bg)"/>
+  <!-- background gears turning -->
+  <g fill="#3a2010" stroke="#5a3418" stroke-width="3">
+    <g transform="translate(130 180)"><path class="gear" d="${gearPath(110, 14)}"/><circle r="30" fill="#2a1608"/></g>
+    <g transform="translate(880 230)"><path class="gear rev" d="${gearPath(90, 12)}"/><circle r="24" fill="#2a1608"/></g>
+    <g transform="translate(860 560)"><path class="gear" d="${gearPath(70, 10)}"/><circle r="18" fill="#2a1608"/></g>
+    <g transform="translate(150 560)"><path class="gear rev" d="${gearPath(80, 11)}"/><circle r="20" fill="#2a1608"/></g>
+  </g>
+  <g fill="url(#k-brass)" opacity=".75">
+    <g transform="translate(250 330)"><path class="gear rev fast" d="${gearPath(46, 9)}"/><circle r="12" fill="#5a3418"/></g>
+    <g transform="translate(760 380)"><path class="gear fast" d="${gearPath(40, 8)}"/><circle r="10" fill="#5a3418"/></g>
+  </g>
+  <!-- chains and weights -->
+  <g stroke="#c9a46a" stroke-width="3" stroke-dasharray="6 4"><line x1="400" y1="0" x2="400" y2="520"/><line x1="600" y1="0" x2="600" y2="470"/></g>
+  <g fill="url(#k-brass)"><path d="M386 520 h28 l-4 70 h-20 z"/><path d="M586 470 h28 l-4 70 h-20 z"/></g>
+  <path d="M386 520 l14 -18 l14 18 z M586 470 l14 -18 l14 18 z" fill="#3f8f5e"/>
+
+  <!-- the clock (tap target) -->
+  <g data-tap class="tap-target clock-target">
+    <circle cx="500" cy="300" r="250" fill="url(#k-glow)" class="pulse"/>
+    <!-- house-shaped case -->
+    <path d="M330 220 L500 80 L670 220 Z" fill="#5a3216" stroke="#3a2010" stroke-width="5"/>
+    <path d="M310 228 L500 64 L690 228" fill="none" stroke="#3f8f5e" stroke-width="14" stroke-linecap="round"/>
+    <rect x="350" y="214" width="300" height="250" rx="10" fill="url(#k-wood)" stroke="#3a2010" stroke-width="5"/>
+    <g fill="#3f8f5e">${[[355, 236], [645, 236], [355, 446], [645, 446]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9"/>`).join('')}</g>
+    <!-- cuckoo door -->
+    <rect x="470" y="128" width="60" height="70" rx="6" fill="#3a2010"/>
+    <path class="cuckoo-door" d="M472 130 h28 v66 h-28 z" fill="#8a5228" stroke="#3a2010" stroke-width="2"/>
+    <path class="cuckoo-door r" d="M500 130 h28 v66 h-28 z" fill="#8a5228" stroke="#3a2010" stroke-width="2"/>
+    <!-- face -->
+    <circle cx="500" cy="338" r="104" fill="url(#k-brass)"/>
+    <circle cx="500" cy="338" r="92" fill="url(#k-face)"/>
+    ${Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * Math.PI * 2; return `<circle cx="${(500 + Math.sin(a) * 76).toFixed(1)}" cy="${(338 - Math.cos(a) * 76).toFixed(1)}" r="${i % 3 ? 3.5 : 6}" fill="#5a3216"/>`; }).join('')}
+    <g class="hand-min" style="transform-origin:500px 338px"><rect x="497" y="262" width="6" height="80" rx="3" fill="#2a1608"/></g>
+    <g class="hand-hr" style="transform-origin:500px 338px"><rect x="495" y="290" width="10" height="52" rx="5" fill="#2a1608"/></g>
+    <circle cx="500" cy="338" r="9" fill="url(#k-brass)" stroke="#2a1608" stroke-width="2"/>
+    <!-- pendulum -->
+    <g class="pendulum" style="transform-origin:500px 464px">
+      <rect x="496" y="464" width="8" height="130" fill="url(#k-brass)"/>
+      <circle cx="500" cy="606" r="30" fill="url(#k-brass)" stroke="#a87418" stroke-width="3"/>
+      <circle cx="492" cy="598" r="9" fill="#fff6c8" opacity=".6"/>
+    </g>
+  </g>
+
+  <!-- the cuckoo bird: pops out of its door now and then -->
+  <g class="cuckoo" transform="translate(500 166)">
+    <circle class="cuckoo-hit" r="46" fill="transparent"/>
+    <rect x="-6" y="-2" width="70" height="6" rx="3" fill="#6b3e1c"/>
+    <g transform="translate(58 -6)">
+      <ellipse rx="22" ry="16" fill="#4a9ad8"/>
+      <circle cx="16" cy="-12" r="12" fill="#5ab0ea"/>
+      <path d="M26 -14 L40 -10 L26 -6 Z" fill="#ffb03a"/>
+      <circle cx="19" cy="-15" r="2.6" fill="#1b1030"/>
+      <path d="M-20 -4 L-36 -14 L-30 2 Z" fill="#3a7ab8"/>
+      <ellipse cx="-2" cy="2" rx="10" ry="6" fill="#3a7ab8"/>
+    </g>
+  </g>
+
+  <g data-sprites></g>
+</svg>`;
+
+export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks };
 
 // Sprite colour per location (helpers drawn as drifting motes).
 export const SPRITE_COLORS = { pond: '#fff3a0', mushroom: '#c8ff9a', oak: '#ffc35a', grotto: '#d6c8ff', meadow: '#fff8c8' };

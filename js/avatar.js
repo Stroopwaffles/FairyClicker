@@ -122,6 +122,8 @@ export const ITEMS = {
   lotus_crown: { front: `<g transform="translate(100 46)">${[-60, -30, 0, 30, 60].map((a) => `<ellipse rx="5" ry="14" fill="#ffe27a" stroke="#d9a520" transform="rotate(${a}) translate(0 -8)"/>`).join('')}<circle r="5" fill="#fff6c8"/></g>` },
   witch_hat: { front: `<ellipse cx="100" cy="58" rx="56" ry="11" fill="#5a3aa8"/><path d="M72 56 L110 -2 Q116 6 112 12 L130 56 Z" fill="#6a4ac0"/>
     <rect x="76" y="44" width="52" height="8" fill="#3a2478"/><rect x="96" y="43" width="10" height="10" rx="2" fill="#ffd24d"/>` },
+  cuckoo_hat: { front: `<path d="M64 66 Q66 30 100 26 Q134 30 136 66 Q100 58 64 66 Z" fill="#6b3e1c"/><path d="M60 68 L100 34 L140 68" fill="none" stroke="#3f8f5e" stroke-width="6" stroke-linecap="round"/>
+    <rect x="90" y="40" width="20" height="18" rx="3" fill="#3a2010"/><g transform="translate(110 46)"><ellipse rx="10" ry="7" fill="#4a9ad8"/><circle cx="7" cy="-5" r="5.5" fill="#5ab0ea"/><path d="M12 -6 L19 -4 L12 -2 Z" fill="#ffb03a"/><circle cx="8" cy="-6" r="1.4" fill="#1b1030"/></g>` },
   halo: { front: `<ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff3a0" stroke-width="5" opacity=".9"/><ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff" stroke-width="1.5"/>` },
 
   // Outfits
@@ -144,6 +146,10 @@ export const ITEMS = {
       <g fill="#c8a24a"><circle cx="100" cy="164" r="1.8"/><circle cx="100" cy="176" r="1.8"/></g>` },
   moon_gown: { front: `${bodice('#e8e6ff')}${gown('#d8d4ff')}<path d="M56 238 Q100 226 144 238" stroke="#b79cff" stroke-width="4" fill="none"/>
     <path d="M100 136 a8 8 0 1 0 6 13 a6 6 0 1 1 -6 -13 z" fill="#fff6c8"/>${star(80, 210, 3, '#fff')}${star(120, 196, 3, '#fff')}` },
+  clock_coat: { front: `<path d="M80 132 Q100 126 120 132 L130 214 L70 214 Z" fill="#6b3e1c"/><path d="M100 132 V214" stroke="#3a2010" stroke-width="2"/>
+    <path d="M86 132 L100 152 L114 132" fill="#f4f1ea"/><g fill="#d9a530" stroke="#a87418">${[160, 176, 192].map((y) => `<circle cx="106" cy="${y}" r="3"/>`).join('')}</g>
+    <circle cx="86" cy="186" r="9" fill="#e8d6a8" stroke="#a87418" stroke-width="2"/><path d="M86 186 v-6 M86 186 h4" stroke="#3a2010" stroke-width="1.5"/>
+    <path d="M70 214 L64 222 L136 222 L130 214 Z" fill="#5a3216"/>` },
   tinker_apron: { front: `<path d="M80 132 L120 132 L122 188 L78 188 Z" fill="#5a8ad0"/><path d="M86 140 L114 140 L118 198 L82 198 Z" fill="#b5773e"/>
     <rect x="92" y="170" width="16" height="12" rx="2" fill="#9a6232"/><path d="M104 168 L110 156" stroke="#9aa3b8" stroke-width="3" stroke-linecap="round"/>
     <path d="M86 140 L80 132 M114 140 L120 132" stroke="#8a5d34" stroke-width="2"/>` },
@@ -164,6 +170,9 @@ export const ITEMS = {
   amber_lantern: { front: `<path d="M134 176 L140 186" stroke="#3a2d1f" stroke-width="2"/><circle cx="141" cy="198" r="16" fill="#ffc35a" opacity=".3"/><rect x="134" y="186" width="14" height="20" rx="4" fill="#ffbf4f" stroke="#8a5d34" stroke-width="2"/>` },
   crystal_wand: { front: `<line x1="134" y1="178" x2="150" y2="144" stroke="#e6dcff" stroke-width="3" stroke-linecap="round"/><path d="M146 146 L152 118 L160 146 Z" fill="#b79cff" stroke="#f3eaff"/>` },
   star_wand: { front: `<line x1="134" y1="178" x2="152" y2="142" stroke="#ffd24d" stroke-width="3" stroke-linecap="round"/>${star(156, 134, 12, '#ffe27a')}<path d="M144 132 Q132 124 120 128" stroke="#fff6c8" stroke-width="2" fill="none" opacity=".7"/>` },
+  pocket_watch: { front: `<path d="M134 176 Q140 168 146 160" stroke="#d9a530" stroke-width="2" fill="none" stroke-dasharray="3 2"/>
+    <circle cx="150" cy="150" r="13" fill="#d9a530" stroke="#a87418" stroke-width="2"/><circle cx="150" cy="150" r="10" fill="#fff8e6"/>
+    <path d="M150 150 V143 M150 150 L155 152" stroke="#2a1608" stroke-width="1.6" stroke-linecap="round"/><rect x="147" y="134" width="6" height="4" rx="1" fill="#d9a530"/>` },
   rose: { front: `<path d="M134 178 Q144 160 146 146" stroke="#3f8f5e" stroke-width="3" fill="none"/><path d="M144 160 q8 -2 8 -8" stroke="#3f8f5e" stroke-width="2.5" fill="none"/>
     <circle cx="147" cy="142" r="8" fill="#c8102e"/><path d="M142 140 q5 -5 10 0 q-5 3 -10 0" fill="#8a0a20"/>` },
 };

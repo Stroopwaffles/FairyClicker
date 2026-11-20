@@ -7,9 +7,10 @@ import {
   SHRINE, SHRINE_BY_ID, BLOOD_SECONDS, BLOOD_EXP, BLOOD_TAP_EQUIV, CHALICE_VALUE_PER_LEVEL,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
-} from './data.js?v=3.7.1';
-import { DEFAULT_LOOK } from './avatar.js?v=3.7.1';
-import { ACHIEVEMENTS } from './achievements.js?v=3.7.1';
+  BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
+} from './data.js?v=3.8';
+import { DEFAULT_LOOK } from './avatar.js?v=3.8';
+import { ACHIEVEMENTS } from './achievements.js?v=3.8';
 
 // ---------- state ----------
 
@@ -35,6 +36,7 @@ export function freshState() {
     ev: { next: FIRST_EVENT_AT, nextId: null, lastId: null, count: 0, seen: {} },
     achievements: {},         // id -> timestamp earned
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
+    clockw: { secs: 0, total: 0, best: 0, cuckoos: 0, borrowed: 0 },   // Cuckoo Clockworks
     workshop: {},             // id -> level (resets on prestige)
     gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
     // The player's fairy (permanent): how she looks, which clothes she owns, which are new.
@@ -89,6 +91,7 @@ export const hasShrineEffect = (t) => shrineEffects().some((e) => e.t === t);
 function buffEffects(b) {
   if (b.kind === 'event') return EVENT_BY_ID[b.id]?.effects || [];
   if (b.kind === 'gift') return GIFT_BY_ID[b.id]?.effects || [];
+  if (b.kind === 'time') return [{ t: 'globalMult', x: BORROWED_MULT }];
   return [];
 }
 
@@ -378,6 +381,10 @@ function startEvent(id) {
     const cd = state.gates.cd.castle || 0;
     state.gates.cd.castle = Math.max(Date.now(), cd - BLOOD_MOON_COOLDOWN_CUT_MIN * 60000);
   }
+  if (id === 'chimes') {
+    const cd = state.gates.cd.clock || 0;
+    state.gates.cd.clock = Math.max(Date.now(), cd - CHIMES_COOLDOWN_CUT_MIN * 60000);
+  }
   invalidate();
 }
 
@@ -439,6 +446,51 @@ export function biteBack() {
   return v;
 }
 
+// ---------- Cuckoo Clockworks ----------
+
+const chimesMult = () => (hasBuff('chimes') ? 2 : 1);
+const inClock = () => visitActive() && state.gates.visit.gate === 'clock';
+
+export function tapClock() {
+  if (!inClock()) return { value: 0, echo: false, crit: false };
+  const echo = Math.random() < d().tapEcho;
+  const crit = Math.random() < d().critChance;
+  const v = (crit ? CLOCK_CRIT_SECS : 1) * (echo ? 2 : 1) * chimesMult();
+  if (echo) state.stats.echoes++;
+  if (crit) state.stats2.crits++;
+  state.clockw.secs += v;
+  state.clockw.total += v;
+  state.stats.taps++;
+  return { value: v, echo, crit };
+}
+
+// Tapping the cuckoo bird when it pops out.
+export function catchCuckoo() {
+  if (!inClock()) return 0;
+  const v = CUCKOO_SECS * chimesMult();
+  state.clockw.secs += v;
+  state.clockw.total += v;
+  state.clockw.cuckoos++;
+  return v;
+}
+
+export const borrowedLeft = () => {
+  const b = state.buffs.find((x) => x.id === 'borrowed');
+  return b ? Math.max(0, b.ends - state.clock) : 0;
+};
+
+// Turn collected Seconds into Borrowed Time. Returns seconds actually added.
+function grantBorrowedTime(secs) {
+  if (secs <= 0) return 0;
+  const left = borrowedLeft();
+  const total = Math.min(BORROWED_CAP_SEC, left + secs);
+  state.buffs = state.buffs.filter((x) => x.id !== 'borrowed');
+  state.buffs.push({ id: 'borrowed', kind: 'time', ends: state.clock + total, dur: total });
+  state.clockw.borrowed += total - left;
+  invalidate();
+  return total - left;
+}
+
 // ---------- Gateways ----------
 
 export const visitActive = () => !!state.gates.visit && Date.now() < state.gates.visit.ends;
@@ -456,21 +508,32 @@ export function enterGate(id) {
   state.gates.visit = { gate: id, ends: Date.now() + g.visitSec * 1000 };
   state.gates.visits[id] = (state.gates.visits[id] || 0) + 1;
   state.blood.drops = 0;
+  state.clockw.secs = 0;
   return true;
 }
 
-// Call regularly: ends a visit whose time is up. Returns true if one just ended.
+// Call regularly: ends a visit whose time is up.
+// Returns null, or { gate, secs, added } (secs/added only for the clock).
 export function checkVisitEnd(now = Date.now()) {
   const v = state.gates.visit;
-  if (!v || now < v.ends) return false;
+  if (!v || now < v.ends) return null;
   const g = GATE_BY_ID[v.gate];
-  const B = state.blood;
-  B.best = Math.max(B.best, B.drops);
-  B.pending += B.drops;
-  B.drops = 0;
+  const out = { gate: v.gate };
+  if (v.gate === 'clock') {
+    const C = state.clockw;
+    C.best = Math.max(C.best, C.secs);
+    out.secs = C.secs;
+    out.added = grantBorrowedTime(C.secs);
+    C.secs = 0;
+  } else {
+    const B = state.blood;
+    B.best = Math.max(B.best, B.drops);
+    B.pending += B.drops;
+    B.drops = 0;
+  }
   state.gates.cd[v.gate] = v.ends + g.cooldownMin * 60000;
   state.gates.visit = null;
-  return true;
+  return out;
 }
 
 // How many seconds of a place's output a haul of drops is worth (diminishing returns).
@@ -681,7 +744,8 @@ export function prestige() {
   // Fresh realm, keeping everything that lasts across runs.
   const fresh = freshState();
   const keep = {
-    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar,
+    created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar, clockw: state.clockw,
+    buffs: state.buffs.filter((b) => b.kind === 'time'), // Borrowed Time carries over
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

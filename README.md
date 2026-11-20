@@ -121,6 +121,14 @@ During the Blood Moon, **Dracula** now peers out of the castle windows. Tap him 
 - Your fairy hovers in each scene and flicks her wand when you tap, and greets you on the title screen. You can hide her from scenes in Settings → Display
 - Your look and wardrobe stay through prestiges and travel with save codes
 
+### Version 3.8: the Cuckoo Clockworks
+
+- **⏰ Cuckoo Gate:** a second gate in the Gate Room, to the inside of a giant cuckoo clock (60-second visit, 45-minute rest)
+- Tap the clock to collect **Seconds** (1 per tap, 2 on an echo, 5 on a crit; the Enchanted Hand helps). The **cuckoo bird** pops out of its door now and then: tap it for +30 Seconds
+- When the gate pulls you home, your Seconds become **⏳ Borrowed Time: everything ×2** for that many seconds of play. It adds to any time you have left, up to 30 minutes, and carries through prestige
+- **🕛 Midnight Chimes** (new event): cuts 15 minutes off the Cuckoo Gate's rest, and clock visits give ×2 Seconds
+- A clockmaker costume (cuckoo hat, clockmaker's coat, pocket watch), a music-box waltz, and three new achievements
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

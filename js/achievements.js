@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.7.1';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.8';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
@@ -56,8 +56,11 @@ add({ id: 'realmrestored', group: 'Places', name: 'Realm Renewed', desc: 'Build 
 add({ id: 'event1', group: 'Events', name: 'Something Stirs', desc: 'Experience your first event', check: (s) => s.ev.count >= 1 });
 add({ id: 'event10', group: 'Events', name: 'Eventful Nights', desc: 'Experience 10 events', check: (s) => s.ev.count >= 10 });
 add({ id: 'event50', group: 'Events', name: 'Weather Watcher', desc: 'Experience 50 events', check: (s) => s.ev.count >= 50 });
-add({ id: 'eventall', group: 'Events', name: 'Seen It All', desc: 'Experience every kind of event', check: (s) => EVENTS.filter((e) => e.id !== 'bloodmoon').every((e) => s.ev.seen[e.id]) });
+add({ id: 'eventall', group: 'Events', name: 'Seen It All', desc: 'Experience every kind of event', check: (s) => EVENTS.filter((e) => !e.req?.gateway).every((e) => s.ev.seen[e.id]) });
 add({ id: 'bloodmoon1', group: 'Events', name: 'Once in a Blood Moon', desc: 'Witness the Blood Moon', check: (s) => s.ev.seen.bloodmoon >= 1 });
+add({ id: 'clock1', group: 'Events', name: 'Time Traveller', desc: 'Visit the Cuckoo Clockworks', check: (s) => (s.gates.visits.clock || 0) >= 1 });
+add({ id: 'clock600', group: 'Events', name: 'Ten Minutes to Spare', desc: 'Collect 600 Seconds in one clock visit', check: (s) => s.clockw.best >= 600 });
+add({ id: 'cuckoo10', group: 'Events', name: 'Cuckoo!', desc: 'Catch the cuckoo bird 10 times', check: (s) => s.clockw.cuckoos >= 10 });
 add({ id: 'gateway', group: 'Events', name: 'Between Worlds', desc: 'Open the Moonlit Gateway', check: (s) => s.gates.owned });
 add({ id: 'castle10', group: 'Events', name: 'Frequent Guest', desc: 'Visit the Crimson Castle 10 times', check: (s) => (s.gates.visits.castle || 0) >= 10 });
 add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single castle visit', check: (s) => s.blood.best >= 300 });

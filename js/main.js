@@ -4,15 +4,15 @@ import {
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
-  COSTUMES, COSTUME_SLOTS, costumeHint,
-} from './data.js?v=3.7.1';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.7.1';
-import * as G from './game.js?v=3.7.1';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.7.1';
+  COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
+} from './data.js?v=3.8';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.8';
+import * as G from './game.js?v=3.8';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.8';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js?v=3.7.1';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.7.1';
+} from './avatar.js?v=3.8';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.8';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -20,7 +20,7 @@ const display = { lessBusy: false, hideFairy: false };
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.7.1';
+import * as A from './audio.js?v=3.8';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -171,7 +171,8 @@ function renderLocTabs() {
     nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab gates${gateView ? ' active' : ''}${ready ? ' ready' : ''}" data-loc="gates">🌀 Gate Room</button>`);
   }
   if (G.visitActive()) {
-    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab courtyard${bloodView ? ' active' : ''}" data-loc="courtyard">🏰 Crimson Castle</button>`);
+    const clock = visitGate() === 'clock';
+    nav.insertAdjacentHTML('afterbegin', `<button class="loc-tab ${clock ? 'clockworks' : 'courtyard'}${bloodView ? ' active' : ''}" data-loc="world">${clock ? '⏰ Cuckoo Clockworks' : '🏰 Crimson Castle'}</button>`);
   }
   for (const b of $$('.loc-tab', nav)) b.addEventListener('click', () => switchLocation(b.dataset.loc));
   updateLocTabs();
@@ -184,7 +185,7 @@ function updateLocTabs() {
 }
 
 function switchLocation(id) {
-  if (id === 'courtyard') {
+  if (id === 'world') {
     if (bloodView || !G.visitActive()) return;
     bloodView = true; gateView = false;
     renderAll();
@@ -203,7 +204,7 @@ function switchLocation(id) {
 }
 
 function renderScene() {
-  if (bloodView) { renderCourtyard(); return; }
+  if (bloodView) { if (visitGate() === 'clock') renderClockworks(); else renderCourtyard(); return; }
   if (gateView) { renderGateRoom(); return; }
   const id = G.state.active;
   const l = LOCATION_BY_ID[id];
@@ -246,7 +247,9 @@ function renderScene() {
 }
 function updateSceneRate() {
   if (bloodView) {
-    $('#scene-rate').innerHTML = `🩸 ${fmt(G.state.blood.drops)} Blood Drops · back in ${fmtClock(G.visitLeftMs() / 1000)}`;
+    $('#scene-rate').innerHTML = visitGate() === 'clock'
+      ? `⏳ ${fmt(G.state.clockw.secs)} Seconds · back in ${fmtClock(G.visitLeftMs() / 1000)}`
+      : `🩸 ${fmt(G.state.blood.drops)} Blood Drops · back in ${fmtClock(G.visitLeftMs() / 1000)}`;
     return;
   }
   if (gateView) {
@@ -326,19 +329,23 @@ function stopHold(e) {
 window.addEventListener('pointerup', stopHold);
 window.addEventListener('pointercancel', stopHold);
 
-const viewId = () => (bloodView ? 'courtyard' : gateView ? 'gates' : G.state.active);
+// Which other world is being visited (if any), and the view id to tap in.
+const visitGate = () => G.state.gates.visit?.gate || null;
+const worldId = () => (visitGate() === 'clock' ? 'clockworks' : 'courtyard');
+const isWorld = (id) => id === 'courtyard' || id === 'clockworks';
+const viewId = () => (bloodView ? worldId() : gateView ? 'gates' : G.state.active);
 
 function onTap(e) {
   e.preventDefault();
   const id = viewId();
   if (id === 'gates') return;
-  if (id === 'courtyard' ? !G.visitActive() : !G.state.locs[id].unlocked) return;
+  if (isWorld(id) ? !G.visitActive() : !G.state.locs[id].unlocked) return;
   if (G.d().holdTap && !holds.has(e.pointerId)) {
     const target = e.currentTarget, x = e.clientX, y = e.clientY, pid = e.pointerId;
     let first = true;
     holds.set(pid, setInterval(() => {
       if (first) { first = false; return; } // wait a moment so a normal tap isn't doubled
-      if (viewId() !== id || (id === 'courtyard' && !G.visitActive())) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
+      if (viewId() !== id || (isWorld(id) && !G.visitActive())) { clearInterval(holds.get(pid)); holds.delete(pid); return; }
       doTap(id, target, x, y);
     }, 166));
   }
@@ -346,11 +353,11 @@ function onTap(e) {
 }
 
 function doTap(id, target, clientX, clientY, byHand = false) {
-  const blood = id === 'courtyard';
+  const blood = id === 'courtyard', clock = id === 'clockworks';
   if (!byHand) { buildStreak(); fairyCast(); }
-  const { value: v, echo, crit } = blood ? G.tapBlood() : G.tap(id, streakMult());
+  const { value: v, echo, crit } = blood ? G.tapBlood() : clock ? G.tapClock() : G.tap(id, streakMult());
   // Hand taps are quieter so a fast hand doesn't drown everything out.
-  if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else A.tap(id, echo); }
+  if (!byHand || Math.random() < 0.3) { if (blood) A.bloodTap(echo); else if (clock) A.tick(echo); else A.tap(id, echo); }
   if (crit) A.crit();
   if (byHand) G.state.stats2.handTaps++; else trackFrenzy();
   target.classList.remove('bump');
@@ -359,12 +366,12 @@ function doTap(id, target, clientX, clientY, byHand = false) {
 
   const wrap = $('#scene-wrap').getBoundingClientRect();
   const x = clientX - wrap.left, y = clientY - wrap.top;
-  const color = blood ? '#ff4a5a' : RESOURCES[LOCATION_BY_ID[id].resource].color;
+  const color = blood ? '#ff4a5a' : clock ? '#ffd27a' : RESOURCES[LOCATION_BY_ID[id].resource].color;
   const layer = $('#floaters');
   const f = document.createElement('div');
   f.className = 'floater';
   f.style.cssText = `left:${x}px;top:${y}px;color:${color}`;
-  f.textContent = `+${fmt(v, 100)}${echo ? ' ×2' : ''}${crit ? ' ✦' : ''}`;
+  f.textContent = `+${fmt(v, 100)}${clock ? 's' : ''}${echo ? ' ×2' : ''}${crit ? ' ✦' : ''}`;
   if (echo) f.classList.add('echo');
   if (crit) f.classList.add('crit');
   if (byHand) f.classList.add('by-hand');
@@ -381,6 +388,7 @@ function doTap(id, target, clientX, clientY, byHand = false) {
   while (layer.childElementCount > 60) layer.firstElementChild.remove();
 
   if (blood) { updateSceneRate(); updateBloodPanel(); return; }
+  if (clock) { updateSceneRate(); updateClockPanel(); return; }
   if (G.state.locs[id].taps === 31) $('#tap-hint').classList.add('faded');
   updateResBar();
 }
@@ -398,7 +406,7 @@ function renderPanel() {
   for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView && !gateView);
   const body = $('#panel-body');
   panelUpdaters = [];
-  if (bloodView) { renderBloodPanel(body); return; }
+  if (bloodView) { if (visitGate() === 'clock') renderClockPanel(body); else renderBloodPanel(body); return; }
   if (gateView) { renderGatePanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
@@ -798,6 +806,7 @@ function trackFrenzy() {
 const fmtClock = (sec) => { sec = Math.ceil(sec); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
 
 function buffInfo(b) {
+  if (b.kind === 'time') return TIME_BUFF;
   return b.kind === 'event' ? EVENT_BY_ID[b.id] : GIFT_BY_ID[b.id];
 }
 
@@ -1048,7 +1057,7 @@ function tickHands(dt) {
   const dd = G.d();
   if (!dd.hands || !$('#modal').hidden || !$('#shrine').hidden) return;
   const id = viewId();
-  if (id === 'gates' || (id === 'courtyard' ? !G.visitActive() : !G.state.locs[id]?.unlocked)) return;
+  if (id === 'gates' || (isWorld(id) ? !G.visitActive() : !G.state.locs[id]?.unlocked)) return;
   handAccum += dt * dd.handRate * dd.hands;
   let n = 0;
   while (handAccum >= 1 && n++ < 6) {
@@ -1169,7 +1178,7 @@ function hideDracula() {
   $$('#scene .win.red').forEach((w) => w.classList.remove('red'));
 }
 function tickDracula(dt) {
-  if (!bloodView || !G.visitActive() || $('#scene .dracula.show')) return;
+  if (!bloodView || !G.visitActive() || visitGate() !== 'castle' || $('#scene .dracula.show')) return;
   draculaTimer -= dt;
   if (draculaTimer > 0) return;
   draculaTimer = 6 + Math.random() * 6;
@@ -1187,13 +1196,14 @@ function tickDracula(dt) {
 let gateView = false; // showing the Gate Room
 
 function gateSceneSVG() {
-  const slots = [[220, 'soon1'], [500, 'castle'], [780, 'soon2']];
+  const slots = [[285, 'clock'], [500, 'castle'], [715, 'soon2']];
   const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 1000}" cy="${(i * 53) % 260}" r="${(i % 3) * 0.6 + 0.6}" fill="#fff" opacity=".6"/>`).join('');
   return `<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
       <linearGradient id="gr-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0a26"/><stop offset="1" stop-color="#1c1846"/></linearGradient>
       <linearGradient id="gr-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2550"/><stop offset="1" stop-color="#110e2a"/></linearGradient>
       <radialGradient id="gr-castle"><stop offset="0" stop-color="#ff6a7a"/><stop offset=".55" stop-color="#a0142e"/><stop offset="1" stop-color="#3a0814"/></radialGradient>
+      <radialGradient id="gr-clock"><stop offset="0" stop-color="#ffe08a"/><stop offset=".55" stop-color="#c07a20"/><stop offset="1" stop-color="#4a2a08"/></radialGradient>
       <radialGradient id="gr-sealed"><stop offset="0" stop-color="#3a3a6a"/><stop offset="1" stop-color="#14122e"/></radialGradient>
       <radialGradient id="gr-glow"><stop offset="0" stop-color="#c9a7ff" stop-opacity=".5"/><stop offset="1" stop-color="#c9a7ff" stop-opacity="0"/></radialGradient>
     </defs>
@@ -1211,17 +1221,19 @@ function gateSceneSVG() {
       const sealed = g.soon;
       return `<g class="portal${sealed ? ' sealed' : ''}" data-gate="${id}">
         <circle cx="${x}" cy="380" r="170" fill="url(#gr-glow)" class="${sealed ? '' : 'pulse'}"/>
-        <path d="M${x - 95} 560 V330 a95 95 0 0 1 190 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
-        <path class="portal-face" d="M${x - 78} 556 V334 a78 78 0 0 1 156 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
+        <path d="M${x - 88} 560 V330 a88 88 0 0 1 176 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
+        <path class="portal-face" d="M${x - 72} 556 V334 a72 72 0 0 1 144 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
         ${sealed
           ? `<g opacity=".75"><path d="M${x - 14} 418 v-12 a14 14 0 0 1 28 0 v12" fill="none" stroke="#7a72c8" stroke-width="5"/>
                <rect x="${x - 22}" y="416" width="44" height="34" rx="6" fill="#4a4290"/><circle cx="${x}" cy="430" r="5" fill="#14122e"/><rect x="${x - 2}" y="432" width="4" height="9" fill="#14122e"/></g>`
           : `<g fill="none" stroke="#ffd6dc" stroke-opacity=".6">
                <circle class="swirl" cx="${x}" cy="440" r="52" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 440px"/>
                <circle class="swirl rev" cx="${x}" cy="440" r="32" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 440px"/></g>
-             <path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`}
+             ${id === 'clock'
+               ? `<circle cx="${x}" cy="510" r="22" fill="#fff8e6" opacity=".85"/><path d="M${x} 510 v-14 M${x} 510 h10" stroke="#4a2a08" stroke-width="3" stroke-linecap="round"/>`
+               : `<path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`}`}
         <rect class="portal-hit" x="${x - 95}" y="235" width="190" height="325" fill="transparent"/>
-        <text x="${x}" y="592" text-anchor="middle" font-size="22" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
+        <text x="${x}" y="592" text-anchor="middle" font-size="19" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
         <text class="portal-status" x="${x}" y="618" text-anchor="middle" font-size="17" fill="#c9b6ff" font-family="Quicksand, sans-serif"></text>
       </g>`;
     }).join('')}
@@ -1292,14 +1304,15 @@ function tryEnterGate(id) {
   setTimeout(renderAll, 350);
 }
 
-function onVisitEnd() {
+function onVisitEnd(res) {
   A.portal();
   portalFlash('#c9a7ff');
   bloodView = false;
   gateView = G.state.gates.owned;
   G.save();
   renderAll();
-  if (G.state.blood.pending > 0) showBloodExchange();
+  if (res?.gate === 'clock') showBorrowedTime(res);
+  else if (G.state.blood.pending > 0) showBloodExchange();
 }
 
 function portalFlash(color) {
@@ -1429,6 +1442,104 @@ function surpriseMe() {
   A.fanfare();
   renderWardrobe();
   renderAvatarUI();
+}
+
+// ---------- Cuckoo Clockworks ----------
+
+function renderClockworks() {
+  $('#scene').innerHTML = SCENES.clockworks();
+  const got = G.grantPlaceCostume('clock');
+  if (got.length) setTimeout(() => onCostumes(got), 600);
+  requestAnimationFrame(placeHandsAtRest);
+  $('#scene-name').textContent = 'Cuckoo Clockworks';
+  $('[data-tap]', $('#scene')).addEventListener('pointerdown', onTap);
+  const bird = $('#scene .cuckoo');
+  bird.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!bird.classList.contains('show')) return;
+    const v = G.catchCuckoo();
+    A.cuckoo();
+    hideCuckoo();
+    const r = $('#scene-wrap').getBoundingClientRect();
+    floatText(e.clientX - r.left, e.clientY - r.top, `⏳ +${v}s`, '#ffd27a');
+    toast(`🐦 Cuckoo! +${v} Seconds`);
+    updateSceneRate();
+    updateClockPanel();
+  });
+  cuckooTimer = 4 + Math.random() * 3;
+  const hint = $('#tap-hint');
+  hint.textContent = 'Tap the clock';
+  hint.classList.remove('faded');
+  $('#lock-overlay').hidden = true;
+  updateSceneRate();
+}
+
+let cuckooTimer = 5, cuckooHide = null;
+function hideCuckoo() {
+  clearTimeout(cuckooHide);
+  $('#scene .cuckoo')?.classList.remove('show');
+  $$('#scene .cuckoo-door').forEach((d) => d.classList.remove('open'));
+}
+function tickCuckoo(dt) {
+  if (!bloodView || visitGate() !== 'clock' || !G.visitActive() || $('#scene .cuckoo.show')) return;
+  cuckooTimer -= dt;
+  if (cuckooTimer > 0) return;
+  cuckooTimer = 7 + Math.random() * 6;
+  const bird = $('#scene .cuckoo');
+  if (!bird) return;
+  $$('#scene .cuckoo-door').forEach((d) => d.classList.add('open'));
+  bird.classList.add('show');
+  A.cuckoo();
+  cuckooHide = setTimeout(hideCuckoo, 1800);
+}
+
+function renderClockPanel(body) {
+  body.innerHTML = `<div class="blood-panel clock-panel">
+    <h3>⏰ The Cuckoo Clockworks</h3>
+    <div class="blood-count"><b id="cp-secs">0</b> Seconds collected</div>
+    <div class="buff-bar"><i id="cp-bar"></i></div>
+    <div class="bp-time" id="cp-time"></div>
+    <p id="cp-chimes"></p>
+    <p>Tap the clock and catch the cuckoo when it pops out. When the gate pulls you home, your Seconds become <b>Borrowed Time</b>: everything ×${BORROWED_MULT} for that many seconds (up to ${BORROWED_CAP_SEC / 60} minutes in total).</p>
+    <div class="bp-rates"><div id="cp-preview"></div></div>
+  </div>`;
+  updateClockPanel();
+}
+
+function updateClockPanel() {
+  const el = $('#cp-secs');
+  if (!el) return;
+  const C = G.state.clockw;
+  el.textContent = fmt(C.secs);
+  const v = G.state.gates.visit;
+  if (v) {
+    const left = G.visitLeftMs() / 1000;
+    $('#cp-bar').style.width = `${(left / GATE_BY_ID[v.gate].visitSec) * 100}%`;
+    $('#cp-time').textContent = `The gate pulls you home in ${fmtClock(left)}`;
+  }
+  $('#cp-chimes').textContent = G.hasBuff('chimes') ? '🕛 Midnight Chimes: every Second counts double!' : '';
+  const total = Math.min(BORROWED_CAP_SEC, G.borrowedLeft() + C.secs);
+  $('#cp-preview').textContent = `⏳ Borrowed Time so far: ${fmtDuration(total * 1000)} of everything ×${BORROWED_MULT}`;
+}
+
+function showBorrowedTime(res) {
+  const m = $('#modal');
+  const left = G.borrowedLeft();
+  m.innerHTML = `<div class="modal-card clock-card" role="dialog" aria-modal="true">
+    <h2>⏳ Borrowed Time</h2>
+    <p>You collected <b>${fmt(res.secs)}</b> Seconds in the Clockworks.</p>
+    ${res.added > 0
+      ? `<p class="big-line">Everything ×${BORROWED_MULT} for <b>${fmtDuration(left * 1000)}</b></p>
+         ${res.added < res.secs ? `<p class="small">Borrowed Time is capped at ${BORROWED_CAP_SEC / 60} minutes.</p>` : ''}`
+      : '<p>No Seconds this time. Tap the clock on your next visit!</p>'}
+    <p class="small">It counts down while you play.</p>
+    <div class="row"><button class="btn primary" data-ok>Wonderful!</button></div></div>`;
+  m.hidden = false;
+  if (res.added > 0) A.fanfare();
+  $('[data-ok]', m).addEventListener('click', () => { m.hidden = true; m.innerHTML = ''; });
+  renderEvents();
+  updateResBar();
+  updateSceneRate();
 }
 
 // ---------- Blood Moon ----------
@@ -1725,7 +1836,7 @@ function renderAll() {
   if (bloodView && !G.visitActive()) bloodView = false;
   if (gateView && !G.state.gates.owned) gateView = false;
   document.body.classList.toggle('blood', G.hasBuff('bloodmoon'));
-  A.setLocation(bloodView ? 'courtyard' : gateView ? 'gates' : G.state.active);
+  A.setLocation(bloodView ? worldId() : gateView ? 'gates' : G.state.active);
   updateMuteBtn();
   renderResBar();
   renderLocTabs();
@@ -1791,6 +1902,7 @@ function tick(now) {
     tickLotus(dt);
     tickSteward(dt);
     tickDracula(dt);
+    tickCuckoo(dt);
     uiAccum += dt; saveAccum += dt; achAccum += dt;
     if (achAccum >= 1) {
       achAccum = 0;
@@ -1803,9 +1915,10 @@ function tick(now) {
       uiAccum = 0;
       updateEvents();
       updateMoonBtn();
-      if (bloodView) { updateBloodPanel(); updateSceneRate(); }
+      if (bloodView) { updateBloodPanel(); updateClockPanel(); updateSceneRate(); }
       if (gateView) updateGates();
-      if (G.checkVisitEnd()) onVisitEnd();
+      const ended = G.checkVisitEnd();
+      if (ended) onVisitEnd(ended);
       else if (G.state.gates.owned && !G.state.gates.visit) {
         // Let the player know when a gate comes off cooldown.
         const ready = GATES.some((g) => !g.soon && G.canEnterGate(g.id));
