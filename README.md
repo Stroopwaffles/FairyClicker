@@ -177,6 +177,13 @@ The Gate Room now has four portals.
   - From places and gates: Flower Crown (Pond), Bell Collar (Mushroom Ring), Acorn Hat (Oak), Tiny Tiara (Grotto), Star Shades (Meadow), Vampire Collar (Castle), Top Hat (Clockworks), Pearl Necklace (Sunken Palace), Rainbow Scarf (Cloud Isles), Tiny Foam Glove (High-Five Heights)
   - Specials: Tinfoil Hat (50 Mycel Gnomes), Propeller Cap (first prestige), Little Halo (the finale)
 
+### Version 3.17: the Taco Truck
+
+- **🌮 Salsa Gate → Taco Truck** (60-second visit, 30-minute rest): a cosmic taco truck under the stars. Tap the giant taco to collect **Tacos**, and catch the chili pepper popping out of the window (+20)
+- When the gate pulls you home, every taco **turns the moon into a taco for one second**, up to **4:20**. The pond's moon, the title-screen moon and the moon button all become tacos. **This has no effect whatsoever**
+- **🌮 Taco Tuesday** event (on any day): cuts 15 minutes off the Salsa Gate's rest and doubles tacos
+- A Taco Hat and Hot Sauce (their bonus: absolutely nothing), a Tiny Taco familiar accessory, two achievements, and the Gate Room now has six portals
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

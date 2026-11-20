@@ -6,15 +6,15 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H, HELPING_HANDS_MAX, HELPING_HANDS_SEC, HELPING_HAND_RATE,
-} from './data.js?v=3.16';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.16';
-import * as G from './game.js?v=3.16';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG, PET_ACCESSORIES } from './familiars.js?v=3.16';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.16';
+} from './data.js?v=3.17';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.17';
+import * as G from './game.js?v=3.17';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG, PET_ACCESSORIES } from './familiars.js?v=3.17';
+import { SCENES, CASTLE_WINDOWS, taco as tacoArt } from './scenes.js?v=3.17';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
-} from './avatar.js?v=3.16';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.16';
+} from './avatar.js?v=3.17';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.17';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.16';
+import * as A from './audio.js?v=3.17';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -343,7 +343,7 @@ window.addEventListener('pointercancel', stopHold);
 
 // Which other world is being visited (if any), and the view id to tap in.
 const visitGate = () => G.state.gates.visit?.gate || null;
-const WORLD_VIEW = { castle: 'courtyard', clock: 'clockworks', palace: 'palace', clouds: 'clouds', hands: 'hands' };
+const WORLD_VIEW = { castle: 'courtyard', clock: 'clockworks', palace: 'palace', clouds: 'clouds', hands: 'hands', taco: 'taco' };
 const worldId = () => WORLD_VIEW[visitGate()] || 'courtyard';
 const isWorld = (id) => Object.values(WORLD_VIEW).includes(id);
 const viewId = () => (bloodView ? worldId() : gateView ? 'gates' : G.state.active);
@@ -854,6 +854,7 @@ const fmtClock = (sec) => { sec = Math.ceil(sec); return `${Math.floor(sec / 60)
 
 function buffInfo(b) {
   if (b.kind === 'time') return TIME_BUFF;
+  if (b.kind === 'taco') return { name: 'Taco Moon', icon: '🌮', desc: 'The moon is a taco. Nothing else happens.' };
   if (b.kind === 'hands') return { name: 'Helping Hands', icon: '🙌', desc: `${b.n} extra hand${b.n === 1 ? '' : 's'} tapping with you` };
   return b.kind === 'event' ? EVENT_BY_ID[b.id] : GIFT_BY_ID[b.id];
 }
@@ -882,6 +883,7 @@ function onEventsChanged({ started, ended }) {
   }
   renderEvents();
   renderHands();
+  syncTaco();
   updateResBar();
   updateSceneRate();
   if (tab === 'helpers') renderPanel(); else updatePanel();
@@ -1248,7 +1250,7 @@ function tickDracula(dt) {
 let gateView = false; // showing the Gate Room
 
 function gateSceneSVG() {
-  const slots = [[204, 'hands'], [352, 'clouds'], [500, 'clock'], [648, 'castle'], [796, 'palace']];
+  const slots = [[195, 'taco'], [317, 'hands'], [439, 'clouds'], [561, 'clock'], [683, 'castle'], [805, 'palace']];
   const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 1000}" cy="${(i * 53) % 260}" r="${(i % 3) * 0.6 + 0.6}" fill="#fff" opacity=".6"/>`).join('');
   return `<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
@@ -1257,6 +1259,7 @@ function gateSceneSVG() {
       <radialGradient id="gr-castle"><stop offset="0" stop-color="#ff6a7a"/><stop offset=".55" stop-color="#a0142e"/><stop offset="1" stop-color="#3a0814"/></radialGradient>
       <radialGradient id="gr-clock"><stop offset="0" stop-color="#ffe08a"/><stop offset=".55" stop-color="#c07a20"/><stop offset="1" stop-color="#4a2a08"/></radialGradient>
       <radialGradient id="gr-palace"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#2a8ac0"/><stop offset="1" stop-color="#08304a"/></radialGradient>
+      <radialGradient id="gr-taco"><stop offset="0" stop-color="#ffe6a0"/><stop offset=".55" stop-color="#ff8a3a"/><stop offset="1" stop-color="#6a2a10"/></radialGradient>
       <radialGradient id="gr-hands"><stop offset="0" stop-color="#fff0d8"/><stop offset=".55" stop-color="#ff9f6a"/><stop offset="1" stop-color="#7a3418"/></radialGradient>
       <radialGradient id="gr-clouds"><stop offset="0" stop-color="#fff6ff"/><stop offset=".55" stop-color="#ffb3e0"/><stop offset="1" stop-color="#7a5aa8"/></radialGradient>
       <radialGradient id="gr-sealed"><stop offset="0" stop-color="#3a3a6a"/><stop offset="1" stop-color="#14122e"/></radialGradient>
@@ -1276,23 +1279,24 @@ function gateSceneSVG() {
       const sealed = g.soon;
       return `<g class="portal${sealed ? ' sealed' : ''}" data-gate="${id}">
         <circle cx="${x}" cy="380" r="150" fill="url(#gr-glow)" pointer-events="none" class="${sealed ? '' : 'pulse'}"/>
-        <path d="M${x - 62} 560 V350 a62 62 0 0 1 124 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
-        <path class="portal-face" d="M${x - 51} 556 V354 a51 51 0 0 1 102 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
+        <path d="M${x - 54} 560 V356 a54 54 0 0 1 108 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
+        <path class="portal-face" d="M${x - 44} 556 V360 a44 44 0 0 1 88 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
         ${sealed
           ? `<g opacity=".75"><path d="M${x - 14} 418 v-12 a14 14 0 0 1 28 0 v12" fill="none" stroke="#7a72c8" stroke-width="5"/>
                <rect x="${x - 22}" y="416" width="44" height="34" rx="6" fill="#4a4290"/><circle cx="${x}" cy="430" r="5" fill="#14122e"/><rect x="${x - 2}" y="432" width="4" height="9" fill="#14122e"/></g>`
           : `<g fill="none" stroke="#ffd6dc" stroke-opacity=".6">
-               <circle class="swirl" cx="${x}" cy="450" r="40" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 450px"/>
-               <circle class="swirl rev" cx="${x}" cy="450" r="24" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 450px"/></g>
+               <circle class="swirl" cx="${x}" cy="450" r="34" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 450px"/>
+               <circle class="swirl rev" cx="${x}" cy="450" r="20" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 450px"/></g>
              ${{
                clock: `<circle cx="${x}" cy="510" r="22" fill="#fff8e6" opacity=".85"/><path d="M${x} 510 v-14 M${x} 510 h10" stroke="#4a2a08" stroke-width="3" stroke-linecap="round"/>`,
                castle: `<path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`,
                palace: `<path d="M${x - 26} 526 Q${x} 486 ${x + 26} 526 Z" fill="#ffb3d0" opacity=".9"/><circle cx="${x}" cy="514" r="8" fill="#fff"/>`,
-               hands: `<text x="${x}" y="530" text-anchor="middle" font-size="40">✋</text>`,
+               hands: `<text x="${x}" y="530" text-anchor="middle" font-size="36">✋</text>`,
+               taco: tacoArt(x, 510, 26),
                clouds: `<g fill="#fff" opacity=".95"><ellipse cx="${x}" cy="520" rx="30" ry="12"/><circle cx="${x - 12}" cy="510" r="12"/><circle cx="${x + 10}" cy="506" r="14"/></g>`,
              }[id] || ''}`}
-        <rect class="portal-hit" x="${x - 64}" y="280" width="128" height="325" fill="transparent"/>
-        <text x="${x}" y="592" text-anchor="middle" font-size="13" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
+        <rect class="portal-hit" x="${x - 56}" y="290" width="112" height="325" fill="transparent"/>
+        <text x="${x}" y="592" text-anchor="middle" font-size="12" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
         <text class="portal-status" x="${x}" y="618" text-anchor="middle" font-size="17" fill="#c9b6ff" font-family="Quicksand, sans-serif"></text>
       </g>`;
     }).join('')}
@@ -1675,13 +1679,13 @@ function renderSimpleWorld(g) {
     hideVisitor();
     const r = $('#scene-wrap').getBoundingClientRect();
     floatText(e.clientX - r.left, e.clientY - r.top, `${W.icon} +${v}`, W.color);
-    toast({ palace: `🧜 The mermaid gives you ${v} Pearls!`, clouds: `🐋 The cloud whale showers you with ${v} Sunbeams!`, hands: `🤚 The shy hand gives you a secret high-five! +${v}` }[g]);
+    toast({ taco: `🌶️ The chili pepper tosses you ${v} tacos!`, palace: `🧜 The mermaid gives you ${v} Pearls!`, clouds: `🐋 The cloud whale showers you with ${v} Sunbeams!`, hands: `🤚 The shy hand gives you a secret high-five! +${v}` }[g]);
     updateSceneRate();
     updateWorldPanel();
   });
   visitorTimer = 4 + Math.random() * 3;
   const hint = $('#tap-hint');
-  hint.textContent = { palace: 'Tap the giant clam', clouds: 'Tap the rainbow cloud', hands: 'High-five the big hand!' }[g];
+  hint.textContent = { taco: 'Tap the taco!', palace: 'Tap the giant clam', clouds: 'Tap the rainbow cloud', hands: 'High-five the big hand!' }[g];
   hint.classList.remove('faded');
   $('#lock-overlay').hidden = true;
   updateSceneRate();
@@ -1707,7 +1711,9 @@ function tickVisitor(dt) {
 
 function renderWorldPanel(body, g) {
   const W = SIMPLE_WORLDS[g], gate = GATE_BY_ID[g];
-  const explain = g === 'hands'
+  const explain = g === 'taco'
+    ? `Tap the giant taco and catch the chili pepper when it pops out of the window. When the gate pulls you home, every taco turns <b>the moon into a taco for one second</b> (up to 4:20). This has <b>no effect whatsoever</b>. You're welcome.`
+    : g === 'hands'
     ? `High-five the big hand and catch the shy hand when it peeks up. Every few high-fives earns a <b>helping hand</b> (up to ${HELPING_HANDS_MAX}). Each one needs more than the last. When the gate pulls you home, they tap with you for <b>${HELPING_HANDS_SEC / 60} minutes</b>.`
     : g === 'palace'
     ? `Tap the clam and catch the mermaid when she peeks out. When the gate pulls you home, your Pearls are strung onto your <b>Pearl Necklace</b>. Every strand is <b>+${Math.round(PEARL_STRAND_BONUS * 100)}% to everything, forever</b>, even through prestiges.`
@@ -1737,7 +1743,11 @@ function updateWorldPanel() {
   }
   const ev = SIMPLE_WORLDS[g].event;
   $('#wp-event').textContent = G.hasBuff(ev) ? `${EVENT_BY_ID[ev].icon} ${EVENT_BY_ID[ev].name}: every ${SIMPLE_WORLDS[g].currency.slice(0, -1)} counts double!` : '';
-  if (g === 'hands') {
+  if (g === 'taco') {
+    const left = G.state.buffs.find((b) => b.kind === 'taco');
+    const total = Math.min(260, (left ? Math.max(0, left.ends - G.state.clock) : 0) + W.amt);
+    $('#wp-preview').innerHTML = `🌮 Taco moon so far: <b>${fmtClock(total)}</b> of 4:20${total >= 260 ? ' (maxed!)' : ''}`;
+  } else if (g === 'hands') {
     const n = G.helpingHandsFor(W.amt);
     const next = n < HELPING_HANDS_MAX ? G.highFivesFor(n + 1) - W.amt : 0;
     $('#wp-preview').innerHTML = `<div class="hand-row">${Array.from({ length: HELPING_HANDS_MAX }, (_, i) => `<span class="${i < n ? 'on' : ''}">✋</span>`).join('')}</div>` +
@@ -1757,7 +1767,15 @@ function showWorldResult(res) {
   const m = $('#modal');
   const W = SIMPLE_WORLDS[res.gate];
   let inner;
-  if (res.gate === 'hands') {
+  if (res.gate === 'taco') {
+    inner = `<h2>🌮 The Moon Is a Taco</h2>
+      <p>You collected <b>${fmt(res.amt)}</b> tacos at the Taco Truck.</p>
+      <div style="width:120px;height:80px;margin:6px auto"><svg viewBox="-70 -40 140 80">${tacoArt(0, -6, 60)}</svg></div>
+      ${res.secs > 0 ? `<p class="big-line">The moon will be a taco for <b>${fmtClock(res.secs)}</b></p>
+        ${res.capped ? '<p class="small">That’s the maximum: 4:20.</p>' : ''}<p class="small">This does absolutely nothing.</p>`
+        : '<p>No tacos, no taco moon. The moon remains a moon.</p>'}`;
+    syncTaco();
+  } else if (res.gate === 'hands') {
     inner = `<h2>🙌 Helping Hands</h2>
       <p>You landed <b>${fmt(res.amt)}</b> high-fives in High-Five Heights.</p>
       <div class="hand-row">${Array.from({ length: HELPING_HANDS_MAX }, (_, i) => `<span class="${i < res.n ? 'on' : ''}">✋</span>`).join('')}</div>
@@ -1808,7 +1826,7 @@ const PLACE_LINES = {
   courtyard: ['Is it just me, or is it chilly in here?', 'Keep an eye on those windows…', 'So. Much. Red.'],
   clockworks: ['Tick… tock… tick…', 'Catch the cuckoo!', 'Every tap is a second saved!'],
   palace: ['Bubbles!', 'I think the mermaid likes you.', 'Every pearl makes the necklace longer!'],
-  hands: ['Up top!', 'So many hands… none of them are mine.', 'High five! …I have paws.'],
+  taco: ['Smells amazing in here!', 'Can familiars eat tacos? Asking for me.', 'Extra salsa, please!'],
   hands: ['Up top!', 'So many hands… none of them are mine.', 'High five! …I have paws.'],
   clouds: ['Wheee, so high up!', 'Look, a whale in the sky!', 'Soft as… well, a cloud.'],
   gates: ['So many doors… where to?', 'Each gate smells different. This one smells like adventure.'],
@@ -1818,7 +1836,7 @@ const EVENT_LINES = {
   sporebloom: 'Spores everywhere! Tap the toadstool!', meteor: 'Shooting stars! Quick, tap them!',
   owlcouncil: 'The owls are meeting. Helpers are cheaper!', fog: 'Spooky fog… but our taps feel stronger!',
   fairy: 'Look! A fairy! Catch her!', bloodmoon: 'The moon turned red… the castle calls.',
-  chimes: 'Midnight! The clock gate is waking up.', hightide: 'High tide! Pearls galore!', rainbow: 'A rainbow! The sky gate shines.',
+  chimes: 'Midnight! The clock gate is waking up.', hightide: 'High tide! Pearls galore!', rainbow: 'A rainbow! The sky gate shines.', tacotuesday: 'It’s Taco Tuesday! (It is not Tuesday.)',
   applause: 'Everyone’s clapping! The Palm Gate wants a high-five!',
 };
 
@@ -1828,6 +1846,7 @@ function helpfulLines() {
   const ev = G.activeEvent();
   if (ev && EVENT_LINES[ev.id]) out.push(EVENT_LINES[ev.id]);
   if (G.borrowedLeft() > 0) out.push('Borrowed Time! Everything is extra speedy!');
+  if (G.state.buffs.some((b) => b.kind === 'taco')) out.push(pickOne(['The moon is a taco. I don’t make the rules.', 'Look up! The moon is a TACO!', 'Taco moon. Delicious. Useless. Perfect.']));
   if (G.canPrestige()) out.push('The moon is calling… a new night awaits.');
   if (G.state.gates.owned && !G.state.gates.visit && GATES.some((g) => !g.soon && G.canEnterGate(g.id))) out.push('A gate is ready to visit!');
   const id = G.state.active, ls = G.state.locs[id];
@@ -2097,9 +2116,19 @@ function moonRow(count) {
   return html + '</div>';
 }
 
+// The taco moon: swap every moon for a taco while it lasts.
+function syncTaco() {
+  const on = G.state.buffs.some((b) => b.kind === 'taco');
+  document.body.classList.toggle('taco', on);
+  const t = $('.title-taco');
+  if (t && !t.innerHTML) t.innerHTML = tacoArt(0, 10, 66);
+  renderMoonBtn();
+}
+
 function renderMoonBtn() {
   const P = G.state.prestige;
-  $('#btn-moon').innerHTML = `${moonSVG(Math.min(P.count, FINALE_PRESTIGE))}<span class="moon-count">${fmt(P.stones)}</span>`;
+  const isTaco = document.body.classList.contains('taco');
+  $('#btn-moon').innerHTML = `${isTaco ? `<svg class="moon-svg" viewBox="-34 -34 68 68">${tacoArt(0, 4, 30)}</svg>` : moonSVG(Math.min(P.count, FINALE_PRESTIGE))}<span class="moon-count">${fmt(P.stones)}</span>`;
   updateMoonBtn();
 }
 function updateMoonBtn() {
@@ -2294,7 +2323,7 @@ function renderAll() {
   renderScene();
   renderPanel();
   renderEvents();
-  renderMoonBtn();
+  syncTaco();
   renderHands();
   renderAvatarUI();
 }
@@ -2473,6 +2502,7 @@ function boot() {
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
   renderTitle();
+  syncTaco();
   requestAnimationFrame((t) => { last = t; tick(t); });
 }
 

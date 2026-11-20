@@ -9,10 +9,10 @@ import {
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
   COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
-  GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, HELPING_HANDS_MAX, HAND_STEP_BASE, HAND_STEP_GROWTH, HELPING_HANDS_SEC, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.16';
-import { DEFAULT_LOOK } from './avatar.js?v=3.16';
-import { ACHIEVEMENTS } from './achievements.js?v=3.16';
+  GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, TACO_MOON_CAP_SEC, HELPING_HANDS_MAX, HAND_STEP_BASE, HAND_STEP_GROWTH, HELPING_HANDS_SEC, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
+} from './data.js?v=3.17';
+import { DEFAULT_LOOK } from './avatar.js?v=3.17';
+import { ACHIEVEMENTS } from './achievements.js?v=3.17';
 
 // ---------- state ----------
 
@@ -40,7 +40,7 @@ export function freshState() {
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
     clockw: { secs: 0, total: 0, best: 0, cuckoos: 0, borrowed: 0 },   // Cuckoo Clockworks
     // Sunken Palace (strung = pearls in the necklace) and Cloud Isles (bank = seconds of ×2 offline)
-    wv: { palace: { amt: 0, total: 0, best: 0, pops: 0, strung: 0 }, clouds: { amt: 0, total: 0, best: 0, pops: 0, bank: 0, used: 0 }, hands: { amt: 0, total: 0, best: 0, pops: 0, bestHands: 0 } },
+    wv: { palace: { amt: 0, total: 0, best: 0, pops: 0, strung: 0 }, clouds: { amt: 0, total: 0, best: 0, pops: 0, bank: 0, used: 0 }, hands: { amt: 0, total: 0, best: 0, pops: 0, bestHands: 0 }, taco: { amt: 0, total: 0, best: 0, pops: 0, moonSec: 0 } },
     workshop: {},             // id -> level (resets on prestige)
     gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
     // The player's fairy (permanent): how she looks, which clothes she owns, which are new.
@@ -161,6 +161,7 @@ function derive() {
   const tapMult = {}, helperMult = {}, tapRatePct = {}, helperOne = {};
   for (const l of locIds) { tapMult[l] = 1; helperMult[l] = 1; tapRatePct[l] = 0; }
   const out = {
+    tacoMoon: state.buffs.some((b) => b.kind === 'taco'),
     globalMult: 1, offlineHours: BASE_OFFLINE_HOURS, helperDiscount: 1, upgradeDiscount: 1,
     tapEcho: 0, eventDuration: 1, eventFreq: 1, eventPreview: false,
     holdTap: false, giftMult: 1,
@@ -412,7 +413,7 @@ function startEvent(id) {
     const cd = state.gates.cd.clock || 0;
     state.gates.cd.clock = Math.max(Date.now(), cd - CHIMES_COOLDOWN_CUT_MIN * 60000);
   }
-  if (id === 'hightide' || id === 'rainbow' || id === 'applause') {
+  if (id === 'hightide' || id === 'rainbow' || id === 'applause' || id === 'tacotuesday') {
     const gate = GATE_EVENTS[id];
     const cd = state.gates.cd[gate] || 0;
     state.gates.cd[gate] = Math.max(Date.now(), cd - GATE_EVENT_CUT_MIN * 60000);
@@ -622,6 +623,21 @@ export function checkVisitEnd(now = Date.now()) {
       invalidate();
     }
     W.amt = 0;
+  } else if (v.gate === 'taco') {
+    // Each taco: one second of the moon being a taco. Purely for fun, capped at 4:20.
+    const W = state.wv.taco;
+    W.best = Math.max(W.best, W.amt);
+    out.amt = W.amt;
+    const old = state.buffs.find((b) => b.kind === 'taco');
+    const left = old ? Math.max(0, old.ends - state.clock) : 0;
+    const total = Math.min(TACO_MOON_CAP_SEC, left + W.amt);
+    state.buffs = state.buffs.filter((b) => b.kind !== 'taco');
+    if (total > 0) state.buffs.push({ id: 'tacomoon', kind: 'taco', ends: state.clock + total, dur: total });
+    out.secs = total;
+    out.capped = left + W.amt > TACO_MOON_CAP_SEC;
+    W.moonSec += total - left;
+    W.amt = 0;
+    invalidate();
   } else if (v.gate === 'clouds') {
     const W = state.wv.clouds;
     W.best = Math.max(W.best, W.amt);
@@ -857,7 +873,7 @@ export function prestige() {
   const fresh = freshState();
   const keep = {
     created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar, clockw: state.clockw, wv: state.wv,
-    buffs: state.buffs.filter((b) => b.kind === 'time' || b.kind === 'hands'), // Borrowed Time and Helping Hands carry over
+    buffs: state.buffs.filter((b) => b.kind === 'time' || b.kind === 'hands' || b.kind === 'taco'), // Borrowed Time and Helping Hands carry over
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

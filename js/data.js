@@ -210,6 +210,7 @@ export const EVENTS = [
   { id: 'hightide',   name: 'High Tide',         icon: '🌊', desc: 'Tide Gate cooldown −15 min · palace visits give ×2 Pearls', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'hightide' },
   { id: 'rainbow',    name: 'Rainbow Day',       icon: '🌈', desc: 'Sky Gate cooldown −15 min · cloud visits give ×2 Sunbeams', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'rainbow' },
   { id: 'applause',   name: 'Grand Applause',    icon: '👏', desc: 'Palm Gate cooldown −15 min · high-fives count double', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'applause' },
+  { id: 'tacotuesday', name: 'Taco Tuesday',     icon: '🌮', desc: 'Salsa Gate cooldown −15 min · tacos count double (it’s not even Tuesday)', dur: 120, weight: 0.4, req: { gateway: true }, effects: [], special: 'tacotuesday' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
 // Blood Drop exchange. Drops have diminishing returns: a haul is worth
@@ -352,6 +353,9 @@ export const GATES = [
   { id: 'palace', name: 'Tide Gate', world: 'Sunken Palace', icon: '🐚', color: '#3ab0d0',
     blurb: 'An undersea palace. Tap the giant clam for Pearls; they’re strung into a necklace that boosts everything forever.',
     visitSec: 60, cooldownMin: 60 },
+  { id: 'taco', name: 'Salsa Gate', world: 'Taco Truck', icon: '🌮', color: '#ff8a3a',
+    blurb: 'A cosmic taco truck parked under the stars. Every taco you collect turns the moon into a taco for a second. That’s it. That’s the reward.',
+    visitSec: 60, cooldownMin: 30 },
   { id: 'hands', name: 'Palm Gate', world: 'High-Five Heights', icon: '✋', color: '#ffb36a',
     blurb: 'A friendly realm of giant hands. High-five the big hand to earn up to 8 helping hands that tap with you for 3 minutes.',
     visitSec: 60, cooldownMin: 40 },
@@ -370,7 +374,7 @@ export const CLOCK_CRIT_SECS = 5;      // a critical tap gives this many seconds
 export const CUCKOO_SECS = 30;         // tapping the cuckoo bird
 export const CHIMES_COOLDOWN_CUT_MIN = 15;
 // Gate events: which gate each one helps (cooldown cut, ×2 haul while it lasts).
-export const GATE_EVENTS = { bloodmoon: 'castle', chimes: 'clock', hightide: 'palace', rainbow: 'clouds', applause: 'hands' };
+export const GATE_EVENTS = { bloodmoon: 'castle', chimes: 'clock', hightide: 'palace', rainbow: 'clouds', applause: 'hands', tacotuesday: 'taco' };
 export const GATE_EVENT_CUT_MIN = 15;
 
 // Sunken Palace and Cloud Isles share one set of rules: tap for a currency,
@@ -378,9 +382,12 @@ export const GATE_EVENT_CUT_MIN = 15;
 export const SIMPLE_WORLDS = {
   palace: { currency: 'Pearls', icon: '🦪', color: '#e6f4ff', critAmt: 5, popupAmt: 25, popup: 'mermaid', event: 'hightide', scene: 'palace' },
   clouds: { currency: 'Sunbeams', icon: '☀️', color: '#ffe27a', critAmt: 5, popupAmt: 25, popup: 'whale', event: 'rainbow', scene: 'clouds' },
+  taco: { currency: 'Tacos', icon: '🌮', color: '#ffcf5c', critAmt: 3, popupAmt: 20, popup: 'chili', event: 'tacotuesday', scene: 'tacotruck' },
   hands: { currency: 'High-fives', icon: '✋', color: '#ffd6a8', critAmt: 3, popupAmt: 10, popup: 'shyhand', event: 'applause', scene: 'heights' },
 };
 // High-Five Heights: hand k needs HAND_STEP_BASE + HAND_STEP_GROWTH × k more high-fives (10, 15, 20 … 45).
+// Taco Truck: each taco turns the moon into a taco for one second (up to 4:20). It does nothing.
+export const TACO_MOON_CAP_SEC = 260;
 export const HELPING_HANDS_MAX = 8;
 export const HAND_STEP_BASE = 5;
 export const HAND_STEP_GROWTH = 5;
@@ -448,6 +455,8 @@ export const COSTUMES = [
   { id: 'rose', slot: 'held', name: 'Midnight Rose', from: { place: 'castle' } },
   { id: 'cuckoo_hat', slot: 'head', name: 'Cuckoo Hat', from: { place: 'clock' } },
   { id: 'clock_coat', slot: 'outfit', name: 'Clockmaker’s Coat', from: { place: 'clock' } },
+  { id: 'taco_hat', slot: 'head', name: 'Taco Hat', from: { place: 'taco' } },
+  { id: 'hot_sauce', slot: 'held', name: 'Hot Sauce', from: { place: 'taco' } },
   { id: 'foam_finger', slot: 'held', name: 'Foam Hand', from: { place: 'hands' } },
   { id: 'shell_crown', slot: 'head', name: 'Seashell Crown', from: { place: 'palace' } },
   { id: 'mermaid_gown', slot: 'outfit', name: 'Mermaid Gown', from: { place: 'palace' } },
@@ -487,11 +496,12 @@ export const COSTUMES = [
   { id: 'tiny_glove', slot: 'petacc', name: 'Tiny Foam Glove', from: { place: 'hands' } },
   { id: 'tinfoil_hat', slot: 'petacc', name: 'Tinfoil Hat', from: { helper: 'gnome', count: 50 } },
   { id: 'propeller_cap', slot: 'petacc', name: 'Propeller Cap', from: { prestige: 1 } },
+  { id: 'tiny_taco', slot: 'petacc', name: 'Tiny Taco', from: { place: 'taco' } },
   { id: 'pet_halo', slot: 'petacc', name: 'Little Halo', from: { prestige: 5 } },
   { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);
-export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks', palace: 'Sunken Palace', clouds: 'Cloud Isles', hands: 'High-Five Heights' };
+export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks', palace: 'Sunken Palace', clouds: 'Cloud Isles', hands: 'High-Five Heights', taco: 'Taco Truck' };
 
 // How to unlock an item, in words (for locked items in the wardrobe).
 export function costumeHint(c) {
@@ -552,6 +562,8 @@ export const COSTUME_BONUS = {
   cloud_dress: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
   parasol: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
   foam_finger: ['All taps +10%', [T('*', 1.1)]],
+  taco_hat: ['Absolutely nothing (it’s a taco)', []],
+  hot_sauce: ['Nothing. Just spicy.', []],
 
   moon_crown: ['Everything +3%', [{ t: 'globalMult', x: 1.03 }]],
   lotus_crown: ['Everything +3%', [{ t: 'globalMult', x: 1.03 }]],

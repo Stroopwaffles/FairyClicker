@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.16';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.17';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
@@ -71,6 +71,8 @@ add({ id: 'runaway', group: 'Secrets', secret: true, name: 'Too Much Love', desc
 add({ id: 'pats50', group: 'Secrets', secret: true, name: 'Good Familiar', desc: 'Pat your familiar 50 times', check: (s) => s.stats2.pats >= 50 });
 add({ id: 'heights1', group: 'Events', name: 'Up Top!', desc: 'Visit High-Five Heights', check: (s) => (s.gates.visits.hands || 0) >= 1 });
 add({ id: 'hands8', group: 'Events', name: 'All Hands on Deck', desc: 'Earn all 8 helping hands in one visit', check: (s) => s.wv.hands.bestHands >= 8 });
+add({ id: 'taco1', group: 'Events', name: 'Taco Moon', desc: 'Turn the moon into a taco', check: (s) => s.wv.taco.moonSec > 0 });
+add({ id: 'taco420', group: 'Secrets', secret: true, name: 'Four Twenty', desc: 'Max out the taco moon at 4:20', check: (s) => s.wv.taco.best >= 260 });
 add({ id: 'gateway', group: 'Events', name: 'Between Worlds', desc: 'Open the Moonlit Gateway', check: (s) => s.gates.owned });
 add({ id: 'castle10', group: 'Events', name: 'Frequent Guest', desc: 'Visit the Crimson Castle 10 times', check: (s) => (s.gates.visits.castle || 0) >= 10 });
 add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single castle visit', check: (s) => s.blood.best >= 300 });

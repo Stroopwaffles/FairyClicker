@@ -4,6 +4,18 @@
 //   - a <g data-sprites> layer where helper sprites drift around
 // viewBox is 1000x700; the scene is cropped with "slice" so it always fills.
 
+// A taco centred on (cx, cy) with radius r: crunchy shell, lettuce, tomato and cheese.
+export function taco(cx, cy, r) {
+  const k = r / 60;
+  return `<g transform="translate(${cx} ${cy}) scale(${k.toFixed(3)})">
+    <g fill="#6ad04a">${[-46, -28, -10, 10, 28, 46].map((x, i) => `<circle cx="${x}" cy="${-4 - (i % 2) * 6}" r="14"/>`).join('')}</g>
+    <g fill="#e8383a">${[-34, 0, 34].map((x) => `<circle cx="${x}" cy="-8" r="9"/>`).join('')}</g>
+    <g fill="#ffd24d">${[-20, 18, 44, -46].map((x, i) => `<rect x="${x}" y="${-14 + (i % 2) * 4}" width="5" height="14" rx="2" transform="rotate(${i * 25 - 30} ${x} -8)"/>`).join('')}</g>
+    <path d="M-60 0 A60 60 0 0 0 60 0 Z" fill="#f2b23a" stroke="#c7801c" stroke-width="4"/>
+    <g fill="#c7801c" opacity=".45">${[[-30, 20], [0, 34], [26, 18], [-10, 14], [36, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.5"/>`).join('')}</g>
+  </g>`;
+}
+
 function rand(seed) {
   // Small deterministic PRNG so stars don't jump around between renders.
   let s = seed;
@@ -46,6 +58,7 @@ const pond = () => `
   <g class="stars">${stars(7, 90, 330)}</g>
   <circle class="moon-halo" cx="700" cy="130" r="150" fill="url(#p-halo)"/>
   <circle class="moon-disc" cx="700" cy="130" r="58" fill="url(#p-moon)"/>
+  <g class="moon-taco">${taco(700, 140, 62)}</g>
   <circle cx="680" cy="118" r="9" fill="#e3d9b0" opacity="0.6"/><circle cx="718" cy="148" r="6" fill="#e3d9b0" opacity="0.5"/>
 
   <!-- distant tree line -->
@@ -752,7 +765,67 @@ const heights = () => `
   <g data-sprites></g>
 </svg>`;
 
-export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks, palace, clouds, heights };
+// The Taco Truck: a cosmic food truck parked under the stars.
+const tacotruck = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="t-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1240"/><stop offset=".7" stop-color="#5a2a6a"/><stop offset="1" stop-color="#ff8a5a"/></linearGradient>
+    <linearGradient id="t-truck" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ac0b0"/><stop offset="1" stop-color="#2a8a80"/></linearGradient>
+    <radialGradient id="t-glow"><stop offset="0" stop-color="#ffe6a0" stop-opacity=".7"/><stop offset="1" stop-color="#ffe6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="t-moon" cx=".45" cy=".4" r=".6"><stop offset="0" stop-color="#fffbe8"/><stop offset="1" stop-color="#e3d6a6"/></radialGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#t-sky)"/>
+  <g class="stars">${stars(42, 60, 260)}</g>
+  <circle class="moon-disc" cx="820" cy="110" r="46" fill="url(#t-moon)"/>
+  <g class="moon-taco">${taco(820, 118, 50)}</g>
+  <!-- city skyline -->
+  <path d="M0 440 V360 h60 v-40 h50 v60 h40 v-90 h70 v100 h50 v-50 h60 v80 h40 V300 h80 v140 h60 v-70 h50 v-40 h70 v110 h40 v-60 h60 v-30 h70 V440 Z" fill="#2a1a3a"/>
+  <g fill="#ffd27a" opacity=".6">${[[80, 380], [130, 360], [240, 380], [420, 330], [450, 380], [640, 390], [700, 350], [880, 380], [930, 400]].map(([x, y]) => `<rect x="${x}" y="${y}" width="10" height="12"/>`).join('')}</g>
+  <rect y="440" width="1000" height="260" fill="#3a2a3a"/>
+  <path d="M0 600 H1000" stroke="#ffd24d" stroke-width="6" stroke-dasharray="40 30" opacity=".6"/>
+
+  <!-- the truck -->
+  <g transform="translate(220 230)">
+    <rect x="0" y="40" width="560" height="230" rx="24" fill="url(#t-truck)" stroke="#1a5a50" stroke-width="5"/>
+    <path d="M560 100 h80 q30 0 40 40 l20 70 v60 h-140 Z" fill="url(#t-truck)" stroke="#1a5a50" stroke-width="5"/>
+    <path d="M580 112 h56 q20 0 28 30 l12 44 h-96 Z" fill="#a8e0ff"/>
+    <rect x="60" y="80" width="420" height="120" rx="10" fill="#2a1a2a"/>
+    <rect x="66" y="86" width="408" height="108" rx="8" fill="#ffe6b8"/>
+    <g>${Array.from({ length: 10 }, (_, i) => `<path d="M${50 + i * 46} 40 h46 l-6 34 h-34 Z" fill="${i % 2 ? '#ffffff' : '#ff5a4a'}"/>`).join('')}</g>
+    <rect x="160" y="-10" width="240" height="44" rx="12" fill="#ff5a4a" stroke="#fff" stroke-width="4"/>
+    <text x="280" y="22" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="Quicksand, sans-serif">COSMIC TACOS</text>
+    <rect x="40" y="196" width="460" height="16" rx="6" fill="#c9c2b0"/>
+    <g fill="#2a1a2a"><circle cx="110" cy="276" r="40"/><circle cx="600" cy="276" r="40"/></g>
+    <g fill="#9aa0b4"><circle cx="110" cy="276" r="16"/><circle cx="600" cy="276" r="16"/></g>
+    <!-- string lights -->
+    <path d="M0 38 Q140 70 280 38 Q420 70 560 38" stroke="#3a2a2a" stroke-width="2" fill="none"/>
+    ${[40, 110, 180, 250, 320, 390, 460, 520].map((x, i) => `<circle cx="${x}" cy="${52 + Math.sin(x / 90) * 6}" r="6" fill="${['#ffd24d', '#ff6a7a', '#6ad04a', '#8fd8ff'][i % 4]}" class="pulse" style="animation-delay:-${i * 0.3}s"/>`).join('')}
+  </g>
+
+  <!-- the chili: peeks out of the serving window -->
+  <g class="popup mermaid chili" transform="translate(620 360)">
+    <circle class="popup-hit" r="60" fill="transparent"/>
+    <g class="peek">
+      <path d="M-6 -42 q2 -12 12 -14" stroke="#3f8f5e" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M-18 -36 Q0 -48 18 -36 Q26 10 4 44 Q-6 52 -10 40 Q-24 0 -18 -36 Z" fill="#e8383a"/>
+      <g fill="#1b1030"><circle cx="-6" cy="-14" r="3.5"/><circle cx="8" cy="-14" r="3.5"/></g>
+      <path d="M-6 0 q7 6 14 0" stroke="#1b1030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M-22 -4 l-14 -10 M20 -4 l14 -12" stroke="#e8383a" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- the giant taco on the counter (tap target) -->
+  <g data-tap class="tap-target taco-target">
+    <circle cx="500" cy="520" r="170" fill="url(#t-glow)" class="pulse"/>
+    <ellipse cx="500" cy="610" rx="170" ry="22" fill="#000" opacity=".35"/>
+    <ellipse cx="500" cy="596" rx="160" ry="26" fill="#f4f1ea" stroke="#c9c2b0" stroke-width="4"/>
+    <g class="palm">${taco(500, 540, 130)}</g>
+  </g>
+
+  <g data-sprites></g>
+</svg>`;
+
+export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks, palace, clouds, heights, tacotruck };
 
 // Sprite colour per location (helpers drawn as drifting motes).
 export const SPRITE_COLORS = { pond: '#fff3a0', mushroom: '#c8ff9a', oak: '#ffc35a', grotto: '#d6c8ff', meadow: '#fff8c8' };

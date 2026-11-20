@@ -220,6 +220,8 @@ export const ITEMS = {
     <circle cx="78" cy="60" r="5" fill="#f4f8ff"/><circle cx="122" cy="60" r="5" fill="#f4f8ff"/>` },
   rainbow_band: { front: `${['#ff8a9a', '#ffb35a', '#ffe27a', '#9ae87a', '#8fd8ff', '#b79cff'].map((c, i) => `<path d="M${62 + i * 2} 70 Q100 ${38 + i * 3} ${138 - i * 2} 70" stroke="${c}" stroke-width="3.2" fill="none"/>`).join('')}
     <g fill="#fff"><circle cx="64" cy="70" r="8"/><circle cx="58" cy="64" r="6"/><circle cx="136" cy="70" r="8"/><circle cx="142" cy="64" r="6"/></g>` },
+  taco_hat: { front: `<g transform="translate(100 50) scale(.55)"><g fill="#6ad04a">${[-46, -28, -10, 10, 28, 46].map((x, i) => `<circle cx="${x}" cy="${-4 - (i % 2) * 6}" r="14"/>`).join('')}</g>
+    <g fill="#e8383a">${[-34, 0, 34].map((x) => `<circle cx="${x}" cy="-8" r="9"/>`).join('')}</g><path d="M-60 0 A60 60 0 0 0 60 0 Z" fill="#f2b23a" stroke="#c7801c" stroke-width="5"/></g>` },
   halo: { front: `<ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff3a0" stroke-width="5" opacity=".9"/><ellipse cx="100" cy="26" rx="30" ry="7" fill="none" stroke="#fff" stroke-width="1.5"/>` },
 
   // Outfits
@@ -292,6 +294,8 @@ export const ITEMS = {
   foam_finger: { front: `<rect x="132" y="150" width="14" height="40" rx="5" fill="#d83a4a" transform="rotate(-12 139 170)"/>
     <g transform="translate(150 132) rotate(-12)"><rect x="-16" y="-8" width="32" height="30" rx="10" fill="#ffd24d" stroke="#d9a520" stroke-width="2"/>
       <rect x="-5" y="-38" width="12" height="34" rx="6" fill="#ffd24d" stroke="#d9a520" stroke-width="2"/><text x="0" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#d83a4a">#1</text></g>` },
+  hot_sauce: { front: `<g transform="translate(146 160) rotate(-15)"><rect x="-7" y="-14" width="14" height="30" rx="5" fill="#e8383a"/><rect x="-4" y="-24" width="8" height="12" rx="2" fill="#f4f1ea"/>
+    <rect x="-5" y="-4" width="10" height="10" rx="2" fill="#ffd24d"/><path d="M-2 1 q2 -4 4 0" stroke="#e8383a" stroke-width="1.5" fill="none"/></g>` },
   trident: { front: `<line x1="134" y1="206" x2="150" y2="120" stroke="#e8c870" stroke-width="4" stroke-linecap="round"/>
     <path d="M140 122 L144 100 L148 120 M150 120 L152 96 L156 122 M160 124 L162 104 L164 126" stroke="#e8c870" stroke-width="3.5" fill="none" stroke-linecap="round"/>
     <path d="M140 124 Q152 132 164 126" stroke="#e8c870" stroke-width="3.5" fill="none"/><circle cx="148" cy="134" r="3.5" fill="#8fd8ff"/>` },

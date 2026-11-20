@@ -295,6 +295,8 @@ export const PET_ACCESSORIES = {
   tinfoil_hat: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 2})"><path d="M-13 0 L-3 -22 L2 -14 L6 -24 L13 0 Z" fill="#c8ccd8" stroke="#9aa0b4" stroke-width="1.5"/><path d="M-8 -6 l5 -3 l3 4 l5 -5" stroke="#eef0f6" stroke-width="1.2" fill="none"/></g>`,
   propeller_cap: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 3})"><path d="M-13 0 Q-12 -12 0 -12 Q12 -12 13 0 Z" fill="#3a6fd0"/><path d="M-13 0 Q0 -5 13 0" stroke="#ffd24d" stroke-width="2" fill="none"/>
     <rect x="-1" y="-17" width="2" height="6" fill="#555"/><g class="prop"><ellipse cx="-7" cy="-17" rx="7" ry="2" fill="#d83a4a"/><ellipse cx="7" cy="-17" rx="7" ry="2" fill="#ffd24d"/></g></g>`,
+  tiny_taco: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 2}) scale(.6)"><g fill="#6ad04a"><circle cx="-10" cy="-4" r="7"/><circle cx="0" cy="-7" r="7"/><circle cx="10" cy="-4" r="7"/></g>
+    <circle cx="-3" cy="-5" r="4" fill="#e8383a"/><path d="M-18 0 A18 18 0 0 0 18 0 Z" fill="#f2b23a" stroke="#c7801c" stroke-width="2"/></g>`,
   pet_halo: (a) => `<g transform="translate(0 ${a.top - 8})"><ellipse rx="13" ry="3.5" fill="none" stroke="#fff3a0" stroke-width="3"/></g>`,
 };
 
