@@ -6,15 +6,15 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H, HELPING_HANDS_MAX, HELPING_HANDS_SEC, HELPING_HAND_RATE,
-} from './data.js?v=3.15.3';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.15.3';
-import * as G from './game.js?v=3.15.3';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.15.3';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.15.3';
+} from './data.js?v=3.16';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.16';
+import * as G from './game.js?v=3.16';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG, PET_ACCESSORIES } from './familiars.js?v=3.16';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.16';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
-} from './avatar.js?v=3.15.3';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.15.3';
+} from './avatar.js?v=3.16';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.16';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.15.3';
+import * as A from './audio.js?v=3.16';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -1403,9 +1403,10 @@ function renderAvatarUI() {
   pet.classList.toggle('in-gates', gateView);
   // A different familiar: clear the old one's speech bubble so lines never appear to come from the wrong pet.
   if (pet.dataset.who !== String(pid)) { hideBubble(); pet.dataset.who = String(pid); }
-  if (!pet.hidden && pet.dataset.pet !== pid) { pet.innerHTML = familiarSVG(pid, 'idle'); pet.dataset.pet = pid; }
+  const acc = look.petacc || 'none_acc';
+  if (!pet.hidden && pet.dataset.pet !== pid + '|' + acc) { pet.innerHTML = familiarSVG(pid, 'idle', acc); pet.dataset.pet = pid + '|' + acc; }
   if (pet.hidden) hideBubble();
-  $('#title-pet').innerHTML = pid ? familiarSVG(pid, 'idle') : '';
+  $('#title-pet').innerHTML = pid ? familiarSVG(pid, 'idle', acc) : '';
 }
 
 let castAt = 0;
@@ -1491,10 +1492,22 @@ function renderWardrobe() {
       <p class="wd-note">A little friend who sits beside you and chats now and then. Tap them in a place to say hello!</p>
       <div class="wd-grid pets">${pets.map((c) => {
         const own = !!owned[c.id];
-        const art = c.id === 'none_pet' ? '<div class="no-pet">✕</div>' : familiarSVG(c.id);
+        const art = c.id === 'none_pet' ? '<div class="no-pet">✕</div>' : familiarSVG(c.id, '', look.petacc);
         return `<button class="wd-thumb${look.familiar === c.id ? ' on' : ''}" data-wear="${c.id}" ${own ? '' : 'disabled'} title="${own ? c.name : costumeHint(c)}">
           ${art}<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${fresh[c.id] ? '<i class="new">New</i>' : ''}</button>`;
-      }).join('')}</div>`;
+      }).join('')}</div>` +
+      (() => {
+        const accs = COSTUMES.filter((c) => c.slot === 'petacc');
+        const showPet = FAMILIAR_BY_ID[look.familiar] ? look.familiar : 'pet_bunny';
+        const haveA = accs.filter((c) => owned[c.id] && c.id !== 'none_acc').length;
+        return `<h4>Familiar accessories <small>${haveA}/${accs.length - 1}</small></h4>
+          <p class="wd-note">Your familiar wears it, whichever friend is out with you.</p>
+          <div class="wd-grid pets">${accs.map((c) => {
+            const own = !!owned[c.id];
+            return `<button class="wd-thumb${(look.petacc || 'none_acc') === c.id ? ' on' : ''}" data-wear="${c.id}" ${own ? '' : 'disabled'} title="${own ? c.name : costumeHint(c)}">
+              ${familiarSVG(showPet, '', c.id)}<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${fresh[c.id] ? '<i class="new">New</i>' : ''}</button>`;
+          }).join('')}</div>`;
+      })();
   } else {
     const owned = G.state.avatar.owned, fresh = G.state.avatar.fresh;
     list.innerHTML = COSTUME_SLOTS.map((slot) => {

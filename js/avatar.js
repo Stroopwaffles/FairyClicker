@@ -28,7 +28,7 @@ export const DEFAULT_LOOK = {
   skin: 0, hair: 'long', hairColor: 0, eyes: 'sparkly', eyeColor: 0,
   wings: 'butterfly', wingColor: 0, ears: 'pointy', blush: true, freckles: false,
   head: 'flower_clip', outfit: 'leaf_dress', feet: 'slippers', held: 'wand',
-  familiar: 'pet_bunny', paint: 'none', mouth: 'smile',
+  familiar: 'pet_bunny', paint: 'none', mouth: 'smile', petacc: 'none_acc',
 };
 
 const mirror = (inner) => `<g transform="translate(200 0) scale(-1 1)">${inner}</g>`;

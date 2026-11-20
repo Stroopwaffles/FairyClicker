@@ -170,6 +170,13 @@ The Gate Room now has four portals.
 - **Matching sets:** wear every piece from one place for a set bonus (×1.25 to that place, or a gate-world perk)
 - The Wardrobe shows each item's bonus and an **Outfit bonuses** summary of what you're wearing
 
+### Version 3.16: familiar accessories
+
+- **16 accessories** for familiars (purely cosmetic), chosen in Wardrobe → Familiars. Whatever's worn stays on when you switch familiars, and each one is placed to fit every animal
+  - From the start: Bow Tie, Bandana, Party Hat
+  - From places and gates: Flower Crown (Pond), Bell Collar (Mushroom Ring), Acorn Hat (Oak), Tiny Tiara (Grotto), Star Shades (Meadow), Vampire Collar (Castle), Top Hat (Clockworks), Pearl Necklace (Sunken Palace), Rainbow Scarf (Cloud Isles), Tiny Foam Glove (High-Five Heights)
+  - Specials: Tinfoil Hat (50 Mycel Gnomes), Propeller Cap (first prestige), Little Halo (the finale)
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

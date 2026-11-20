@@ -264,8 +264,44 @@ for (const f of FAMILIARS) {
 
 export const FAMILIAR_BY_ID = Object.fromEntries(FAMILIARS.map((f) => [f.id, f]));
 
-export function familiarSVG(id, cls = '') {
+// Where accessories sit on each familiar: top of head, neck, eye line and eye gap.
+const ANCHOR = {
+  pet_bunny: { top: -27, neck: 19, eyes: -6, gap: 10 },   pet_kitten: { top: -30, neck: 16, eyes: -6, gap: 10 },
+  pet_hedgehog: { top: -36, neck: 22, eyes: 0, gap: 9 },  pet_fox: { top: -31, neck: 14, eyes: -8, gap: 10 },
+  pet_axolotl: { top: -26, neck: 18, eyes: -6, gap: 13 }, pet_owlet: { top: -24, neck: 8, eyes: -8, gap: 12 },
+  pet_bat: { top: -26, neck: 16, eyes: -6, gap: 9 },      pet_mouse: { top: -26, neck: 16, eyes: -6, gap: 9 },
+  pet_otter: { top: -29, neck: 18, eyes: -10, gap: 10 },  pet_lamb: { top: -28, neck: 18, eyes: -2, gap: 7 },
+  pet_dragon: { top: -30, neck: 13, eyes: -10, gap: 10 }, pet_foal: { top: -28, neck: 16, eyes: -8, gap: 9, side: true },
+  pet_gnome: { top: -46, neck: 30, eyes: -8, gap: 9 },
+};
+
+// Accessory drawings (positioned with an anchor). Unlocks live with the wardrobe (slot 'petacc').
+export const PET_ACCESSORIES = {
+  none_acc: () => '',
+  bow_tie: (a) => `<g transform="translate(0 ${a.neck})"><path d="M0 0 L-11 -7 L-11 7 Z M0 0 L11 -7 L11 7 Z" fill="#d83a4a"/><circle r="3.5" fill="#a8283a"/></g>`,
+  bandana: (a) => `<g transform="translate(0 ${a.neck - 3})"><path d="M-17 -2 Q0 4 17 -2 L0 13 Z" fill="#3a8ad8"/><g fill="#fff"><circle cx="-6" cy="2" r="1.4"/><circle cx="5" cy="3" r="1.4"/><circle cx="0" cy="8" r="1.2"/></g></g>`,
+  party_hat: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 2}) rotate(${a.side ? 15 : -8})"><path d="M-10 0 L0 -26 L10 0 Z" fill="#ff7fbf"/><path d="M-6 -8 L6 -8 M-3 -16 L3 -16" stroke="#ffe27a" stroke-width="2.5"/><circle cy="-27" r="3.5" fill="#ffe27a"/></g>`,
+  flower_crown: (a) => `<g transform="translate(0 ${a.top + 3})"><path d="M-18 0 Q0 -6 18 0" stroke="#3f8f5e" stroke-width="3" fill="none"/>${[-14, -5, 5, 14].map((x, i) =>
+    `<g transform="translate(${x} ${i % 3 ? -4 : -2})">${[0, 72, 144, 216, 288].map((r) => `<circle r="2.4" cy="-2.6" fill="${['#ff9fcf', '#ffe27a', '#c9a7ff', '#8fd8ff'][i]}" transform="rotate(${r})"/>`).join('')}<circle r="1.4" fill="#fff"/></g>`).join('')}</g>`,
+  bell_collar: (a) => `<g transform="translate(0 ${a.neck})"><path d="M-16 -3 Q0 4 16 -3" stroke="#c06bff" stroke-width="4" fill="none"/><circle cy="4" r="5" fill="#ffd24d" stroke="#d9a520"/><path d="M-2 5 h4" stroke="#8a6a1a" stroke-width="1.5"/></g>`,
+  acorn_hat: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 3})"><path d="M-13 0 Q-12 -14 0 -15 Q12 -14 13 0 Q0 -3 -13 0 Z" fill="#8a5d34"/><path d="M-10 -5 h20 M-8 -10 h16" stroke="#6b4423" stroke-width="1.5"/><rect x="-1.5" y="-21" width="3" height="7" rx="1.5" fill="#6b4423"/></g>`,
+  mini_tiara: (a) => `<g transform="translate(0 ${a.top + 3})"><path d="M-12 0 Q0 -4 12 0" stroke="#d6c8ff" stroke-width="2.5" fill="none"/><path d="M-3 -2 L0 -14 L3 -2 Z" fill="#b79cff" stroke="#f3eaff" stroke-width=".8"/><path d="M-9 -1 l2 -7 l2 7 Z M5 -1 l2 -7 l2 7 Z" fill="#8fd8ff"/></g>`,
+  star_shades: (a) => `<g transform="translate(0 ${a.eyes})">${[-a.gap, a.gap].map((x) => `<path transform="translate(${x} 0)" d="M0 -8 L2.3 -2.5 L8 -2.5 L3.5 1.2 L5 7 L0 3.6 L-5 7 L-3.5 1.2 L-8 -2.5 L-2.3 -2.5 Z" fill="#2a2a4a" stroke="#ffd24d" stroke-width="1.4"/>`).join('')}<path d="M${-a.gap + 7} -1 H${a.gap - 7}" stroke="#ffd24d" stroke-width="1.6"/></g>`,
+  vampire_collar: (a) => `<g transform="translate(0 ${a.neck - 2})"><path d="M-18 -6 L-14 8 L0 2 L14 8 L18 -6 L0 0 Z" fill="#1a0610"/><path d="M-14 -4 L-11 5 L0 1 L11 5 L14 -4 L0 1 Z" fill="#a0142e"/><circle cy="3" r="2.5" fill="#ff4a5a"/></g>`,
+  top_hat: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 2}) rotate(${a.side ? 12 : -6})"><rect x="-14" y="-3" width="28" height="4" rx="2" fill="#2a1a2a"/><rect x="-9" y="-20" width="18" height="18" rx="2" fill="#2a1a2a"/><rect x="-9" y="-8" width="18" height="3.5" fill="#d9a530"/></g>`,
+  pearl_necklace: (a) => `<g transform="translate(0 ${a.neck - 2})">${Array.from({ length: 9 }, (_, i) => { const t = (i / 8) * Math.PI; return `<circle cx="${(-Math.cos(t) * 15).toFixed(1)}" cy="${(Math.sin(t) * 6).toFixed(1)}" r="2.6" fill="#f4f8ff" stroke="#c8d4f0" stroke-width=".6"/>`; }).join('')}</g>`,
+  rainbow_scarf: (a) => `<g transform="translate(0 ${a.neck - 2})">${['#ff8a9a', '#ffe27a', '#8fd8ff'].map((c, i) => `<path d="M-17 ${-4 + i * 3} Q0 ${2 + i * 3} 17 ${-4 + i * 3}" stroke="${c}" stroke-width="3" fill="none"/>`).join('')}<path d="M8 2 l4 14 l-5 0 z" fill="#b79cff"/></g>`,
+  tiny_glove: (a) => `<g transform="translate(14 ${a.neck + 2}) rotate(20)"><rect x="-5" y="-12" width="10" height="14" rx="4" fill="#ffd24d" stroke="#d9a520"/><rect x="-1.5" y="-20" width="4" height="10" rx="2" fill="#ffd24d" stroke="#d9a520"/></g>`,
+  tinfoil_hat: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 2})"><path d="M-13 0 L-3 -22 L2 -14 L6 -24 L13 0 Z" fill="#c8ccd8" stroke="#9aa0b4" stroke-width="1.5"/><path d="M-8 -6 l5 -3 l3 4 l5 -5" stroke="#eef0f6" stroke-width="1.2" fill="none"/></g>`,
+  propeller_cap: (a) => `<g transform="translate(${a.side ? 10 : 0} ${a.top + 3})"><path d="M-13 0 Q-12 -12 0 -12 Q12 -12 13 0 Z" fill="#3a6fd0"/><path d="M-13 0 Q0 -5 13 0" stroke="#ffd24d" stroke-width="2" fill="none"/>
+    <rect x="-1" y="-17" width="2" height="6" fill="#555"/><g class="prop"><ellipse cx="-7" cy="-17" rx="7" ry="2" fill="#d83a4a"/><ellipse cx="7" cy="-17" rx="7" ry="2" fill="#ffd24d"/></g></g>`,
+  pet_halo: (a) => `<g transform="translate(0 ${a.top - 8})"><ellipse rx="13" ry="3.5" fill="none" stroke="#fff3a0" stroke-width="3"/></g>`,
+};
+
+export function familiarSVG(id, cls = '', acc = 'none_acc') {
   const f = FAMILIAR_BY_ID[id];
   if (!f) return '';
-  return `<svg class="familiar ${cls}" viewBox="-52 -52 104 104" aria-hidden="true">${f.draw()}</svg>`;
+  const draw = PET_ACCESSORIES[acc];
+  const extra = draw && ANCHOR[id] ? draw(ANCHOR[id]) : '';
+  return `<svg class="familiar ${cls}" viewBox="-52 -52 104 104" aria-hidden="true">${f.draw()}${extra}</svg>`;
 }
