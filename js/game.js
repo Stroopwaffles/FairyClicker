@@ -10,9 +10,9 @@ import {
   COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
   GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, HELPING_HANDS_MAX, HAND_STEP_BASE, HAND_STEP_GROWTH, HELPING_HANDS_SEC, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.15';
-import { DEFAULT_LOOK } from './avatar.js?v=3.15';
-import { ACHIEVEMENTS } from './achievements.js?v=3.15';
+} from './data.js?v=3.15.1';
+import { DEFAULT_LOOK } from './avatar.js?v=3.15.1';
+import { ACHIEVEMENTS } from './achievements.js?v=3.15.1';
 
 // ---------- state ----------
 

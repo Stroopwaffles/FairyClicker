@@ -740,12 +740,12 @@ const heights = () => `
   <!-- the big friendly hand (tap target) -->
   <g data-tap class="tap-target palm-target">
     <circle cx="500" cy="360" r="240" fill="url(#h-glow)" class="pulse"/>
-    <g transform="translate(500 400)">${openHand('url(#h-palm)', '#e0905a')}
+    <g transform="translate(500 400)"><g class="palm">${openHand('url(#h-palm)', '#e0905a')}
       <g fill="#1b1030"><ellipse cx="-14" cy="40" rx="7" ry="9"/><ellipse cx="22" cy="40" rx="7" ry="9"/></g>
       <g fill="#fff"><circle cx="-16" cy="37" r="2.5"/><circle cx="20" cy="37" r="2.5"/></g>
       <g fill="#ff9fb3" opacity=".6"><ellipse cx="-34" cy="58" rx="10" ry="6"/><ellipse cx="44" cy="58" rx="10" ry="6"/></g>
       <path d="M-6 64 Q4 76 14 64" stroke="#8a4a3a" stroke-width="4" fill="none" stroke-linecap="round"/>
-    </g>
+    </g></g>
     <g class="clap-stars" fill="#fff6c8">${[[380, 200], [620, 190], [640, 300], [360, 300]].map(([x, y]) => `<path transform="translate(${x} ${y})" d="M0 -12 L3 -3 L12 0 L3 3 L0 12 L-3 3 L-12 0 L-3 -3 Z"/>`).join('')}</g>
   </g>
 

@@ -705,7 +705,8 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 
 .waver { animation: wave 1.4s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: bottom center; }
 @keyframes wave { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
-.palm-target.bump > g { animation: highFive .2s ease-out; transform-box: fill-box; transform-origin: center; }
+/* The squish goes on an inner group so it never overrides the hand's position. */
+.palm-target.bump .palm { animation: highFive .2s ease-out; transform-box: fill-box; transform-origin: center; }
 @keyframes highFive { 50% { transform: scale(.94) rotate(-3deg); } }
 .palm-target .clap-stars { opacity: 0; }
 .palm-target.bump .clap-stars { animation: clapStars .35s ease-out; }
