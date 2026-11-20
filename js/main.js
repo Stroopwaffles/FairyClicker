@@ -6,15 +6,15 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H, HELPING_HANDS_MAX, HELPING_HANDS_SEC, HELPING_HAND_RATE,
-} from './data.js?v=3.15.1';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.15.1';
-import * as G from './game.js?v=3.15.1';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.15.1';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.15.1';
+} from './data.js?v=3.15.2';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.15.2';
+import * as G from './game.js?v=3.15.2';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.15.2';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.15.2';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
-} from './avatar.js?v=3.15.1';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.15.1';
+} from './avatar.js?v=3.15.2';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.15.2';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.15.1';
+import * as A from './audio.js?v=3.15.2';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -1401,6 +1401,8 @@ function renderAvatarUI() {
   const pid = FAMILIAR_BY_ID[look.familiar] ? look.familiar : null;
   pet.hidden = f.hidden || !pid || petAway;
   pet.classList.toggle('in-gates', gateView);
+  // A different familiar: clear the old one's speech bubble so lines never appear to come from the wrong pet.
+  if (pet.dataset.who !== String(pid)) { hideBubble(); pet.dataset.who = String(pid); }
   if (!pet.hidden && pet.dataset.pet !== pid) { pet.innerHTML = familiarSVG(pid, 'idle'); pet.dataset.pet = pid; }
   if (pet.hidden) hideBubble();
   $('#title-pet').innerHTML = pid ? familiarSVG(pid, 'idle') : '';
@@ -1435,6 +1437,7 @@ function openWardrobe(create) {
   $('#wd-sub').textContent = create ? 'This is you! Choose how you look. You can change it any time from the portrait at the top.' : 'Change your look any time. Visit new places and reach milestones to unlock more clothes.';
   $('#btn-wd-done').textContent = create ? 'Begin ✨' : 'Done';
   $('#wardrobe').hidden = false;
+  hideBubble();
   A.chime();
   renderWardrobe();
 }
