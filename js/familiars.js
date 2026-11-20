@@ -186,6 +186,82 @@ export const FAMILIARS = [
     annoyed: ['Hey! Personal space! It’s in the Forest Constitution!', 'You’re one of THEM, aren’t you?', 'I know my rights!', 'This is exactly what Big Toadstool wants!'],
   },
 ];
+// More personality lines and grumpy lines, merged into each familiar above.
+const MORE = {
+  pet_bunny: {
+    lines: ['I hid a snack under that mushroom. Do not look.', 'Your wings are so shiny today!', 'Thump thump! That means I love you.', 'Can we go to the meadow? The grass there is extra crunchy.',
+      'I counted all the stars. Then I forgot. Then I counted again.', 'Ears up! Something exciting is coming!', 'Binky time! *spins in the air*'],
+    annoyed: ['My ears are getting tangled!', 'Thump! THUMP! (That means stop.)', 'Bunnies need personal space too!', 'I’m about to hop away…'],
+  },
+  pet_kitten: {
+    lines: ['I knocked a dewdrop off the lily pad. On purpose.', 'If I fits, I sits.', 'That firefly is mocking me.', 'Wake me when something shiny happens.',
+      'I would help gather, but I am busy being adorable.', '*stretches dramatically*', 'You may pet me exactly three times.'],
+    annoyed: ['*swishes tail angrily*', 'That was four times. I said three.', 'Hssss! …sorry. But really.', 'I will knock something over. I swear it.'],
+  },
+  pet_hedgehog: {
+    lines: ['I rolled down a hill! It was great!', 'Snuffle snuffle… found a beetle. He said hi.', 'I am small but mighty. Mostly small.', 'Do you think the toadstool is comfy? I do.',
+      'I keep my best leaf on my back. Look!', 'Night walks are my favourite walks.', 'Hug me gently. Very gently.'],
+    annoyed: ['Ow! Ow! Prickles go both ways!', '*puffs up spikes*', 'Hedgehogs need naps, not pokes!', 'Curling up in three… two…'],
+  },
+  pet_fox: {
+    lines: ['Let us take a shortcut. I know a secret path!', 'That squirrel owes me three acorns.', 'Shh… I am sneaking. Am I sneaking well?', 'I could totally outrun a star hare. Probably.',
+      'Who, me? I was just sitting here innocently.', 'Ooh, is that Amber Sap? Sticky and sweet!', 'A clever fox always has a plan. I have four.'],
+    annoyed: ['Hey! Paws off the tail!', 'I will remember this, you know.', 'You are lucky I like you.', 'Okay, okay, I yield! Stop!'],
+  },
+  pet_axolotl: {
+    lines: ['Blub blub! That means hello.', 'I am smiling all the time. It is my face.', 'The crystals sing if you are very quiet.', 'Do you ever just… float?',
+      'I like it cool and dark and sparkly.', 'My frills are wiggly. Look! Wiggle wiggle.', 'Water is my best friend. You are second.'],
+    annoyed: ['Blub! Too many boops!', 'My frills are getting frazzled!', 'I am going to hide under a rock…', 'Even my smile is tired now.'],
+  },
+  pet_owlet: {
+    lines: ['Did you know? Moonlight is just sunlight on its night shift.', 'Patience, young fairy. The helpers will gather.', 'Who? Who? …oh, sorry, force of habit.', 'Every upgrade is a lesson.',
+      'I have read every book in the Treehouse Library. Twice.', 'A balanced realm is a happy realm.', 'My eyes are big because the night is big.'],
+    annoyed: ['Pecking order, please!', 'Wise owls do not enjoy poking.', 'I will need to consult the Owl Council about this.', 'Hoo! That is quite enough.'],
+  },
+  pet_bat: {
+    lines: ['Bats are just mice with fancy capes!', 'I can hear the moon humming.', 'Upside down, everything looks like a smile.', 'The castle smells like old roses and drama.',
+      'Eek! A moth! …oh, it’s just a Lantern Moth. Hi!', 'Night snacks are the best snacks.', 'I am cute AND spooky. Very rare.'],
+    annoyed: ['Squeak squeak! (Rude!)', 'I am going to hang upside down and ignore you.', 'My ears are ringing!', 'Echo… echo… stop… stop…'],
+  },
+  pet_mouse: {
+    lines: ['My key turns all by itself. Spooky, right?', 'I run on springs and cheese.', 'Tick… tick… squeak… tock…', 'If I stop moving, just give me a little wind.',
+      'Gears are like friends. They work together!', 'I ate a cog once. Do not recommend.', 'Time flies when you are clicking!'],
+    annoyed: ['My gears are getting wound up!', 'Overclocking! Overclocking!', '*springs boing everywhere*', 'Squeak! You will strip my threads!'],
+  },
+  pet_otter: {
+    lines: ['Holding hands so we do not float away!', 'I found the shiniest rock. It is yours now.', 'Back floats are the best floats.', 'The mermaid taught me a song. It goes blub.',
+      'Ooh, a clam! …I will not eat it. Promise.', 'Wet fur, warm heart!', 'Shall we go for a swim? You can borrow my pebble.'],
+    annoyed: ['Splash! Okay, that was on purpose.', 'You are making my fur all ruffled!', 'I am going to go float somewhere quiet.', 'Even otters have limits!'],
+  },
+  pet_lamb: {
+    lines: ['If you count me, you get sleepy. Try it!', 'I am made of the fluffiest cloud. Squish!', 'Raindrops tickle my wool.', 'Baa! That means I am happy.',
+      'Let us lie down and watch the clouds. Wait, I am one.', 'Soft and sleepy… soft and sleepy…', 'Rainbows taste like candyfloss.'],
+    annoyed: ['Baaa! Too much squishing!', 'I am getting all frizzy!', 'Even clouds can rain on you, you know.', 'I am drifting away… on purpose.'],
+  },
+  pet_dragon: {
+    lines: ['Behold my mighty wings! They are small. But mighty.', 'I will guard your Moonstones with my life.', 'I sneezed and a tiny flame came out. Did you see?', 'When I grow up I will be as big as the Ancient Oak.',
+      'Treasure! Where? Oh. It’s you. You are treasure.', 'Dragons do not nap. We… plan with our eyes closed.', 'Fear me! …or pet me. Either is fine.'],
+    annoyed: ['RAWR! (That was a warning rawr.)', '*very small smoke puff of anger*', 'You dare poke a dragon?!', 'I am getting… heated.'],
+  },
+  pet_foal: {
+    lines: ['Every step I take leaves a little stardust.', 'The full moon sings to me. It is very off-key.', 'Make a wish on my horn! (No refunds.)', 'Gallop with me through the meadow!',
+      'I am made of moonbeams and good manners.', 'You restored the realm. I knew you could!', 'Sparkle sparkle! That is just me existing.'],
+    annoyed: ['My mane! You are messing up my mane!', 'Moon foals deserve gentle boops only.'],
+  },
+  pet_gnome: {
+    lines: ['Helpers? More like spies. Every single one of them.', 'Why do you think the Grotto is so sparkly? Cover-up.', 'Echoes are just the cave repeating THEIR talking points.',
+      'They call it a Golden Lotus. I call it surveillance.', 'Cuckoo clock? Yeah. That’s what they WANT you to call it.', 'My hat is lined for a reason. You’ll see.',
+      'Unspent Moonstones? That’s how they keep you complacent.', 'I run for Mushroom Mayor every year. The polls are rigged.'],
+    annoyed: ['Is this a citizen’s arrest? I know my mushroom rights!', 'You just proved my theory. Thanks.'],
+  },
+};
+for (const f of FAMILIARS) {
+  const m = MORE[f.id];
+  if (!m) continue;
+  f.lines = [...f.lines, ...m.lines];
+  f.annoyed = [...(f.annoyed || []), ...m.annoyed];
+}
+
 export const FAMILIAR_BY_ID = Object.fromEntries(FAMILIARS.map((f) => [f.id, f]));
 
 export function familiarSVG(id, cls = '') {
