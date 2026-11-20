@@ -139,6 +139,16 @@ The Gate Room now has four portals.
 - Costumes: seashell crown, mermaid gown, little trident; rainbow headband, cloud puff dress, sky parasol
 - Undersea ambience with bubbles, a floaty Cloud Isles song, and four new achievements
 
+### Version 3.10: familiars
+
+- **12 familiars**: cute animal companions who sit beside your fairy in every place and on the title screen. Choose one in the Wardrobe's new **🐾 Familiars** tab
+  - Bunny and Kitten from the start; Hedgehog, Fox Kit, Axolotl and Owlet from the Mushroom Ring, Oak, Grotto and Meadow; Bat Pup, Clockwork Mouse, Otter and Cloud Lamb from the four gate worlds; Dragon Hatchling from your first prestige; Moon Foal from the finale
+- **Speech bubbles**: every so often your familiar says something in its own voice: about where you are, the current event, useful hints (an affordable upgrade, a ready gate, the moon calling for a new night), or just its personality. It cheers when you earn achievements and clothes
+- **Tap your familiar** to make it hop and say something
+- **Settings → Display → Familiar chatter**: Chatty, Quiet or Off
+- Two new achievements
+- Fix: the Workshop, Awards and Settings tabs now work in the Gate Room and during gate visits
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:
@@ -169,6 +179,7 @@ POLICY=double node tools/sim.mjs 10 3   # 10 days, 3 taps per second
 | `js/scenes.js` | SVG artwork for each location and the Crimson Courtyard |
 | `js/sprites.js` | Helper drawings, where they live and how they move |
 | `js/avatar.js` | The player's fairy: body options and clothing drawings |
+| `js/familiars.js` | Familiar drawings and personality lines |
 | `js/audio.js` | Generated sound effects, ambience, castle theme and finale music |
 | `tools/sim.mjs` | Pacing simulator for balancing |
 | `tools/stamp-version.mjs` | Stamps a release version onto file URLs so updates aren't hidden by caching |

@@ -281,6 +281,14 @@ export function visitor(gate) {
   }
 }
 
+// A familiar's chirp when it speaks; pitch gives each one its own voice.
+export function chirp(pitch = 1) {
+  if (!ready()) return;
+  const f = 880 * pitch;
+  tone({ freq: f, to: f * 1.25, glide: 0.06, decay: 0.09, peak: 0.07, wet: 0.3 });
+  tone({ freq: f * 1.12, to: f * 1.5, glide: 0.06, start: 0.1, decay: 0.12, peak: 0.06, wet: 0.3 });
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));

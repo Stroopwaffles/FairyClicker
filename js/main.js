@@ -6,22 +6,23 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.9.3';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.9.3';
-import * as G from './game.js?v=3.9.3';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.9.3';
+} from './data.js?v=3.10';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.10';
+import * as G from './game.js?v=3.10';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.10';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.10';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js?v=3.9.3';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.9.3';
+} from './avatar.js?v=3.10';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.10';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
-const display = { lessBusy: false, hideFairy: false };
+const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // chatter: chatty | quiet | off
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.9.3';
+import * as A from './audio.js?v=3.10';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -191,12 +192,14 @@ function switchLocation(id) {
   if (id === 'world') {
     if (bloodView || !G.visitActive()) return;
     bloodView = true; gateView = false;
+    if (GLOBAL_TABS.includes(tab)) tab = 'helpers';
     renderAll();
     return;
   }
   if (id === 'gates') {
     if (gateView || !G.state.gates.owned) return;
     gateView = true; bloodView = false;
+    if (GLOBAL_TABS.includes(tab)) tab = 'helpers';
     renderAll();
     return;
   }
@@ -413,16 +416,21 @@ function setTab(t) {
   renderPanel();
 }
 
+// These tabs work everywhere, including the Gate Room and other worlds.
+const GLOBAL_TABS = ['workshop', 'awards', 'settings'];
+
 function renderPanel() {
-  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !bloodView && !gateView);
+  // In the Gate Room or another world, the place tabs show that room's own panel instead.
+  const special = (bloodView || gateView) && !GLOBAL_TABS.includes(tab);
+  for (const b of $$('.ptab')) b.classList.toggle('active', b.dataset.tab === tab && !special);
   const body = $('#panel-body');
   panelUpdaters = [];
-  if (bloodView) {
+  if (special && bloodView) {
     const g = visitGate();
     if (g === 'clock') renderClockPanel(body); else if (SIMPLE_WORLDS[g]) renderWorldPanel(body, g); else renderBloodPanel(body);
     return;
   }
-  if (gateView) { renderGatePanel(body); return; }
+  if (special) { renderGatePanel(body); return; }
   const id = G.state.active;
   const ls = G.state.locs[id];
   if (!['settings', 'awards', 'workshop'].includes(tab) && !ls.unlocked) {
@@ -651,8 +659,14 @@ function renderSettings(body) {
           <button data-busy="calm" class="${display.lessBusy ? 'on' : ''}">🍃 Less busy</button>
         </div></div>
       <p class="style-note">Lively shows up to ${MAX_VISIBLE_PER_HELPER} of each helper; Less busy shows up to ${CALM_VISIBLE_PER_HELPER}. Helpers off screen still gather.</p>
-      <div class="style-row"><span>Show my fairy in places</span>
+      <div class="style-row"><span>Show my fairy &amp; familiar in places</span>
         <button class="toggle ${display.hideFairy ? '' : 'on'}" data-act="fairy">${display.hideFairy ? 'Off' : 'On'}</button></div>
+      <div class="style-row"><span>Familiar chatter</span>
+        <div class="seg" role="group" aria-label="Familiar chatter">
+          <button data-chat="chatty" class="${display.chatter === 'chatty' ? 'on' : ''}">💬 Chatty</button>
+          <button data-chat="quiet" class="${display.chatter === 'quiet' ? 'on' : ''}">🤫 Quiet</button>
+          <button data-chat="off" class="${display.chatter === 'off' ? 'on' : ''}">Off</button>
+        </div></div>
     </div>
     <div class="settings-group">
       <h3>Sound</h3>
@@ -711,6 +725,15 @@ function renderSettings(body) {
     e.target.textContent = display.hideFairy ? 'Off' : 'On';
     renderAvatarUI();
   });
+  for (const b of $$('[data-chat]', body)) {
+    b.addEventListener('click', () => {
+      display.chatter = b.dataset.chat;
+      saveDisplay();
+      for (const x of $$('[data-chat]', body)) x.classList.toggle('on', x === b);
+      chatTimer = 3;
+      if (display.chatter === 'off') hideBubble();
+    });
+  }
   for (const b of $$('[data-busy]', body)) {
     b.addEventListener('click', () => {
       display.lessBusy = b.dataset.busy === 'calm';
@@ -801,6 +824,7 @@ function renderAwards(body) {
 
 function onAchievements(list) {
   A.achievement();
+  petReact(pickOne(['Yay! An achievement!', 'You did it! 🎉', 'Ooh, shiny trophy!', 'I knew you could!']));
   for (const a of list) toast(`🏆 Achievement: ${a.name}`);
   G.save();
   updateResBar();
@@ -1321,6 +1345,7 @@ function tryEnterGate(id) {
   A.portal();
   portalFlash(GATE_BY_ID[id].color);
   bloodView = true; gateView = false;
+  if (GLOBAL_TABS.includes(tab)) tab = 'helpers';
   G.save();
   toast(`🌀 You step through the ${GATE_BY_ID[id].name}…`);
   setTimeout(renderAll, 350);
@@ -1331,6 +1356,7 @@ function onVisitEnd(res) {
   portalFlash('#c9a7ff');
   bloodView = false;
   gateView = G.state.gates.owned;
+  if (GLOBAL_TABS.includes(tab)) tab = 'helpers';
   G.save();
   renderAll();
   if (res?.gate === 'clock') showBorrowedTime(res);
@@ -1357,6 +1383,14 @@ function renderAvatarUI() {
   f.classList.toggle('in-gates', gateView); // in the Gate Room she floats above the portals
   if (!f.hidden) f.innerHTML = avatarSVG(look, { cls: 'idle' });
   $('#title-fairy').innerHTML = avatarSVG(look, { cls: 'idle' });
+  // Familiar beside the fairy
+  const pet = $('#my-pet');
+  const pid = FAMILIAR_BY_ID[look.familiar] ? look.familiar : null;
+  pet.hidden = f.hidden || !pid;
+  pet.classList.toggle('in-gates', gateView);
+  if (!pet.hidden && pet.dataset.pet !== pid) { pet.innerHTML = familiarSVG(pid, 'idle'); pet.dataset.pet = pid; }
+  if (pet.hidden) hideBubble();
+  $('#title-pet').innerHTML = pid ? familiarSVG(pid, 'idle') : '';
 }
 
 let castAt = 0;
@@ -1371,6 +1405,7 @@ function fairyCast() {
 
 function onCostumes(list, quiet = false) {
   if (!list.length) return;
+  if (!quiet) petReact(list.some((c) => c.slot === 'familiar') ? 'A new friend! Hello, hello!' : 'Ooh, new clothes! Try them on!');
   if (!quiet) A.chime();
   const names = list.map((c) => c.name);
   toast(`👗 New in your wardrobe: ${names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ')}`);
@@ -1420,6 +1455,18 @@ function renderWardrobe() {
       <h4>Extras</h4><div class="wd-toggles">
         <button class="toggle ${look.blush ? 'on' : ''}" data-flag="blush">Rosy cheeks</button>
         <button class="toggle ${look.freckles ? 'on' : ''}" data-flag="freckles">Freckles</button></div>`;
+  } else if (wdTab === 'pets') {
+    const owned = G.state.avatar.owned, fresh = G.state.avatar.fresh;
+    const pets = COSTUMES.filter((c) => c.slot === 'familiar');
+    const have = pets.filter((c) => owned[c.id] && c.id !== 'none_pet').length;
+    list.innerHTML = `<h4>Familiars <small>${have}/${pets.length - 1}</small></h4>
+      <p class="wd-note">A little friend who sits beside you and chats now and then. Tap them in a place to say hello!</p>
+      <div class="wd-grid pets">${pets.map((c) => {
+        const own = !!owned[c.id];
+        const art = c.id === 'none_pet' ? '<div class="no-pet">✕</div>' : familiarSVG(c.id);
+        return `<button class="wd-thumb${look.familiar === c.id ? ' on' : ''}" data-wear="${c.id}" ${own ? '' : 'disabled'} title="${own ? c.name : costumeHint(c)}">
+          ${art}<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${fresh[c.id] ? '<i class="new">New</i>' : ''}</button>`;
+      }).join('')}</div>`;
   } else {
     const owned = G.state.avatar.owned, fresh = G.state.avatar.fresh;
     list.innerHTML = COSTUME_SLOTS.map((slot) => {
@@ -1447,8 +1494,8 @@ function renderWardrobe() {
   for (const b of $$('[data-wear]', list)) {
     b.addEventListener('click', () => { if (G.wearItem(b.dataset.wear)) { A.chime(); renderWardrobe(); renderAvatarUI(); } });
   }
-  // Viewing the clothes tab clears the "new" markers next time it's opened.
-  if (wdTab === 'clothes') setTimeout(() => { G.state.avatar.fresh = {}; renderAvatarUI(); }, 0);
+  // Viewing the clothes or familiars tab clears the "new" markers.
+  if (wdTab !== 'body') setTimeout(() => { G.state.avatar.fresh = {}; renderAvatarUI(); }, 0);
 }
 
 function surpriseMe() {
@@ -1683,6 +1730,128 @@ function showWorldResult(res) {
   $('[data-ok]', m).addEventListener('click', () => { m.hidden = true; m.innerHTML = ''; });
   updateResBar();
   updateSceneRate();
+}
+
+// ---------- Familiars & their chatter ----------
+
+const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
+let chatTimer = 12, lastLine = '', bubbleHide = null;
+
+function currentPet() {
+  const id = G.state.avatar.look.familiar;
+  return FAMILIAR_BY_ID[id] && !$('#my-pet').hidden ? FAMILIAR_BY_ID[id] : null;
+}
+
+const PLACE_LINES = {
+  pond: ['The moon looks lovely in the water.', 'Listen… the frogs are singing.', 'Splashy splashy!'],
+  mushroom: ['The toadstools are glowing extra bright!', 'Mushrooms! Do not eat the purple ones.', 'I can hear the fae dancing.'],
+  oak: ['This tree is older than the moon. Maybe.', 'Smells like warm honey here.', 'Hello, Mister Oak!'],
+  grotto: ['Everything sparkles! Even me!', 'Hello… hello… hello… (echo!)', 'Crystals hum if you listen closely.'],
+  meadow: ['A shooting star! Make a wish!', 'The stars feel close enough to touch.', 'Shall we lie in the grass and count stars?'],
+  courtyard: ['Is it just me, or is it chilly in here?', 'Keep an eye on those windows…', 'So. Much. Red.'],
+  clockworks: ['Tick… tock… tick…', 'Catch the cuckoo!', 'Every tap is a second saved!'],
+  palace: ['Bubbles!', 'I think the mermaid likes you.', 'Every pearl makes the necklace longer!'],
+  clouds: ['Wheee, so high up!', 'Look, a whale in the sky!', 'Soft as… well, a cloud.'],
+  gates: ['So many doors… where to?', 'Each gate smells different. This one smells like adventure.'],
+};
+const EVENT_LINES = {
+  moonrise: 'The moon is blessing us! Everything doubles!', rain: 'Pitter-patter… the pond loves the rain.',
+  sporebloom: 'Spores everywhere! Tap the toadstool!', meteor: 'Shooting stars! Quick, tap them!',
+  owlcouncil: 'The owls are meeting. Helpers are cheaper!', fog: 'Spooky fog… but our taps feel stronger!',
+  fairy: 'Look! A fairy! Catch her!', bloodmoon: 'The moon turned red… the castle calls.',
+  chimes: 'Midnight! The clock gate is waking up.', hightide: 'High tide! Pearls galore!', rainbow: 'A rainbow! The sky gate shines.',
+};
+
+// Helpful things worth mentioning right now.
+function helpfulLines() {
+  const out = [];
+  const ev = G.activeEvent();
+  if (ev && EVENT_LINES[ev.id]) out.push(EVENT_LINES[ev.id]);
+  if (G.borrowedLeft() > 0) out.push('Borrowed Time! Everything is extra speedy!');
+  if (G.canPrestige()) out.push('The moon is calling… a new night awaits.');
+  if (G.state.gates.owned && !G.state.gates.visit && GATES.some((g) => !g.soon && G.canEnterGate(g.id))) out.push('A gate is ready to visit!');
+  const id = G.state.active, ls = G.state.locs[id];
+  if (!bloodView && !gateView && ls?.unlocked) {
+    if (UPGRADES.some((u) => u.loc === id && !ls.upgrades[u.id] && G.upgradeAvailable(u) && G.canAfford(G.upgradeCost(u)))) out.push('Ooh, we can afford an upgrade!');
+    if (FEATURES.some((f) => f.loc === id && !ls.features[f.id] && G.featureAvailable(f) && G.canAfford(G.featureCost(f)))) out.push('We could build something new here!');
+  }
+  if (WORKSHOP.some((w) => G.workshopAvailable(w.id) && G.canAfford(G.workshopCost(w.id)))) out.push('The Workshop has something for us!');
+  for (const l of LOCATIONS) if (!G.state.locs[l.id].unlocked && G.canAfford(l.unlockCost)) { out.push(`We can open the ${l.name}!`); break; }
+  return out;
+}
+
+function chooseLine(pet) {
+  const help = helpfulLines();
+  const place = PLACE_LINES[viewId()] || [];
+  let pool;
+  const r = Math.random();
+  if (help.length && r < 0.5) pool = help;
+  else if (r < 0.75 && place.length) pool = place;
+  else pool = pet.lines;
+  let line = pickOne(pool);
+  if (line === lastLine) line = pickOne(pet.lines);
+  lastLine = line;
+  return line;
+}
+
+function hideBubble() {
+  clearTimeout(bubbleHide);
+  const b = $('#pet-bubble');
+  if (b) b.hidden = true;
+}
+
+function petSay(text) {
+  const pet = currentPet();
+  if (!pet || !text) return;
+  const b = $('#pet-bubble');
+  b.textContent = text;
+  b.hidden = false;
+  // Position above the familiar, kept inside the scene.
+  const wrap = $('#scene-wrap').getBoundingClientRect();
+  const pr = $('#my-pet').getBoundingClientRect();
+  const bw = b.offsetWidth, bh = b.offsetHeight;
+  let x = pr.left - wrap.left + pr.width / 2 - bw / 2;
+  x = Math.max(8, Math.min(wrap.width - bw - 8, x));
+  let y = pr.top - wrap.top - bh - 10;
+  // Below the familiar if there's no room above, or in the Gate Room (so it doesn't cover the fairy).
+  const below = y < 8 || $('#my-pet').classList.contains('in-gates');
+  b.classList.toggle('below', below);
+  if (below) y = pr.bottom - wrap.top + 10;
+  b.style.left = `${x}px`;
+  b.style.top = `${y}px`;
+  b.style.setProperty('--tail', `${pr.left - wrap.left + pr.width / 2 - x}px`);
+  b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  A.chirp(pet.pitch);
+  clearTimeout(bubbleHide);
+  bubbleHide = setTimeout(hideBubble, Math.min(7000, 2600 + text.length * 70));
+}
+
+// React to something now (if chatter is on), resetting the idle timer.
+function petReact(text) {
+  if (display.chatter === 'off' || !currentPet()) return;
+  setTimeout(() => petSay(text), 500);
+  chatTimer = chatGap();
+}
+
+const chatGap = () => (display.chatter === 'quiet' ? 90 + Math.random() * 60 : 30 + Math.random() * 30);
+
+function tickChatter(dt) {
+  if (display.chatter === 'off' || !$('#modal').hidden || !$('#shrine').hidden || !$('#wardrobe').hidden) return;
+  chatTimer -= dt;
+  if (chatTimer > 0) return;
+  chatTimer = chatGap();
+  const pet = currentPet();
+  if (pet) petSay(chooseLine(pet));
+}
+
+function patPet() {
+  const pet = currentPet();
+  if (!pet) return;
+  G.state.stats2.pats++;
+  const el = $('#my-pet');
+  el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop');
+  petSay(Math.random() < 0.6 ? pickOne(pet.lines) : chooseLine(pet));
+  chatTimer = chatGap();
 }
 
 // ---------- Blood Moon ----------
@@ -2047,6 +2216,7 @@ function tick(now) {
     tickDracula(dt);
     tickCuckoo(dt);
     tickVisitor(dt);
+    tickChatter(dt);
     uiAccum += dt; saveAccum += dt; achAccum += dt;
     if (achAccum >= 1) {
       achAccum = 0;
@@ -2117,7 +2287,7 @@ window.addEventListener('pagehide', () => { if (started) G.save(); });
 
 // Test hook: only with ?debug in the URL.
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__fc = { lotusNow: () => { lotusTimer = 0; }, draculaNow: () => { draculaTimer = 0; } };
+  window.__fc = { lotusNow: () => { lotusTimer = 0; }, draculaNow: () => { draculaTimer = 0; }, chatNow: () => { chatTimer = 0; } };
 }
 
 // ---------- boot ----------
@@ -2143,6 +2313,7 @@ function boot() {
   $('#btn-home').addEventListener('click', goHome);
   $('#btn-avatar').addEventListener('click', () => openWardrobe(false));
   $('#my-fairy').addEventListener('click', () => openWardrobe(false));
+  $('#my-pet').addEventListener('click', patPet);
   $('#btn-wd-done').addEventListener('click', closeWardrobe);
   $('#btn-wd-random').addEventListener('click', surpriseMe);
   for (const b of $$('[data-wtab]')) b.addEventListener('click', () => { wdTab = b.dataset.wtab; renderWardrobe(); });

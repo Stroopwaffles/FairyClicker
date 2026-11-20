@@ -442,6 +442,20 @@ export const COSTUMES = [
   { id: 'rainbow_band', slot: 'head', name: 'Rainbow Headband', from: { place: 'clouds' } },
   { id: 'cloud_dress', slot: 'outfit', name: 'Cloud Puff Dress', from: { place: 'clouds' } },
   { id: 'parasol', slot: 'held', name: 'Sky Parasol', from: { place: 'clouds' } },
+  // Familiars (drawn in familiars.js) unlock like clothes
+  { id: 'none_pet', slot: 'familiar', name: 'No familiar', from: 'starter' },
+  { id: 'pet_bunny', slot: 'familiar', name: 'Bunny', from: 'starter' },
+  { id: 'pet_kitten', slot: 'familiar', name: 'Kitten', from: 'starter' },
+  { id: 'pet_hedgehog', slot: 'familiar', name: 'Hedgehog', from: { place: 'mushroom' } },
+  { id: 'pet_fox', slot: 'familiar', name: 'Fox Kit', from: { place: 'oak' } },
+  { id: 'pet_axolotl', slot: 'familiar', name: 'Axolotl', from: { place: 'grotto' } },
+  { id: 'pet_owlet', slot: 'familiar', name: 'Owlet', from: { place: 'meadow' } },
+  { id: 'pet_bat', slot: 'familiar', name: 'Bat Pup', from: { place: 'castle' } },
+  { id: 'pet_mouse', slot: 'familiar', name: 'Clockwork Mouse', from: { place: 'clock' } },
+  { id: 'pet_otter', slot: 'familiar', name: 'Otter', from: { place: 'palace' } },
+  { id: 'pet_lamb', slot: 'familiar', name: 'Cloud Lamb', from: { place: 'clouds' } },
+  { id: 'pet_dragon', slot: 'familiar', name: 'Dragon Hatchling', from: { prestige: 1 } },
+  { id: 'pet_foal', slot: 'familiar', name: 'Moon Foal', from: { prestige: 5 } },
   { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);

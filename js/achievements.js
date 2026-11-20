@@ -1,6 +1,6 @@
 // Achievements. Each `check(s, d)` gets the game state and derived values.
 // `secret: true` hides the description until earned.
-import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.9.3';
+import { HELPERS, FEATURES, LOCATIONS, EVENTS, SHRINE } from './data.js?v=3.10';
 
 const helpersTotal = (s) => Object.values(s.locs).reduce((a, l) => a + Object.values(l.helpers).reduce((x, y) => x + y, 0), 0);
 const featuresAt = (s, loc) => FEATURES.filter((f) => f.loc === loc).every((f) => s.locs[loc].features[f.id]);
@@ -65,6 +65,8 @@ add({ id: 'palace1', group: 'Events', name: 'Under the Sea', desc: 'Visit the Su
 add({ id: 'strands10', group: 'Events', name: 'String of Pearls', desc: 'Have 10 strands in your Pearl Necklace', check: (s) => s.wv.palace.strung >= 2750 });
 add({ id: 'clouds1', group: 'Events', name: 'Head in the Clouds', desc: 'Visit the Cloud Isles', check: (s) => (s.gates.visits.clouds || 0) >= 1 });
 add({ id: 'whale10', group: 'Events', name: 'Whale Watcher', desc: 'Catch the cloud whale 10 times', check: (s) => s.wv.clouds.pops >= 10 });
+add({ id: 'pets5', group: 'Places', name: 'Animal Friends', desc: 'Befriend 5 familiars', check: (s) => Object.keys(s.avatar.owned).filter((k) => k.startsWith('pet_')).length >= 5 });
+add({ id: 'pats50', group: 'Secrets', secret: true, name: 'Good Familiar', desc: 'Pat your familiar 50 times', check: (s) => s.stats2.pats >= 50 });
 add({ id: 'gateway', group: 'Events', name: 'Between Worlds', desc: 'Open the Moonlit Gateway', check: (s) => s.gates.owned });
 add({ id: 'castle10', group: 'Events', name: 'Frequent Guest', desc: 'Visit the Crimson Castle 10 times', check: (s) => (s.gates.visits.castle || 0) >= 10 });
 add({ id: 'blood300', group: 'Events', name: 'Sanguine Harvest', desc: 'Collect 300 Blood Drops in a single castle visit', check: (s) => s.blood.best >= 300 });

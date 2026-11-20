@@ -9,9 +9,9 @@ import {
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
   GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.9.3';
-import { DEFAULT_LOOK } from './avatar.js?v=3.9.3';
-import { ACHIEVEMENTS } from './achievements.js?v=3.9.3';
+} from './data.js?v=3.10';
+import { DEFAULT_LOOK } from './avatar.js?v=3.10';
+import { ACHIEVEMENTS } from './achievements.js?v=3.10';
 
 // ---------- state ----------
 
@@ -46,7 +46,7 @@ export function freshState() {
     avatar: { look: { ...DEFAULT_LOOK }, owned: Object.fromEntries(COSTUMES.filter((c) => c.from === 'starter').map((c) => [c.id, true])), fresh: {}, created: false },
     stats: { taps: 0, playMs: 0, starsCaught: 0, fairiesCaught: 0, echoes: 0, frenzy: false, fullOffline: false },
     settings: { buyAmt: 1, steward: true, stewardMode: 'cheapest' },
-    stats2: { crits: 0, lotuses: 0, handTaps: 0 },
+    stats2: { crits: 0, lotuses: 0, handTaps: 0, pats: 0 },
     prestige: { count: 0, stones: 0, lifetimeStones: 0, shrine: {}, finaleSeen: false, runStart: now, fastestRunMs: 0, hinted: false },
   };
 }
