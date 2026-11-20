@@ -7,11 +7,12 @@ import {
   SHRINE, SHRINE_BY_ID, BLOOD_SECONDS, BLOOD_EXP, BLOOD_TAP_EQUIV, CHALICE_VALUE_PER_LEVEL,
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
+  COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
   GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, HELPING_HANDS_MAX, HAND_STEP_BASE, HAND_STEP_GROWTH, HELPING_HANDS_SEC, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.14';
-import { DEFAULT_LOOK } from './avatar.js?v=3.14';
-import { ACHIEVEMENTS } from './achievements.js?v=3.14';
+} from './data.js?v=3.15';
+import { DEFAULT_LOOK } from './avatar.js?v=3.15';
+import { ACHIEVEMENTS } from './achievements.js?v=3.15';
 
 // ---------- state ----------
 
@@ -98,6 +99,24 @@ function buffEffects(b) {
   return [];
 }
 
+// Bonuses from the clothes the fairy is wearing, plus any complete matching set.
+export function wornSets() {
+  const look = state.avatar?.look || {};
+  const out = [];
+  for (const place of Object.keys(COSTUME_SETS)) {
+    const pieces = COSTUMES.filter((c) => c.from?.place === place && WEAR_SLOTS.includes(c.slot));
+    if (pieces.length && pieces.every((c) => look[c.slot] === c.id)) out.push(place);
+  }
+  return out;
+}
+function outfitEffects() {
+  const look = state.avatar?.look || {};
+  const fx = [];
+  for (const slot of WEAR_SLOTS) { const b = COSTUME_BONUS[look[slot]]; if (b) fx.push(...b[1]); }
+  for (const place of wornSets()) fx.push(...COSTUME_SETS[place][1]);
+  return fx;
+}
+
 function collectEffects() {
   const fx = [];
   for (const ls of Object.values(state.locs)) {
@@ -106,6 +125,7 @@ function collectEffects() {
   }
   const shrine = shrineEffects();
   fx.push(...shrine);
+  fx.push(...outfitEffects());
   const whistle = wl('whistle');
   if (whistle) fx.push({ t: 'helperMult', loc: '*', x: 1 + whistle * 0.1 });
   const lantern = wl('lantern');
@@ -135,6 +155,7 @@ export function achievementCount() {
 }
 
 function derive() {
+  let bloodBoost = 1;
   const fx = collectEffects();
   const locIds = Object.keys(state.locs);
   const tapMult = {}, helperMult = {}, tapRatePct = {}, helperOne = {};
@@ -152,6 +173,7 @@ function derive() {
       case 'tapRatePct': each(e.loc, (l) => { tapRatePct[l] += e.x; }); break;
       case 'holdTap': out.holdTap = true; break;
       case 'giftMult': out.giftMult *= e.x; break;
+      case 'bloodMult': bloodBoost *= e.x; break;
       case 'helperOne': helperOne[e.id] = (helperOne[e.id] || 1) * e.x; break;
       case 'globalMult': out.globalMult *= e.x; break;
       case 'offlineHours': out.offlineHours += e.x; break;
@@ -169,7 +191,7 @@ function derive() {
   out.handRate = hand ? HAND_RATES[hand - 1] : 0;
   out.critChance = wl('clover') * 0.02;
   out.streakMax = STREAK_MAX[wl('streak')];
-  out.bloodMult = 1 + wl('chalice') * CHALICE_VALUE_PER_LEVEL;
+  out.bloodMult = (1 + wl('chalice') * CHALICE_VALUE_PER_LEVEL) * bloodBoost;
   out.bloodPerTap = 1 + wl('chalice');
   out.tempHands = state.buffs.find((b) => b.kind === 'hands')?.n || 0;
   out.pearlMult = 1 + pearlStrands() * PEARL_STRAND_BONUS;
@@ -915,6 +937,7 @@ export function wearItem(id) {
   if (!c || !state.avatar.owned[id]) return false;
   state.avatar.look[c.slot] = id;
   delete state.avatar.fresh[id];
+  invalidate();
   return true;
 }
 

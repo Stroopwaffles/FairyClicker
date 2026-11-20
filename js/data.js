@@ -488,3 +488,73 @@ export function costumeHint(c) {
   if (f.helper) return `Recruit ${f.count} Mycel Gnomes`;
   return 'Keep playing';
 }
+
+// ---------- Clothing bonuses (only while worn) ----------
+// [short description, effects]. Effects use the same types as upgrades, plus
+// { t: 'bloodMult', x } for Blood Drop value.
+const H = (loc, x) => ({ t: 'helperMult', loc, x });
+const T = (loc, x) => ({ t: 'tapMult', loc, x });
+export const COSTUME_BONUS = {
+  flower_clip: ['Pond taps +10%', [T('pond', 1.1)]],
+  bow: ['All taps +5%', [T('*', 1.05)]],
+  leaf_dress: ['Pond helpers +5%', [H('pond', 1.05)]],
+  petal_dress: ['All taps +5%', [T('*', 1.05)]],
+  slippers: ['Offline +30 min', [{ t: 'offlineHours', x: 0.5 }]],
+  boots: ['All helpers +3%', [H('*', 1.03)]],
+  wand: ['All taps +5%', [T('*', 1.05)]],
+
+  lily_crown: ['Pond helpers +10%', [H('pond', 1.1)]],
+  lily_dress: ['Pond helpers +10%', [H('pond', 1.1)]],
+  dewdrop_wand: ['Pond taps +20%', [T('pond', 1.2)]],
+  toadstool_cap: ['Mushroom helpers +10%', [H('mushroom', 1.1)]],
+  spore_dress: ['Mushroom helpers +10%', [H('mushroom', 1.1)]],
+  mushroom_staff: ['Toadstool taps +20%', [T('mushroom', 1.2)]],
+  acorn_cap: ['Oak helpers +10%', [H('oak', 1.1)]],
+  leaf_tunic: ['Oak helpers +10%', [H('oak', 1.1)]],
+  amber_lantern: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
+  crystal_tiara: ['Grotto helpers +10%', [H('grotto', 1.1)]],
+  amethyst_gown: ['Grotto helpers +10%', [H('grotto', 1.1)]],
+  crystal_shoes: ['+3% echo chance', [{ t: 'tapEcho', x: 0.03 }]],
+  crystal_wand: ['Crystal taps +20%', [T('grotto', 1.2)]],
+  star_crown: ['Meadow helpers +10%', [H('meadow', 1.1)]],
+  starlight_robe: ['Meadow helpers +10%', [H('meadow', 1.1)]],
+  star_boots: ['Events 5% more often', [{ t: 'eventFreq', x: 0.95 }]],
+  star_wand: ['Star taps +20%', [T('meadow', 1.2)]],
+
+  bat_band: ['Blood Drops +10%', [{ t: 'bloodMult', x: 1.1 }]],
+  vampire_cape: ['Blood Drops +10%', [{ t: 'bloodMult', x: 1.1 }]],
+  rose: ['Blood Drops +10%', [{ t: 'bloodMult', x: 1.1 }]],
+  cuckoo_hat: ['Events last 5% longer', [{ t: 'eventDuration', x: 1.05 }]],
+  clock_coat: ['Everything +3%', [{ t: 'globalMult', x: 1.03 }]],
+  pocket_watch: ['Events last 5% longer', [{ t: 'eventDuration', x: 1.05 }]],
+  shell_crown: ['All helpers +3%', [H('*', 1.03)]],
+  mermaid_gown: ['All helpers +3%', [H('*', 1.03)]],
+  trident: ['All taps +10%', [T('*', 1.1)]],
+  rainbow_band: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
+  cloud_dress: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
+  parasol: ['Offline +1 hour', [{ t: 'offlineHours', x: 1 }]],
+  foam_finger: ['All taps +10%', [T('*', 1.1)]],
+
+  moon_crown: ['Everything +3%', [{ t: 'globalMult', x: 1.03 }]],
+  lotus_crown: ['Everything +3%', [{ t: 'globalMult', x: 1.03 }]],
+  witch_hat: ['Events last 10% longer', [{ t: 'eventDuration', x: 1.1 }]],
+  halo: ['Everything +5%', [{ t: 'globalMult', x: 1.05 }]],
+  moon_gown: ['Everything +5%', [{ t: 'globalMult', x: 1.05 }]],
+  tinker_apron: ['Helpers cost 3% less', [{ t: 'helperDiscount', x: 0.97 }]],
+  flats: ['All taps +5%', [T('*', 1.05)]],
+  couch_potato: ['Offline +2 hours (very relaxed)', [{ t: 'offlineHours', x: 2 }]],
+};
+
+// Matching sets: wear every piece from one place for an extra bonus.
+export const COSTUME_SETS = {
+  pond: ['Moonlit Pond set: pond ×1.25', [H('pond', 1.25), T('pond', 1.25)]],
+  mushroom: ['Mushroom Ring set: mushroom ×1.25', [H('mushroom', 1.25), T('mushroom', 1.25)]],
+  oak: ['Ancient Oak set: oak ×1.25', [H('oak', 1.25), T('oak', 1.25)]],
+  grotto: ['Crystal Grotto set: grotto ×1.25', [H('grotto', 1.25), T('grotto', 1.25)]],
+  meadow: ['Starfall Meadow set: meadow ×1.25', [H('meadow', 1.25), T('meadow', 1.25)]],
+  castle: ['Crimson Castle set: Blood Drops +25%', [{ t: 'bloodMult', x: 1.25 }]],
+  clock: ['Clockworks set: everything +5%', [{ t: 'globalMult', x: 1.05 }]],
+  palace: ['Sunken Palace set: everything +5%', [{ t: 'globalMult', x: 1.05 }]],
+  clouds: ['Cloud Isles set: offline +2 hours', [{ t: 'offlineHours', x: 2 }]],
+};
+export const WEAR_SLOTS = ['head', 'outfit', 'feet', 'held'];

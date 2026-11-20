@@ -609,6 +609,12 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .wd-thumb:disabled { cursor: default; }
 .wd-thumb:disabled .avatar { opacity: .25; filter: grayscale(1); }
 .wd-thumb .new { position: absolute; top: 4px; right: 4px; font-style: normal; font-size: .65rem; background: var(--accent-2); color: #1b1030; border-radius: 999px; padding: 1px 6px; font-weight: 700; }
+.wd-thumb em { font-style: normal; font-size: .66rem; color: var(--good); line-height: 1.15; text-align: center; }
+.wd-bonus { width: min(100%, 300px); background: rgba(23, 23, 63, .8); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; font-size: .85rem; color: var(--good); font-weight: 600; }
+.wd-bonus h4 { margin: 0 0 6px; color: var(--accent-2); font-size: .9rem; }
+.wd-bonus .set { color: var(--accent-2); }
+.wd-bonus .muted { color: var(--muted); font-weight: 500; }
+.wd-bonus .small { font-size: .75rem; margin-top: 6px; }
 .wd-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
 .wd-swatch { width: 40px; height: 40px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .15); cursor: pointer; }
 .wd-swatch.on { border-color: var(--accent-2); box-shadow: 0 0 0 2px #1b1030 inset, 0 0 10px rgba(255, 217, 138, .5); }
@@ -616,9 +622,18 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .wd-toggles .toggle { min-width: 120px; }
 
 @media (orientation: portrait), (max-width: 760px) {
-  .wd-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .wd-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .wd-options, .wd-preview { min-width: 0; }
   .wd-preview { flex-direction: row; padding: 6px; }
   .wd-fairy { width: auto; height: 26vh; }
+  .wd-bonus { width: auto; flex: 1; max-height: 26vh; overflow-y: auto; }
+}
+@media (max-width: 600px) {
+  .wd-preview { flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .wd-fairy { height: 19vh; }
+  .wd-bonus { flex: 1 1 100%; min-width: 0; max-height: 92px; font-size: .78rem; padding: 8px 12px; }
+  .wd-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .wd-tabs button { min-width: 0; padding: 0 10px; white-space: nowrap; font-size: .85rem; }
 }
 
 /* ---------- Cuckoo Clockworks ---------- */

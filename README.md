@@ -164,6 +164,12 @@ The Gate Room now has four portals.
 - A Foam Hand to hold, and two new achievements
 - The Gate Room now has five portals; fixed portal glows overlapping so taps always enter the gate you meant
 
+### Version 3.15: clothes with bonuses
+
+- **Every clothing item now gives a small bonus while worn**, matching its theme. For example: each place's hat and outfit boost that place's helpers +10%, its wand or staff boosts its taps +20%; the castle pieces raise Blood Drop value; Cloud Isles pieces add offline time; rare items like the Halo and Full Moon Gown give +5% to everything
+- **Matching sets:** wear every piece from one place for a set bonus (×1.25 to that place, or a gate-world perk)
+- The Wardrobe shows each item's bonus and an **Outfit bonuses** summary of what you're wearing
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

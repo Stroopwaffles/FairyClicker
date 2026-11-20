@@ -4,17 +4,17 @@ import {
   EVENT_BY_ID, FAIRY_GIFTS, GIFT_BY_ID, ACHIEVEMENT_BONUS,
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
-  COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
+  COSTUMES, COSTUME_SLOTS, costumeHint, COSTUME_BONUS, COSTUME_SETS, WEAR_SLOTS, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H, HELPING_HANDS_MAX, HELPING_HANDS_SEC, HELPING_HAND_RATE,
-} from './data.js?v=3.14';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.14';
-import * as G from './game.js?v=3.14';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.14';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.14';
+} from './data.js?v=3.15';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.15';
+import * as G from './game.js?v=3.15';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.15';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.15';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
-} from './avatar.js?v=3.14';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.14';
+} from './avatar.js?v=3.15';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.15';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.14';
+import * as A from './audio.js?v=3.15';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -1434,6 +1434,8 @@ function openWardrobe(create) {
 }
 function closeWardrobe() {
   $('#wardrobe').hidden = true;
+  // Clothing bonuses may have changed
+  updateResBar(); updateSceneRate(); updatePanel();
   if (!G.state.avatar.created) G.state.avatar.created = true;
   G.save();
   renderAvatarUI();
@@ -1443,6 +1445,13 @@ function closeWardrobe() {
 function renderWardrobe() {
   const look = G.state.avatar.look;
   $('#wd-fairy').innerHTML = avatarSVG(look, { cls: 'idle' });
+  // What the current outfit gives
+  const worn = WEAR_SLOTS.map((sl) => COSTUME_BONUS[look[sl]]?.[0]).filter(Boolean);
+  const sets = G.wornSets().map((p) => COSTUME_SETS[p][0]);
+  $('#wd-bonus').innerHTML = `<h4>Outfit bonuses</h4>` + (worn.length || sets.length
+    ? worn.map((t) => `<div>✦ ${t}</div>`).join('') + sets.map((t) => `<div class="set">★ ${t}</div>`).join('')
+    : '<div class="muted">Wear clothes to get small bonuses.</div>') +
+    '<div class="muted small">Wear every piece from one place for a set bonus.</div>';
   for (const b of $$('[data-wtab]')) b.classList.toggle('on', b.dataset.wtab === wdTab);
   const list = $('#wd-list');
   const thumb = (patch, crop, on, attrs, extra = '') =>
@@ -1486,7 +1495,7 @@ function renderWardrobe() {
         const own = !!owned[c.id];
         return thumb({ [slot.id]: c.id }, CROPS[slot.id], look[slot.id] === c.id,
           `data-wear="${c.id}" ${own ? '' : 'disabled'} title="${own ? c.name : costumeHint(c)}"`,
-          `<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${fresh[c.id] ? '<i class="new">New</i>' : ''}`);
+          `<span>${own ? c.name : '🔒 ' + costumeHint(c)}</span>${COSTUME_BONUS[c.id] ? `<em>${COSTUME_BONUS[c.id][0]}</em>` : ''}${fresh[c.id] ? '<i class="new">New</i>' : ''}`);
       }).join('')}</div>`;
     }).join('');
   }
