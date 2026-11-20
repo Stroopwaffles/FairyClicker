@@ -9,9 +9,9 @@ import {
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
   GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.9.1';
-import { DEFAULT_LOOK } from './avatar.js?v=3.9.1';
-import { ACHIEVEMENTS } from './achievements.js?v=3.9.1';
+} from './data.js?v=3.9.2';
+import { DEFAULT_LOOK } from './avatar.js?v=3.9.2';
+import { ACHIEVEMENTS } from './achievements.js?v=3.9.2';
 
 // ---------- state ----------
 

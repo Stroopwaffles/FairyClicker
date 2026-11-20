@@ -33,7 +33,7 @@ const both = (inner) => inner + mirror(inner);
 
 const WINGS = {
   butterfly: () => both(`<path d="M100 146 C62 92 24 108 42 148 C52 170 84 162 100 150 Z"/><path d="M100 154 C72 160 54 196 78 202 C92 204 98 182 100 160 Z"/>`),
-  dragonfly: () => both(`<ellipse cx="62" cy="128" rx="42" ry="11" transform="rotate(-22 62 128)"/><ellipse cx="66" cy="162" rx="36" ry="9" transform="rotate(14 66 162)"/>`),
+  dragonfly: () => both(`<ellipse cx="62" cy="128" rx="42" ry="11" transform="rotate(22 62 128)"/><ellipse cx="66" cy="162" rx="36" ry="9" transform="rotate(-14 66 162)"/>`),
   moth: () => both(`<path d="M100 140 Q42 96 20 140 Q48 150 38 188 Q74 172 100 158 Z"/>`),
   leaf: () => both(`<path d="M100 148 Q54 76 28 118 Q44 160 100 152 Z"/><path d="M100 150 Q76 112 40 120" fill="none" stroke-width="1.5"/><path d="M100 158 Q64 168 60 198 Q90 192 100 162 Z"/>`),
   crystal: () => both(`<path d="M100 146 L38 96 L50 152 Z"/><path d="M100 150 L28 140 L60 168 Z"/><path d="M100 156 L56 184 L82 196 Z"/>`),
