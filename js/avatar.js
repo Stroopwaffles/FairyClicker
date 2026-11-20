@@ -8,13 +8,13 @@ export const HAIR_COLORS = ['#f7c96b', '#ffe8a8', '#c0763a', '#7a4a2a', '#2a1c18
 export const EYE_COLORS = ['#5a7fd8', '#3f9a6a', '#8a5a2a', '#9a5ad8', '#d8508a', '#2a2a3a'];
 export const WING_COLORS = ['#c9a7ff', '#ffb3e0', '#8fd8ff', '#9dffb0', '#ffe27a', '#ffb35a', '#f4f1ea', '#ff6a7a'];
 
-export const HAIR_STYLES = ['long', 'bob', 'pigtails', 'bun', 'pixie', 'curly'];
+export const HAIR_STYLES = ['long', 'bob', 'pigtails', 'bun', 'pixie', 'curly', 'afro'];
 export const EYE_STYLES = ['round', 'sparkly', 'sleepy', 'happy'];
 export const WING_STYLES = ['butterfly', 'dragonfly', 'moth', 'leaf', 'crystal'];
 export const EAR_STYLES = ['pointy', 'round'];
 
 export const NAMES = {
-  long: 'Long', bob: 'Bob', pigtails: 'Pigtails', bun: 'Bun', pixie: 'Pixie', curly: 'Curly',
+  long: 'Long', bob: 'Bob', pigtails: 'Pigtails', bun: 'Bun', pixie: 'Pixie', curly: 'Curly', afro: 'Afro',
   round: 'Round', sparkly: 'Sparkly', sleepy: 'Sleepy', happy: 'Happy',
   butterfly: 'Butterfly', dragonfly: 'Dragonfly', moth: 'Moth', leaf: 'Leaf', crystal: 'Crystal',
   pointy: 'Pointy',
@@ -47,7 +47,9 @@ function hairBack(style, c) {
     case 'pigtails': return `<ellipse cx="54" cy="122" rx="14" ry="28" fill="${c}"/><ellipse cx="146" cy="122" rx="14" ry="28" fill="${c}"/>
       <circle cx="58" cy="96" r="5" fill="#ff7fbf"/><circle cx="142" cy="96" r="5" fill="#ff7fbf"/><path d="M60 86 Q100 40 140 86 Z" fill="${c}"/>`;
     case 'bun': return `<circle cx="100" cy="44" r="17" fill="${c}"/><path d="M60 88 Q100 40 140 88 Z" fill="${c}"/>`;
-    case 'pixie': return `<path d="M60 92 Q100 38 140 92 Q140 70 100 52 Q60 70 60 92 Z" fill="${c}"/>`;
+    case 'pixie': return `<path d="M57 100 Q50 52 78 36 Q98 22 124 32 Q152 46 143 100 Q138 74 100 66 Q62 74 57 100 Z" fill="${c}"/>`;
+    case 'afro': return `<g fill="${c}"><circle cx="100" cy="76" r="58"/>${Array.from({ length: 18 }, (_, i) => {
+      const a = (i / 18) * Math.PI * 2; return `<circle cx="${(100 + Math.cos(a) * 56).toFixed(1)}" cy="${(76 + Math.sin(a) * 54).toFixed(1)}" r="13"/>`; }).join('')}</g>`;
     case 'curly': return `<g fill="${c}">${[[62, 70], [56, 92], [58, 114], [66, 130], [138, 70], [144, 92], [142, 114], [134, 130], [80, 52], [120, 52], [100, 46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="15"/>`).join('')}</g>`;
   }
   return '';
@@ -59,7 +61,11 @@ function hairFront(style, c) {
     case 'bob': return `<path d="M60 88 Q62 50 100 48 Q138 50 140 88 Q130 70 112 64 Q100 78 86 66 Q70 72 60 88 Z" fill="${c}"/>`;
     case 'pigtails': return `<path d="M60 86 Q60 48 100 46 Q140 48 140 86 Q120 72 100 74 Q80 72 60 86 Z" fill="${c}"/>`;
     case 'bun': return `<path d="M60 88 Q64 50 100 50 Q136 50 140 88 Q122 64 100 60 Q78 64 60 88 Z" fill="${c}"/>`;
-    case 'pixie': return `<path d="M58 90 L62 60 L74 66 L80 50 L92 60 L100 44 L110 60 L120 50 L126 66 L138 60 L142 90 Q122 70 100 72 Q78 70 58 90 Z" fill="${c}"/>`;
+    case 'pixie': return `<path d="M58 94 Q54 54 82 40 Q104 28 126 38 Q148 52 142 90 Q136 70 120 62 Q112 76 92 74 Q76 72 66 80 Q60 86 58 94 Z" fill="${c}"/>
+      <path d="M84 40 Q88 22 104 20 Q98 28 100 36 Q108 22 122 26 Q112 30 112 40 Z" fill="${c}"/>
+      <path d="M78 52 Q96 44 116 50" stroke="#000" stroke-opacity=".12" stroke-width="2" fill="none"/>`;
+    case 'afro': return `<g fill="${c}">${Array.from({ length: 9 }, (_, i) => {
+      const a = Math.PI * (1.08 + (i / 8) * 0.84); return `<circle cx="${(100 + Math.cos(a) * 40).toFixed(1)}" cy="${(90 + Math.sin(a) * 40).toFixed(1)}" r="11"/>`; }).join('')}</g>`;
     case 'curly': return `<g fill="${c}">${[[70, 64], [86, 54], [102, 52], [118, 56], [132, 66]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="13"/>`).join('')}</g>`;
   }
   return '';
@@ -237,5 +243,5 @@ export function avatarSVG(look, opts = {}) {
 // Crops for wardrobe thumbnails, by what's being chosen.
 export const CROPS = {
   head: '30 -6 140 130', outfit: '36 110 128 140', feet: '62 210 76 44', held: '96 100 84 120',
-  hair: '26 20 148 180', eyes: '62 74 76 44', wings: '0 70 200 150', ears: '28 60 144 70', face: '50 40 100 100',
+  hair: '18 2 164 200', eyes: '62 74 76 44', wings: '0 70 200 150', ears: '28 60 144 70', face: '50 40 100 100',
 };
