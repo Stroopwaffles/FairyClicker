@@ -206,6 +206,8 @@ textarea { font: 500 13px/1.4 ui-monospace, Menlo, Consolas, monospace; user-sel
 @keyframes sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 
 /* ---------- helper sprites ---------- */
+/* Helpers are decoration: taps go straight through them to the tap target. */
+[data-sprites], [data-sprites] * { pointer-events: none; }
 .hs-in.spawn { animation: spawnPop .6s cubic-bezier(.3, 1.6, .5, 1) both; transform-box: fill-box; transform-origin: center; }
 @keyframes spawnPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .hs { animation-delay: var(--delay, 0s); animation-iteration-count: infinite; animation-timing-function: ease-in-out; transform-box: fill-box; transform-origin: center bottom; }

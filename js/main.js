@@ -6,14 +6,14 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.9.2';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.9.2';
-import * as G from './game.js?v=3.9.2';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.9.2';
+} from './data.js?v=3.9.3';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.9.3';
+import * as G from './game.js?v=3.9.3';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.9.3';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js?v=3.9.2';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.9.2';
+} from './avatar.js?v=3.9.3';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.9.3';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -21,7 +21,7 @@ const display = { lessBusy: false, hideFairy: false };
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.9.2';
+import * as A from './audio.js?v=3.9.3';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
