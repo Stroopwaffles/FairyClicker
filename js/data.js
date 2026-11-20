@@ -209,6 +209,7 @@ export const EVENTS = [
   { id: 'chimes',     name: 'Midnight Chimes',   icon: '🕛', desc: 'Cuckoo Gate cooldown −15 min · clock visits give ×2 Seconds', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'chimes' },
   { id: 'hightide',   name: 'High Tide',         icon: '🌊', desc: 'Tide Gate cooldown −15 min · palace visits give ×2 Pearls', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'hightide' },
   { id: 'rainbow',    name: 'Rainbow Day',       icon: '🌈', desc: 'Sky Gate cooldown −15 min · cloud visits give ×2 Sunbeams', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'rainbow' },
+  { id: 'applause',   name: 'Grand Applause',    icon: '👏', desc: 'Palm Gate cooldown −15 min · high-fives count double', dur: 120, weight: 0.5, req: { gateway: true }, effects: [], special: 'applause' },
   { id: 'fairy',      name: 'Wandering Fairy',   icon: '🧚', desc: 'Tap the fairy before she flies off',       dur: 30,  weight: 1.2, effects: [], special: 'fairy' },
 ];
 // Blood Drop exchange. Drops have diminishing returns: a haul is worth
@@ -351,6 +352,9 @@ export const GATES = [
   { id: 'palace', name: 'Tide Gate', world: 'Sunken Palace', icon: '🐚', color: '#3ab0d0',
     blurb: 'An undersea palace. Tap the giant clam for Pearls; they’re strung into a necklace that boosts everything forever.',
     visitSec: 60, cooldownMin: 60 },
+  { id: 'hands', name: 'Palm Gate', world: 'High-Five Heights', icon: '✋', color: '#ffb36a',
+    blurb: 'A friendly realm of giant hands. High-five the big hand to earn up to 8 helping hands that tap with you for 3 minutes.',
+    visitSec: 60, cooldownMin: 40 },
   { id: 'clouds', name: 'Sky Gate', world: 'Cloud Isles', icon: '☁️', color: '#ffb3e0',
     blurb: 'Floating islands above the clouds. Tap the rainbow cloud for Sunbeams; they make your next time away earn double.',
     visitSec: 60, cooldownMin: 45 },
@@ -366,7 +370,7 @@ export const CLOCK_CRIT_SECS = 5;      // a critical tap gives this many seconds
 export const CUCKOO_SECS = 30;         // tapping the cuckoo bird
 export const CHIMES_COOLDOWN_CUT_MIN = 15;
 // Gate events: which gate each one helps (cooldown cut, ×2 haul while it lasts).
-export const GATE_EVENTS = { bloodmoon: 'castle', chimes: 'clock', hightide: 'palace', rainbow: 'clouds' };
+export const GATE_EVENTS = { bloodmoon: 'castle', chimes: 'clock', hightide: 'palace', rainbow: 'clouds', applause: 'hands' };
 export const GATE_EVENT_CUT_MIN = 15;
 
 // Sunken Palace and Cloud Isles share one set of rules: tap for a currency,
@@ -374,7 +378,14 @@ export const GATE_EVENT_CUT_MIN = 15;
 export const SIMPLE_WORLDS = {
   palace: { currency: 'Pearls', icon: '🦪', color: '#e6f4ff', critAmt: 5, popupAmt: 25, popup: 'mermaid', event: 'hightide', scene: 'palace' },
   clouds: { currency: 'Sunbeams', icon: '☀️', color: '#ffe27a', critAmt: 5, popupAmt: 25, popup: 'whale', event: 'rainbow', scene: 'clouds' },
+  hands: { currency: 'High-fives', icon: '✋', color: '#ffd6a8', critAmt: 3, popupAmt: 10, popup: 'shyhand', event: 'applause', scene: 'heights' },
 };
+// High-Five Heights: hand k needs HAND_STEP_BASE + HAND_STEP_GROWTH × k more high-fives (10, 15, 20 … 45).
+export const HELPING_HANDS_MAX = 8;
+export const HAND_STEP_BASE = 5;
+export const HAND_STEP_GROWTH = 5;
+export const HELPING_HANDS_SEC = 180;
+export const HELPING_HAND_RATE = 2; // taps a second each (or the Enchanted Hand's rate, if faster)
 // Pearl Necklace: strand n needs PEARL_STRAND_STEP × n more pearls; each strand is +2% to everything, forever.
 export const PEARL_STRAND_STEP = 50;
 export const PEARL_STRAND_BONUS = 0.02;
@@ -437,6 +448,7 @@ export const COSTUMES = [
   { id: 'rose', slot: 'held', name: 'Midnight Rose', from: { place: 'castle' } },
   { id: 'cuckoo_hat', slot: 'head', name: 'Cuckoo Hat', from: { place: 'clock' } },
   { id: 'clock_coat', slot: 'outfit', name: 'Clockmaker’s Coat', from: { place: 'clock' } },
+  { id: 'foam_finger', slot: 'held', name: 'Foam Hand', from: { place: 'hands' } },
   { id: 'shell_crown', slot: 'head', name: 'Seashell Crown', from: { place: 'palace' } },
   { id: 'mermaid_gown', slot: 'outfit', name: 'Mermaid Gown', from: { place: 'palace' } },
   { id: 'trident', slot: 'held', name: 'Little Trident', from: { place: 'palace' } },
@@ -461,7 +473,7 @@ export const COSTUMES = [
   { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);
-export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks', palace: 'Sunken Palace', clouds: 'Cloud Isles' };
+export const COSTUME_PLACE_NAMES = { pond: 'Moonlit Pond', mushroom: 'Mushroom Ring', oak: 'Ancient Oak', grotto: 'Crystal Grotto', meadow: 'Starfall Meadow', castle: 'Crimson Castle', clock: 'Cuckoo Clockworks', palace: 'Sunken Palace', clouds: 'Cloud Isles', hands: 'High-Five Heights' };
 
 // How to unlock an item, in words (for locked items in the wardrobe).
 export function costumeHint(c) {

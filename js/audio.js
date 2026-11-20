@@ -259,7 +259,11 @@ export function worldTap(gate, echo = false) {
   if (now - lastTapAt < 35) return;
   lastTapAt = now;
   const v = rnd(0.9, 1.12);
-  if (gate === 'palace') {
+  if (gate === 'hands') {
+    // a crisp high-five clap
+    noise({ dur: 0.08, peak: 0.3, type: 'bandpass', freq: rnd(1400, 2000), q: 1.2, wet: 0.3 });
+    noise({ dur: 0.03, peak: 0.12, type: 'highpass', freq: 4000 });
+  } else if (gate === 'palace') {
     // a bubbly "bloop"
     tone({ freq: 300 * v, to: 900 * v, glide: 0.1, decay: 0.14, peak: 0.22, wet: 0.5 });
     tone({ freq: 1400 * v, start: 0.05, decay: 0.12, peak: 0.04, wet: 0.7 });
@@ -273,7 +277,9 @@ export function worldTap(gate, echo = false) {
 
 export function visitor(gate) {
   if (!ready()) return;
-  if (gate === 'palace') {
+  if (gate === 'hands') {
+    [79, 84].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.12, decay: 0.3, peak: 0.08, wet: 0.5 }));
+  } else if (gate === 'palace') {
     [67, 71, 74, 79, 83, 86, 91].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.05, decay: 0.9, peak: 0.06, wet: 0.8 }));
   } else {
     tone({ freq: 180, to: 320, glide: 0.6, type: 'sine', attack: 0.15, decay: 1.2, peak: 0.12, wet: 0.8 });
@@ -357,6 +363,9 @@ export function eventStart(id) {
     case 'hightide':
       noise({ dur: 2.2, peak: 0.14, type: 'lowpass', freq: 200, to: 1200, wet: 0.6 });
       noise({ start: 1, dur: 1.6, peak: 0.1, type: 'lowpass', freq: 1200, to: 200, wet: 0.6 });
+      break;
+    case 'applause':
+      for (let i = 0; i < 40; i++) noise({ start: Math.random() * 1.8, dur: 0.04, peak: 0.07, type: 'bandpass', freq: rnd(1200, 2600), q: 1.5, wet: 0.4 });
       break;
     case 'rainbow':
       [72, 76, 79, 83, 86, 88, 91].forEach((m, i) => tone({ freq: mtof(m), type: 'triangle', start: i * 0.08, decay: 1, peak: 0.06, wet: 0.7 }));
@@ -445,6 +454,7 @@ const AMBIENCES = {
     layers: [water, bubbles],
   },
   clouds: { custom: (c) => playSong(SKY_SONG, c) },
+  hands: { custom: (c) => playSong({ ...SONGS.pond, bpm: 132, drums: { kick: [0, 8], snare: [4, 12], wood: [2, 6, 10, 14], shaker: [1, 3, 5, 7, 9, 11, 13, 15] } }, c) },
   gates: {
     // Mysterious whole-tone shimmer for the hall of portals
     chords: [[48, 55, 62, 66], [46, 53, 60, 64], [44, 51, 58, 62], [46, 53, 60, 64]],

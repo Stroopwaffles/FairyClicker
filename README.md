@@ -156,6 +156,14 @@ The Gate Room now has four portals.
 - **The gnome explodes instead**, and a different familiar you own takes his place. He stays in your wardrobe for next time
 - Three new secret achievements
 
+### Version 3.14: High-Five Heights
+
+- **✋ Palm Gate → High-Five Heights** (60-second visit, 40-minute rest): high-five the big friendly hand, and catch the shy hand when it peeks up (+10)
+- High-fives earn **helping hands**, up to 8, each needing more than the last (10, 15, 20 … 45; 220 for all eight). When the gate pulls you home, they **tap with you for 3 minutes** wherever you are (2 taps a second each, or your Enchanted Hand's speed if faster)
+- **👏 Grand Applause** event: cuts 15 minutes off the Palm Gate's rest and doubles high-fives
+- A Foam Hand to hold, and two new achievements
+- The Gate Room now has five portals; fixed portal glows overlapping so taps always enter the gate you meant
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

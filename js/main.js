@@ -5,16 +5,16 @@ import {
   SHRINE, SHRINE_PATHS, STONE_BONUS, FINALE_PRESTIGE, MILESTONES,
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
-  SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.13';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.13';
-import * as G from './game.js?v=3.13';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.13';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.13';
+  SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H, HELPING_HANDS_MAX, HELPING_HANDS_SEC, HELPING_HAND_RATE,
+} from './data.js?v=3.14';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.14';
+import * as G from './game.js?v=3.14';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.14';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.14';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES, FACE_PAINTS, MOUTHS,
-} from './avatar.js?v=3.13';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.13';
+} from './avatar.js?v=3.14';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.14';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.13';
+import * as A from './audio.js?v=3.14';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -343,7 +343,7 @@ window.addEventListener('pointercancel', stopHold);
 
 // Which other world is being visited (if any), and the view id to tap in.
 const visitGate = () => G.state.gates.visit?.gate || null;
-const WORLD_VIEW = { castle: 'courtyard', clock: 'clockworks', palace: 'palace', clouds: 'clouds' };
+const WORLD_VIEW = { castle: 'courtyard', clock: 'clockworks', palace: 'palace', clouds: 'clouds', hands: 'hands' };
 const worldId = () => WORLD_VIEW[visitGate()] || 'courtyard';
 const isWorld = (id) => Object.values(WORLD_VIEW).includes(id);
 const viewId = () => (bloodView ? worldId() : gateView ? 'gates' : G.state.active);
@@ -848,6 +848,7 @@ const fmtClock = (sec) => { sec = Math.ceil(sec); return `${Math.floor(sec / 60)
 
 function buffInfo(b) {
   if (b.kind === 'time') return TIME_BUFF;
+  if (b.kind === 'hands') return { name: 'Helping Hands', icon: '🙌', desc: `${b.n} extra hand${b.n === 1 ? '' : 's'} tapping with you` };
   return b.kind === 'event' ? EVENT_BY_ID[b.id] : GIFT_BY_ID[b.id];
 }
 
@@ -874,6 +875,7 @@ function onEventsChanged({ started, ended }) {
     return;
   }
   renderEvents();
+  renderHands();
   updateResBar();
   updateSceneRate();
   if (tab === 'helpers') renderPanel(); else updatePanel();
@@ -1064,12 +1066,13 @@ const HAND_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
 
 function renderHands() {
   const layer = $('#hands');
-  const n = started ? G.d().hands : 0;
+  const dd = G.d();
+  const n = started ? dd.hands + dd.tempHands : 0;
   if (layer.childElementCount === n) { placeHandsAtRest(); return; }
   layer.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const h = document.createElement('div');
-    h.className = 'hand' + (i ? ' twin' : '');
+    h.className = 'hand' + (i % 2 ? ' twin' : '') + (i >= dd.hands ? ' temp' : '');
     h.innerHTML = HAND_SVG;
     layer.append(h);
   }
@@ -1088,20 +1091,22 @@ function placeHandsAtRest() {
   const box = tapTargetBox();
   if (!box) return;
   $$('#hands .hand').forEach((h, i) => {
-    const x = box.x + box.w * (i ? 0.75 : 0.3), y = box.y + box.h * 0.6;
-    h.style.transform = `translate(${x - 26}px, ${y - 4}px)${i ? ' scaleX(-1)' : ''}`;
+    // Hands fan out around the target: two rows of up to five.
+    const x = box.x + box.w * (0.18 + (i % 5) * 0.16), y = box.y + box.h * (0.55 + Math.floor(i / 5) * 0.2);
+    h.style.transform = `translate(${x - 26}px, ${y - 4}px)${i % 2 ? ' scaleX(-1)' : ''}`;
   });
 }
 
 let handAccum = 0, handTurn = 0;
 function tickHands(dt) {
   const dd = G.d();
-  if (!dd.hands || !$('#modal').hidden || !$('#shrine').hidden) return;
+  if ((!dd.hands && !dd.tempHands) || !$('#modal').hidden || !$('#shrine').hidden) return;
   const id = viewId();
   if (id === 'gates' || (isWorld(id) ? !G.visitActive() : !G.state.locs[id]?.unlocked)) return;
-  handAccum += dt * dd.handRate * dd.hands;
+  // Helping Hands from High-Five Heights tap at least HELPING_HAND_RATE a second.
+  handAccum += dt * (dd.handRate * dd.hands + Math.max(HELPING_HAND_RATE, dd.handRate) * dd.tempHands);
   let n = 0;
-  while (handAccum >= 1 && n++ < 6) {
+  while (handAccum >= 1 && n++ < 12) {
     handAccum -= 1;
     const box = tapTargetBox();
     if (!box) return;
@@ -1237,7 +1242,7 @@ function tickDracula(dt) {
 let gateView = false; // showing the Gate Room
 
 function gateSceneSVG() {
-  const slots = [[228, 'clouds'], [409, 'clock'], [591, 'castle'], [772, 'palace']];
+  const slots = [[204, 'hands'], [352, 'clouds'], [500, 'clock'], [648, 'castle'], [796, 'palace']];
   const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 1000}" cy="${(i * 53) % 260}" r="${(i % 3) * 0.6 + 0.6}" fill="#fff" opacity=".6"/>`).join('');
   return `<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>
@@ -1246,6 +1251,7 @@ function gateSceneSVG() {
       <radialGradient id="gr-castle"><stop offset="0" stop-color="#ff6a7a"/><stop offset=".55" stop-color="#a0142e"/><stop offset="1" stop-color="#3a0814"/></radialGradient>
       <radialGradient id="gr-clock"><stop offset="0" stop-color="#ffe08a"/><stop offset=".55" stop-color="#c07a20"/><stop offset="1" stop-color="#4a2a08"/></radialGradient>
       <radialGradient id="gr-palace"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#2a8ac0"/><stop offset="1" stop-color="#08304a"/></radialGradient>
+      <radialGradient id="gr-hands"><stop offset="0" stop-color="#fff0d8"/><stop offset=".55" stop-color="#ff9f6a"/><stop offset="1" stop-color="#7a3418"/></radialGradient>
       <radialGradient id="gr-clouds"><stop offset="0" stop-color="#fff6ff"/><stop offset=".55" stop-color="#ffb3e0"/><stop offset="1" stop-color="#7a5aa8"/></radialGradient>
       <radialGradient id="gr-sealed"><stop offset="0" stop-color="#3a3a6a"/><stop offset="1" stop-color="#14122e"/></radialGradient>
       <radialGradient id="gr-glow"><stop offset="0" stop-color="#c9a7ff" stop-opacity=".5"/><stop offset="1" stop-color="#c9a7ff" stop-opacity="0"/></radialGradient>
@@ -1263,23 +1269,24 @@ function gateSceneSVG() {
       const g = GATE_BY_ID[id];
       const sealed = g.soon;
       return `<g class="portal${sealed ? ' sealed' : ''}" data-gate="${id}">
-        <circle cx="${x}" cy="380" r="170" fill="url(#gr-glow)" class="${sealed ? '' : 'pulse'}"/>
-        <path d="M${x - 78} 560 V340 a78 78 0 0 1 156 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
-        <path class="portal-face" d="M${x - 64} 556 V344 a64 64 0 0 1 128 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
+        <circle cx="${x}" cy="380" r="150" fill="url(#gr-glow)" pointer-events="none" class="${sealed ? '' : 'pulse'}"/>
+        <path d="M${x - 62} 560 V350 a62 62 0 0 1 124 0 V560 Z" fill="#2e2864" stroke="#5a50a8" stroke-width="5"/>
+        <path class="portal-face" d="M${x - 51} 556 V354 a51 51 0 0 1 102 0 V556 Z" fill="url(#${sealed ? 'gr-sealed' : 'gr-' + id})"/>
         ${sealed
           ? `<g opacity=".75"><path d="M${x - 14} 418 v-12 a14 14 0 0 1 28 0 v12" fill="none" stroke="#7a72c8" stroke-width="5"/>
                <rect x="${x - 22}" y="416" width="44" height="34" rx="6" fill="#4a4290"/><circle cx="${x}" cy="430" r="5" fill="#14122e"/><rect x="${x - 2}" y="432" width="4" height="9" fill="#14122e"/></g>`
           : `<g fill="none" stroke="#ffd6dc" stroke-opacity=".6">
-               <circle class="swirl" cx="${x}" cy="440" r="52" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 440px"/>
-               <circle class="swirl rev" cx="${x}" cy="440" r="32" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 440px"/></g>
+               <circle class="swirl" cx="${x}" cy="450" r="40" stroke-width="4" stroke-dasharray="30 22" style="transform-origin:${x}px 450px"/>
+               <circle class="swirl rev" cx="${x}" cy="450" r="24" stroke-width="3" stroke-dasharray="18 14" style="transform-origin:${x}px 450px"/></g>
              ${{
                clock: `<circle cx="${x}" cy="510" r="22" fill="#fff8e6" opacity=".85"/><path d="M${x} 510 v-14 M${x} 510 h10" stroke="#4a2a08" stroke-width="3" stroke-linecap="round"/>`,
                castle: `<path d="M${x - 30} 520 l12 -40 l12 18 l12 -32 l12 26 l12 -12 l0 40 z" fill="#1a0610" opacity=".85"/>`,
                palace: `<path d="M${x - 26} 526 Q${x} 486 ${x + 26} 526 Z" fill="#ffb3d0" opacity=".9"/><circle cx="${x}" cy="514" r="8" fill="#fff"/>`,
+               hands: `<text x="${x}" y="530" text-anchor="middle" font-size="40">✋</text>`,
                clouds: `<g fill="#fff" opacity=".95"><ellipse cx="${x}" cy="520" rx="30" ry="12"/><circle cx="${x - 12}" cy="510" r="12"/><circle cx="${x + 10}" cy="506" r="14"/></g>`,
              }[id] || ''}`}
-        <rect class="portal-hit" x="${x - 95}" y="235" width="190" height="325" fill="transparent"/>
-        <text x="${x}" y="592" text-anchor="middle" font-size="16" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
+        <rect class="portal-hit" x="${x - 64}" y="280" width="128" height="325" fill="transparent"/>
+        <text x="${x}" y="592" text-anchor="middle" font-size="13" fill="#e6dcff" font-family="Quicksand, sans-serif" font-weight="700">${sealed ? 'Sealed' : g.world}</text>
         <text class="portal-status" x="${x}" y="618" text-anchor="middle" font-size="17" fill="#c9b6ff" font-family="Quicksand, sans-serif"></text>
       </g>`;
     }).join('')}
@@ -1637,13 +1644,13 @@ function renderSimpleWorld(g) {
     hideVisitor();
     const r = $('#scene-wrap').getBoundingClientRect();
     floatText(e.clientX - r.left, e.clientY - r.top, `${W.icon} +${v}`, W.color);
-    toast(g === 'palace' ? `🧜 The mermaid gives you ${v} Pearls!` : `🐋 The cloud whale showers you with ${v} Sunbeams!`);
+    toast({ palace: `🧜 The mermaid gives you ${v} Pearls!`, clouds: `🐋 The cloud whale showers you with ${v} Sunbeams!`, hands: `🤚 The shy hand gives you a secret high-five! +${v}` }[g]);
     updateSceneRate();
     updateWorldPanel();
   });
   visitorTimer = 4 + Math.random() * 3;
   const hint = $('#tap-hint');
-  hint.textContent = g === 'palace' ? 'Tap the giant clam' : 'Tap the rainbow cloud';
+  hint.textContent = { palace: 'Tap the giant clam', clouds: 'Tap the rainbow cloud', hands: 'High-five the big hand!' }[g];
   hint.classList.remove('faded');
   $('#lock-overlay').hidden = true;
   updateSceneRate();
@@ -1669,7 +1676,9 @@ function tickVisitor(dt) {
 
 function renderWorldPanel(body, g) {
   const W = SIMPLE_WORLDS[g], gate = GATE_BY_ID[g];
-  const explain = g === 'palace'
+  const explain = g === 'hands'
+    ? `High-five the big hand and catch the shy hand when it peeks up. Every few high-fives earns a <b>helping hand</b> (up to ${HELPING_HANDS_MAX}). Each one needs more than the last. When the gate pulls you home, they tap with you for <b>${HELPING_HANDS_SEC / 60} minutes</b>.`
+    : g === 'palace'
     ? `Tap the clam and catch the mermaid when she peeks out. When the gate pulls you home, your Pearls are strung onto your <b>Pearl Necklace</b>. Every strand is <b>+${Math.round(PEARL_STRAND_BONUS * 100)}% to everything, forever</b>, even through prestiges.`
     : `Tap the rainbow cloud and catch the cloud whale as it drifts by. Each Sunbeam stores <b>${SUN_SECS_PER_BEAM} seconds of double offline earnings</b> (up to ${SUN_BANK_CAP_H} hours), used up the next time you're away.`;
   body.innerHTML = `<div class="blood-panel world-panel ${g}" data-world="${g}">
@@ -1697,7 +1706,12 @@ function updateWorldPanel() {
   }
   const ev = SIMPLE_WORLDS[g].event;
   $('#wp-event').textContent = G.hasBuff(ev) ? `${EVENT_BY_ID[ev].icon} ${EVENT_BY_ID[ev].name}: every ${SIMPLE_WORLDS[g].currency.slice(0, -1)} counts double!` : '';
-  if (g === 'palace') {
+  if (g === 'hands') {
+    const n = G.helpingHandsFor(W.amt);
+    const next = n < HELPING_HANDS_MAX ? G.highFivesFor(n + 1) - W.amt : 0;
+    $('#wp-preview').innerHTML = `<div class="hand-row">${Array.from({ length: HELPING_HANDS_MAX }, (_, i) => `<span class="${i < n ? 'on' : ''}">✋</span>`).join('')}</div>` +
+      (n < HELPING_HANDS_MAX ? `${n} helping hand${n === 1 ? '' : 's'} · next in <b>${fmt(next)}</b> high-fives` : '<b>All 8 helping hands earned!</b>');
+  } else if (g === 'palace') {
     const now = G.pearlStrands(), after = G.pearlStrands(W.strung + W.amt);
     const next = G.pearlsForStrands(after + 1) - (W.strung + W.amt);
     $('#wp-preview').innerHTML = `📿 Necklace: ${now} strand${now === 1 ? '' : 's'} (+${Math.round(now * PEARL_STRAND_BONUS * 100)}%)` +
@@ -1712,7 +1726,14 @@ function showWorldResult(res) {
   const m = $('#modal');
   const W = SIMPLE_WORLDS[res.gate];
   let inner;
-  if (res.gate === 'palace') {
+  if (res.gate === 'hands') {
+    inner = `<h2>🙌 Helping Hands</h2>
+      <p>You landed <b>${fmt(res.amt)}</b> high-fives in High-Five Heights.</p>
+      <div class="hand-row">${Array.from({ length: HELPING_HANDS_MAX }, (_, i) => `<span class="${i < res.n ? 'on' : ''}">✋</span>`).join('')}</div>
+      ${res.n > 0 ? `<p class="big-line"><b>${res.n}</b> helping hand${res.n === 1 ? '' : 's'} will tap with you for <b>${HELPING_HANDS_SEC / 60} minutes</b></p>`
+        : `<p>Not quite enough for a helping hand. ${G.highFivesFor(1)} high-fives earns the first!</p>`}`;
+    renderHands();
+  } else if (res.gate === 'palace') {
     const gained = res.after - res.before;
     const beads = Math.min(res.after, 40);
     inner = `<h2>📿 Your Pearl Necklace</h2>
@@ -1756,6 +1777,8 @@ const PLACE_LINES = {
   courtyard: ['Is it just me, or is it chilly in here?', 'Keep an eye on those windows…', 'So. Much. Red.'],
   clockworks: ['Tick… tock… tick…', 'Catch the cuckoo!', 'Every tap is a second saved!'],
   palace: ['Bubbles!', 'I think the mermaid likes you.', 'Every pearl makes the necklace longer!'],
+  hands: ['Up top!', 'So many hands… none of them are mine.', 'High five! …I have paws.'],
+  hands: ['Up top!', 'So many hands… none of them are mine.', 'High five! …I have paws.'],
   clouds: ['Wheee, so high up!', 'Look, a whale in the sky!', 'Soft as… well, a cloud.'],
   gates: ['So many doors… where to?', 'Each gate smells different. This one smells like adventure.'],
 };
@@ -1765,6 +1788,7 @@ const EVENT_LINES = {
   owlcouncil: 'The owls are meeting. Helpers are cheaper!', fog: 'Spooky fog… but our taps feel stronger!',
   fairy: 'Look! A fairy! Catch her!', bloodmoon: 'The moon turned red… the castle calls.',
   chimes: 'Midnight! The clock gate is waking up.', hightide: 'High tide! Pearls galore!', rainbow: 'A rainbow! The sky gate shines.',
+  applause: 'Everyone’s clapping! The Palm Gate wants a high-five!',
 };
 
 // Helpful things worth mentioning right now.

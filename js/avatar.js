@@ -289,6 +289,9 @@ export const ITEMS = {
   pocket_watch: { front: `<path d="M134 176 Q140 168 146 160" stroke="#d9a530" stroke-width="2" fill="none" stroke-dasharray="3 2"/>
     <circle cx="150" cy="150" r="13" fill="#d9a530" stroke="#a87418" stroke-width="2"/><circle cx="150" cy="150" r="10" fill="#fff8e6"/>
     <path d="M150 150 V143 M150 150 L155 152" stroke="#2a1608" stroke-width="1.6" stroke-linecap="round"/><rect x="147" y="134" width="6" height="4" rx="1" fill="#d9a530"/>` },
+  foam_finger: { front: `<rect x="132" y="150" width="14" height="40" rx="5" fill="#d83a4a" transform="rotate(-12 139 170)"/>
+    <g transform="translate(150 132) rotate(-12)"><rect x="-16" y="-8" width="32" height="30" rx="10" fill="#ffd24d" stroke="#d9a520" stroke-width="2"/>
+      <rect x="-5" y="-38" width="12" height="34" rx="6" fill="#ffd24d" stroke="#d9a520" stroke-width="2"/><text x="0" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#d83a4a">#1</text></g>` },
   trident: { front: `<line x1="134" y1="206" x2="150" y2="120" stroke="#e8c870" stroke-width="4" stroke-linecap="round"/>
     <path d="M140 122 L144 100 L148 120 M150 120 L152 96 L156 122 M160 124 L162 104 L164 126" stroke="#e8c870" stroke-width="3.5" fill="none" stroke-linecap="round"/>
     <path d="M140 124 Q152 132 164 126" stroke="#e8c870" stroke-width="3.5" fill="none"/><circle cx="148" cy="134" r="3.5" fill="#8fd8ff"/>` },

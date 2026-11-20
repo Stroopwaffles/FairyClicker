@@ -8,10 +8,10 @@ import {
   WORKSHOP_BY_ID, HAND_RATES, CRIT_MULT, STREAK_MAX, RES_ORDER, HELPER_BY_ID,
   GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN, COSTUMES, COSTUME_BY_ID,
   BORROWED_MULT, BORROWED_CAP_SEC, CLOCK_CRIT_SECS, CUCKOO_SECS, CHIMES_COOLDOWN_CUT_MIN,
-  GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.13';
-import { DEFAULT_LOOK } from './avatar.js?v=3.13';
-import { ACHIEVEMENTS } from './achievements.js?v=3.13';
+  GATE_EVENTS, GATE_EVENT_CUT_MIN, SIMPLE_WORLDS, HELPING_HANDS_MAX, HAND_STEP_BASE, HAND_STEP_GROWTH, HELPING_HANDS_SEC, PEARL_STRAND_STEP, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
+} from './data.js?v=3.14';
+import { DEFAULT_LOOK } from './avatar.js?v=3.14';
+import { ACHIEVEMENTS } from './achievements.js?v=3.14';
 
 // ---------- state ----------
 
@@ -39,7 +39,7 @@ export function freshState() {
     blood: { drops: 0, pending: 0, total: 0, best: 0, draculas: 0 }, // Blood Moon
     clockw: { secs: 0, total: 0, best: 0, cuckoos: 0, borrowed: 0 },   // Cuckoo Clockworks
     // Sunken Palace (strung = pearls in the necklace) and Cloud Isles (bank = seconds of ×2 offline)
-    wv: { palace: { amt: 0, total: 0, best: 0, pops: 0, strung: 0 }, clouds: { amt: 0, total: 0, best: 0, pops: 0, bank: 0, used: 0 } },
+    wv: { palace: { amt: 0, total: 0, best: 0, pops: 0, strung: 0 }, clouds: { amt: 0, total: 0, best: 0, pops: 0, bank: 0, used: 0 }, hands: { amt: 0, total: 0, best: 0, pops: 0, bestHands: 0 } },
     workshop: {},             // id -> level (resets on prestige)
     gates: { owned: false, visit: null, cd: {}, visits: {} }, // permanent; cd: gateId -> ready-at (ms)
     // The player's fairy (permanent): how she looks, which clothes she owns, which are new.
@@ -171,6 +171,7 @@ function derive() {
   out.streakMax = STREAK_MAX[wl('streak')];
   out.bloodMult = 1 + wl('chalice') * CHALICE_VALUE_PER_LEVEL;
   out.bloodPerTap = 1 + wl('chalice');
+  out.tempHands = state.buffs.find((b) => b.kind === 'hands')?.n || 0;
   out.pearlMult = 1 + pearlStrands() * PEARL_STRAND_BONUS;
   out.achievementMult = 1 + achievementCount() * ACHIEVEMENT_BONUS;
   out.stoneMult = 1 + state.prestige.stones * STONE_BONUS;
@@ -389,7 +390,7 @@ function startEvent(id) {
     const cd = state.gates.cd.clock || 0;
     state.gates.cd.clock = Math.max(Date.now(), cd - CHIMES_COOLDOWN_CUT_MIN * 60000);
   }
-  if (id === 'hightide' || id === 'rainbow') {
+  if (id === 'hightide' || id === 'rainbow' || id === 'applause') {
     const gate = GATE_EVENTS[id];
     const cd = state.gates.cd[gate] || 0;
     state.gates.cd[gate] = Math.max(Date.now(), cd - GATE_EVENT_CUT_MIN * 60000);
@@ -509,6 +510,18 @@ export function pearlStrands(strung = state.wv?.palace.strung || 0) {
 export const pearlsForStrands = (n) => (PEARL_STRAND_STEP * n * (n + 1)) / 2;
 export const sunBankCap = () => SUN_BANK_CAP_H * 3600;
 
+// High-five totals needed for each helping hand: 10, 25, 45, 70, 100, 135, 175, 220.
+export const highFivesFor = (k) => HAND_STEP_BASE * k + (HAND_STEP_GROWTH * k * (k + 1)) / 2;
+export function helpingHandsFor(fives) {
+  let k = 0;
+  while (k < HELPING_HANDS_MAX && fives >= highFivesFor(k + 1)) k++;
+  return k;
+}
+export const helpingHandsLeft = () => {
+  const b = state.buffs.find((x) => x.kind === 'hands');
+  return b ? Math.max(0, b.ends - state.clock) : 0;
+};
+
 const inWorld = (g) => visitActive() && state.gates.visit.gate === g;
 const worldEventMult = (g) => (hasBuff(SIMPLE_WORLDS[g].event) ? 2 : 1);
 
@@ -572,6 +585,21 @@ export function checkVisitEnd(now = Date.now()) {
     out.after = pearlStrands();
     W.amt = 0;
     invalidate();
+  } else if (v.gate === 'hands') {
+    const W = state.wv.hands;
+    W.best = Math.max(W.best, W.amt);
+    out.amt = W.amt;
+    out.n = helpingHandsFor(W.amt);
+    W.bestHands = Math.max(W.bestHands, out.n);
+    if (out.n > 0) {
+      const old = state.buffs.find((b) => b.kind === 'hands');
+      state.buffs = state.buffs.filter((b) => b.kind !== 'hands');
+      const n = Math.max(out.n, old && old.ends > state.clock ? old.n : 0);
+      state.buffs.push({ id: 'helpinghands', kind: 'hands', n, ends: state.clock + HELPING_HANDS_SEC, dur: HELPING_HANDS_SEC });
+      out.n = n;
+      invalidate();
+    }
+    W.amt = 0;
   } else if (v.gate === 'clouds') {
     const W = state.wv.clouds;
     W.best = Math.max(W.best, W.amt);
@@ -807,7 +835,7 @@ export function prestige() {
   const fresh = freshState();
   const keep = {
     created: state.created, achievements: state.achievements, stats: state.stats, stats2: state.stats2, settings: state.settings, blood: state.blood, gates: state.gates, avatar: state.avatar, clockw: state.clockw, wv: state.wv,
-    buffs: state.buffs.filter((b) => b.kind === 'time'), // Borrowed Time carries over
+    buffs: state.buffs.filter((b) => b.kind === 'time' || b.kind === 'hands'), // Borrowed Time and Helping Hands carry over
     earned: state.earned, prestige: P, clock: state.clock,
     ev: { ...fresh.ev, count: state.ev.count, seen: state.ev.seen, next: state.clock + FIRST_EVENT_AT },
   };

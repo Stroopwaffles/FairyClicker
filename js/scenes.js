@@ -704,7 +704,55 @@ const clouds = () => `
   <g data-sprites></g>
 </svg>`;
 
-export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks, palace, clouds };
+// An open hand, palm facing out, centred on (0,0) and about 300 tall.
+function openHand(fill, line) {
+  const fingers = [[-62, -60, 150], [-22, -68, 170], [18, -64, 160], [56, -50, 130]];
+  return `<g stroke="${line}" stroke-width="5" fill="${fill}">
+    ${fingers.map(([x, top, h]) => `<rect x="${x}" y="${top - h + 80}" width="38" height="${h}" rx="19"/>`).join('')}
+    <rect x="-84" y="-14" width="70" height="38" rx="19" transform="rotate(-38 -50 5)"/>
+    <path d="M-66 10 Q-70 120 -10 140 Q60 146 80 90 L86 10 Z"/>
+  </g>
+  <g fill="none" stroke="${line}" stroke-width="3" opacity=".35"><path d="M-40 50 Q0 70 50 40"/><path d="M-30 90 Q10 100 46 76"/></g>`;
+}
+
+// High-Five Heights: a sunny sky realm of friendly hands.
+const heights = () => `
+<svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="h-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9f6a"/><stop offset=".55" stop-color="#ffc98a"/><stop offset="1" stop-color="#ffe6b8"/></linearGradient>
+    <radialGradient id="h-glow"><stop offset="0" stop-color="#fff6d8" stop-opacity=".85"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="h-palm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6cf"/><stop offset="1" stop-color="#ffc8a0"/></linearGradient>
+  </defs>
+  <rect width="1000" height="700" fill="url(#h-sky)"/>
+  <g fill="#fff6e8" opacity=".9">${[[160, 140, 1], [820, 110, 1.2], [520, 70, 0.7]].map(([x, y, k], i) => `<g class="drift-cloud" style="animation-delay:-${i * 8}s"><g transform="translate(${x} ${y}) scale(${k})"><ellipse rx="70" ry="24"/><circle cx="-28" cy="-14" r="26"/><circle cx="16" cy="-22" r="32"/></g></g>`).join('')}</g>
+  <!-- little hands waving in the distance -->
+  ${[[120, 470, 0.28, 0], [880, 450, 0.3, 1], [260, 600, 0.22, 2], [760, 610, 0.24, 3]].map(([x, y, k, i]) => `
+    <g transform="translate(${x} ${y})"><g class="waver" style="animation-delay:-${i * 0.4}s"><g transform="scale(${k})">${openHand('#ffd8b8', '#e0a070')}</g></g></g>`).join('')}
+  <path d="M0 620 Q250 580 500 600 Q750 580 1000 620 V700 H0 Z" fill="#fff0d8" opacity=".9"/>
+
+  <!-- the shy hand: peeks up from the clouds -->
+  <g class="popup mermaid shyhand" transform="translate(230 520)">
+    <circle class="popup-hit" r="70" fill="transparent"/>
+    <g class="peek"><g transform="scale(.42)">${openHand('#ffe0f0', '#e07aa8')}</g>
+      <g fill="#1b1030"><circle cx="-8" cy="12" r="4"/><circle cx="12" cy="12" r="4"/></g><path d="M-6 26 q8 6 16 0" stroke="#1b1030" stroke-width="2.5" fill="none"/></g>
+  </g>
+
+  <!-- the big friendly hand (tap target) -->
+  <g data-tap class="tap-target palm-target">
+    <circle cx="500" cy="360" r="240" fill="url(#h-glow)" class="pulse"/>
+    <g transform="translate(500 400)">${openHand('url(#h-palm)', '#e0905a')}
+      <g fill="#1b1030"><ellipse cx="-14" cy="40" rx="7" ry="9"/><ellipse cx="22" cy="40" rx="7" ry="9"/></g>
+      <g fill="#fff"><circle cx="-16" cy="37" r="2.5"/><circle cx="20" cy="37" r="2.5"/></g>
+      <g fill="#ff9fb3" opacity=".6"><ellipse cx="-34" cy="58" rx="10" ry="6"/><ellipse cx="44" cy="58" rx="10" ry="6"/></g>
+      <path d="M-6 64 Q4 76 14 64" stroke="#8a4a3a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <g class="clap-stars" fill="#fff6c8">${[[380, 200], [620, 190], [640, 300], [360, 300]].map(([x, y]) => `<path transform="translate(${x} ${y})" d="M0 -12 L3 -3 L12 0 L3 3 L0 12 L-3 3 L-12 0 L-3 -3 Z"/>`).join('')}</g>
+  </g>
+
+  <g data-sprites></g>
+</svg>`;
+
+export const SCENES = { pond, mushroom, oak, grotto, meadow, courtyard, clockworks, palace, clouds, heights };
 
 // Sprite colour per location (helpers drawn as drifting motes).
 export const SPRITE_COLORS = { pond: '#fff3a0', mushroom: '#c8ff9a', oak: '#ffc35a', grotto: '#d6c8ff', meadow: '#fff8c8' };

@@ -488,7 +488,7 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .card .best { font-size: .78rem; color: #1b1030; background: var(--accent-2); border-radius: 999px; padding: 2px 8px; }
 .card.best-card { border-color: rgba(255, 217, 138, .6); }
 
-.hands { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+#hands { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .hand { position: absolute; left: 0; top: 0; width: 52px; height: 52px; transition: transform .12s ease-out; filter: drop-shadow(0 0 8px rgba(201, 167, 255, .7)); }
 .hand svg { width: 100%; height: 100%; display: block; animation: handFloat 2.4s ease-in-out infinite; }
 .hand.tapping svg { animation: handTap .16s ease-out; }
@@ -687,6 +687,22 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .world-card .big-line { font-size: 1.2rem; color: #fff; }
 .world-card .big-line b { color: #fff6c8; }
 .world-card .row { justify-content: center; }
+
+.waver { animation: wave 1.4s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: bottom center; }
+@keyframes wave { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+.palm-target.bump > g { animation: highFive .2s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes highFive { 50% { transform: scale(.94) rotate(-3deg); } }
+.palm-target .clap-stars { opacity: 0; }
+.palm-target.bump .clap-stars { animation: clapStars .35s ease-out; }
+@keyframes clapStars { 0% { opacity: 1; } 100% { opacity: 0; } }
+.loc-tab.world-hands { background: linear-gradient(180deg, #ff9f6a, #d8703a); border-color: #ffe0b8; animation: pulse 2.4s ease-in-out infinite; }
+.loc-tab.world-hands.active { animation: none; filter: brightness(1.12); }
+.world-panel.hands { background: linear-gradient(180deg, #a8582a, #6a3418); border-color: #ffb36a; }
+.world-card.hands { border-color: #ffb36a; background: linear-gradient(180deg, #8a4a22, #4a2410); }
+.hand-row { display: flex; justify-content: center; gap: 4px; margin: 8px 0; font-size: 1.4rem; }
+.hand-row span { opacity: .25; filter: grayscale(1); }
+.hand-row span.on { opacity: 1; filter: none; }
+.hand.temp { filter: drop-shadow(0 0 8px rgba(255, 180, 100, .8)) hue-rotate(-60deg) saturate(1.4); }
 
 /* ---------- panel ---------- */
 .panel-tabs { display: grid; grid-template-columns: repeat(5, 1fr) 46px; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
