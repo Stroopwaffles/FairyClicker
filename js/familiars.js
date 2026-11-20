@@ -144,7 +144,46 @@ export const FAMILIARS = [
       <ellipse cx="0" cy="-6" rx="22" ry="22" fill="#f4f1ff"/>${eyes(0, -8, 9, 6, '#5a3aa8')}${blush(4, 15)}
       <ellipse cx="0" cy="8" rx="9" ry="6" fill="#ffe0f0"/><circle cx="-3" cy="8" r="1.4" fill="#a87ab8"/><circle cx="3" cy="8" r="1.4" fill="#a87ab8"/>
       <path d="M8 -20 a6 6 0 1 0 4 10 a4.5 4.5 0 1 1 -4 -10 z" fill="#fff6c8"/>`,
+    annoyed: ['Hmph! Unicorns need dignity.', 'Please… no more boops.'],
     lines: ['Neigh~!', 'The full moon is my favourite.', '*sparkly prance*', 'You restored the whole realm. You are amazing!', 'Moonbeams taste like vanilla.'],
+  },
+  {
+    // Unlocked by recruiting 50 Mycel Gnomes. Not the brightest mushroom in the ring.
+    id: 'pet_gnome', name: 'Conspiracy Gnome', pitch: 0.7, explodes: true,
+    draw: () => `
+      <ellipse cx="-12" cy="44" rx="11" ry="6" fill="#5a3418"/><ellipse cx="12" cy="44" rx="11" ry="6" fill="#5a3418"/>
+      <ellipse cx="0" cy="22" rx="34" ry="26" fill="#3a6fd0"/><rect x="-34" y="26" width="68" height="7" fill="#5a3418"/><rect x="-6" y="25" width="12" height="9" rx="2" fill="#e8c24a"/>
+      <circle cx="-34" cy="16" r="9" fill="#ffd8bf"/><circle cx="34" cy="16" r="9" fill="#ffd8bf"/>
+      <circle cx="0" cy="-8" r="22" fill="#ffd8bf"/>
+      <path d="M-22 -4 Q-26 34 0 30 Q26 34 22 -4 Q14 8 0 6 Q-14 8 -22 -4 Z" fill="#f4f1ea"/>
+      <path d="M-24 -14 L0 -56 L24 -14 Z" fill="#d83a4a"/>
+      <path d="M-25 -14 L25 -14 L22 -20 L-22 -20 Z" fill="#c8ccd8" stroke="#9aa0b4" stroke-width="1"/>
+      <path d="M-18 -18 l4 -2 l3 2 l4 -2 l3 2 l4 -2 l3 2 l4 -2 l3 2" stroke="#e8ecf4" stroke-width="1" fill="none"/>
+      <g class="pet-eyes"><circle cx="-9" cy="-8" r="6.5" fill="#fff"/><circle cx="9" cy="-8" r="4.5" fill="#fff"/>
+        <circle cx="-6" cy="-7" r="3" fill="#1b1030"/><circle cx="7" cy="-6" r="2.3" fill="#1b1030"/></g>
+      <ellipse cx="0" cy="2" rx="7" ry="6" fill="#f4a08a"/>${blush(-1, 16)}
+      <path d="M-5 13 q5 3 10 -1" stroke="#8a5a4a" stroke-width="2" fill="none"/>`,
+    lines: [
+      'The moon isn’t real. It’s a lantern the owls hung up to spy on us.',
+      'Wake up! Fireflies don’t glow naturally. Big Toadstool puts it in the dew.',
+      'Who’s minting all these Moonstones, hmm? HMM?',
+      'Prestige is a hoax to reset our hard-earned spores. Think about it.',
+      'The mermaid is a government plant. Well, seaweed. Same thing.',
+      'Abolish the Toadstool Throne! No crowns without caps!',
+      'Back in my day, helpers worked for free and we LIKED it.',
+      'Sap Squirrels pay zero acorns in tax. Zero! Look it up.',
+      'Pearls are just fish teeth. Do your own research.',
+      'I did my own research. I read half a leaf.',
+      'Cloud whales are drones. Ever seen a baby one? Exactly.',
+      'Dracula is the only honest politician left in this realm.',
+      'If the world is round, why do my mushrooms grow flat? Checkmate.',
+      'Achievements are how they track you. I have zero. On purpose.',
+      'The Owl Council meets in secret. On Tuesdays. Probably.',
+      'Gates? Portals? Nah. It’s all done with mirrors and glitter.',
+      'Vote gnome! Free hats for everyone! (Hats not included.)',
+      'The pond is only wet because THEY want you to think it’s wet.',
+    ],
+    annoyed: ['Hey! Personal space! It’s in the Forest Constitution!', 'You’re one of THEM, aren’t you?', 'I know my rights!', 'This is exactly what Big Toadstool wants!'],
   },
 ];
 export const FAMILIAR_BY_ID = Object.fromEntries(FAMILIARS.map((f) => [f.id, f]));

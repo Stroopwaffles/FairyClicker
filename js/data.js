@@ -456,6 +456,7 @@ export const COSTUMES = [
   { id: 'pet_lamb', slot: 'familiar', name: 'Cloud Lamb', from: { place: 'clouds' } },
   { id: 'pet_dragon', slot: 'familiar', name: 'Dragon Hatchling', from: { prestige: 1 } },
   { id: 'pet_foal', slot: 'familiar', name: 'Moon Foal', from: { prestige: 5 } },
+  { id: 'pet_gnome', slot: 'familiar', name: 'Conspiracy Gnome', from: { helper: 'gnome', count: 50 } },
   { id: 'pocket_watch', slot: 'held', name: 'Pocket Watch', from: { place: 'clock' } },
 ];
 export const COSTUME_BY_ID = byId(COSTUMES);
@@ -471,5 +472,6 @@ export function costumeHint(c) {
   if (f.prestige) return 'Begin your first new night (prestige)';
   if (f.ach === 'lotus10') return 'Catch 10 Golden Lotuses';
   if (f.ach === 'handy') return 'Get the Enchanted Hand';
+  if (f.helper) return `Recruit ${f.count} Mycel Gnomes`;
   return 'Keep playing';
 }

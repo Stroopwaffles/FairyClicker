@@ -149,6 +149,13 @@ The Gate Room now has four portals.
 - Two new achievements
 - Fix: the Workshop, Awards and Settings tabs now work in the Gate Room and during gate visits
 
+### Version 3.11: the Conspiracy Gnome and grumpy familiars
+
+- **🍄 Conspiracy Gnome** familiar: unlocks once you've recruited 50 Mycel Gnomes in the Mushroom Ring. He has a tinfoil-lined hat and a head full of in-world conspiracy theories ("The moon isn't real. It's a lantern the owls hung up to spy on us.")
+- **Familiars get annoyed:** tap one more than 4 times in a row and it gets grumpy; at 9 it storms off for 30 seconds. Pausing for 2 seconds calms it down
+- **The gnome explodes instead**, and a different familiar you own takes his place. He stays in your wardrobe for next time
+- Three new secret achievements
+
 ## Releasing an update
 
 Browsers may keep old copies of the game's files for a while. Before pushing a release, stamp a new version so every browser fetches fresh files:

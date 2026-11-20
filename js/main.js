@@ -6,15 +6,15 @@ import {
   WORKSHOP, WORKSHOP_GROUPS, WORKSHOP_BY_ID, LOTUS_EVERY, GATES, GATE_BY_ID, BLOOD_MOON_COOLDOWN_CUT_MIN,
   COSTUMES, COSTUME_SLOTS, costumeHint, TIME_BUFF, BORROWED_MULT, BORROWED_CAP_SEC, CUCKOO_SECS,
   SIMPLE_WORLDS, PEARL_STRAND_BONUS, SUN_SECS_PER_BEAM, SUN_BANK_CAP_H,
-} from './data.js?v=3.10';
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.10';
-import * as G from './game.js?v=3.10';
-import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.10';
-import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.10';
+} from './data.js?v=3.11';
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from './achievements.js?v=3.11';
+import * as G from './game.js?v=3.11';
+import { FAMILIARS, FAMILIAR_BY_ID, familiarSVG } from './familiars.js?v=3.11';
+import { SCENES, CASTLE_WINDOWS } from './scenes.js?v=3.11';
 import {
   avatarSVG, CROPS, SKINS, HAIR_COLORS, EYE_COLORS, WING_COLORS, HAIR_STYLES, EYE_STYLES, WING_STYLES, EAR_STYLES, NAMES,
-} from './avatar.js?v=3.10';
-import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.10';
+} from './avatar.js?v=3.11';
+import { SPRITES, HELPER_VIS, MAX_VISIBLE_PER_HELPER, CALM_VISIBLE_PER_HELPER } from './sprites.js?v=3.11';
 
 // Per-device display preferences (not part of the save, like sound settings).
 const DISPLAY_KEY = 'fairyclicker.display';
@@ -22,7 +22,7 @@ const display = { lessBusy: false, hideFairy: false, chatter: 'chatty' }; // cha
 try { Object.assign(display, JSON.parse(localStorage.getItem(DISPLAY_KEY) || '{}')); } catch { /* ignore */ }
 function saveDisplay() { try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(display)); } catch { /* ignore */ } }
 const spriteCap = () => (display.lessBusy ? CALM_VISIBLE_PER_HELPER : MAX_VISIBLE_PER_HELPER);
-import * as A from './audio.js?v=3.10';
+import * as A from './audio.js?v=3.11';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -1386,7 +1386,7 @@ function renderAvatarUI() {
   // Familiar beside the fairy
   const pet = $('#my-pet');
   const pid = FAMILIAR_BY_ID[look.familiar] ? look.familiar : null;
-  pet.hidden = f.hidden || !pid;
+  pet.hidden = f.hidden || !pid || petAway;
   pet.classList.toggle('in-gates', gateView);
   if (!pet.hidden && pet.dataset.pet !== pid) { pet.innerHTML = familiarSVG(pid, 'idle'); pet.dataset.pet = pid; }
   if (pet.hidden) hideBubble();
@@ -1844,14 +1844,93 @@ function tickChatter(dt) {
   if (pet) petSay(chooseLine(pet));
 }
 
+// ---- Annoyance: too many pats in a row and your familiar has had enough ----
+const ANNOY_WARN = 5, ANNOY_LEAVE = 9, AWAY_SECONDS = 30;
+const ANNOYED_LINES = ['Hey! That tickles!', 'Okay, okay, that’s enough pats.', 'Hmph!', 'I’m warning you…', 'Too many boops!'];
+let annoy = 0, lastPat = 0, petAway = false, leaving = false, awayOverride = null;
+
 function patPet() {
   const pet = currentPet();
-  if (!pet) return;
+  if (!pet || leaving) return;
   G.state.stats2.pats++;
+  // Annoyance counts pats in a row; a 2-second pause and it calms down.
+  const now = performance.now();
+  annoy = now - lastPat > 2000 ? 1 : annoy + 1;
+  lastPat = now;
   const el = $('#my-pet');
-  el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop');
-  petSay(Math.random() < 0.6 ? pickOne(pet.lines) : chooseLine(pet));
+  if (annoy >= ANNOY_LEAVE) { if (pet.explodes) explodePet(pet); else runAway(pet); return; }
+  if (annoy >= ANNOY_WARN) {
+    el.classList.remove('hop', 'grumpy'); void el.offsetWidth; el.classList.add('grumpy');
+    const lines = pet.annoyed?.length && Math.random() < 0.6 ? pet.annoyed : ANNOYED_LINES;
+    petSay(annoy >= ANNOY_LEAVE - 1 ? (pet.explodes ? 'Stop it… I’m getting all… fizzy…' : 'One more and I’m leaving!') : pickOne(lines));
+  } else {
+    el.classList.remove('hop', 'grumpy'); void el.offsetWidth; el.classList.add('hop');
+    petSay(Math.random() < 0.6 ? pickOne(pet.lines) : chooseLine(pet));
+  }
   chatTimer = chatGap();
+}
+
+function runAway(pet) {
+  const secs = awayOverride ?? AWAY_SECONDS;
+  leaving = true;
+  G.state.stats2.runaways++;
+  const el = $('#my-pet');
+  petSay('That’s it, I’m out of here!');
+  A.runAway();
+  el.classList.remove('hop', 'grumpy'); void el.offsetWidth; el.classList.add('run');
+  setTimeout(() => {
+    el.classList.remove('run');
+    petAway = true; leaving = false; annoy = 0;
+    hideBubble();
+    renderAvatarUI();
+    toast(`💨 Your ${pet.name} ran off in a huff. It’ll be back in ${secs} seconds.`);
+  }, 900);
+  setTimeout(() => {
+    petAway = false;
+    renderAvatarUI();
+    const back = $('#my-pet');
+    back.classList.remove('return'); void back.offsetWidth; back.classList.add('return');
+    chatTimer = chatGap();
+    setTimeout(() => petSay(pickOne(['I’m back. Be gentle this time!', 'Okay, I forgive you. Mostly.', '*sulks back in*'])), 600);
+  }, 900 + secs * 1000);
+  G.save();
+}
+
+// The Conspiracy Gnome doesn't run away. He explodes, and someone else takes his place.
+function explodePet(pet) {
+  leaving = true;
+  G.state.stats2.gnomeBooms++;
+  const el = $('#my-pet');
+  hideBubble();
+  A.boom();
+  el.classList.remove('hop', 'grumpy'); void el.offsetWidth; el.classList.add('boom');
+  const wrap = $('#scene-wrap').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const cx = r.left - wrap.left + r.width / 2, cy = r.top - wrap.top + r.height / 2;
+  const fx = document.createElement('div');
+  fx.className = 'pet-boom';
+  fx.style.cssText = `left:${cx}px;top:${cy}px`;
+  fx.innerHTML = '<span class="flash"></span>' + Array.from({ length: 16 }, (_, i) => {
+    const a = (i / 16) * Math.PI * 2, d = 50 + Math.random() * 50;
+    return `<i style="--dx:${(Math.cos(a) * d).toFixed(0)}px;--dy:${(Math.sin(a) * d).toFixed(0)}px;background:${['#d83a4a', '#3a6fd0', '#f4f1ea', '#b8ff8a', '#c8ccd8'][i % 5]}"></i>`;
+  }).join('');
+  $('#scene-wrap').append(fx);
+  setTimeout(() => fx.remove(), 1400);
+  setTimeout(() => {
+    el.classList.remove('boom');
+    // Swap in a different familiar the player owns.
+    const owned = COSTUMES.filter((c) => c.slot === 'familiar' && c.id !== pet.id && c.id !== 'none_pet' && G.state.avatar.owned[c.id]);
+    const next = pickOne(owned);
+    if (next) G.wearItem(next.id);
+    leaving = false; annoy = 0;
+    renderAvatarUI();
+    const nel = $('#my-pet');
+    nel.classList.remove('return'); void nel.offsetWidth; nel.classList.add('return');
+    toast(`💥 The Conspiracy Gnome exploded!${next ? ` Your ${next.name} takes his place.` : ''}`);
+    setTimeout(() => petSay(pickOne(['…Did the gnome just explode? Anyway, hi!', 'I heard a bang. Is everyone okay?', 'He said the moon was fake right before. Just saying.'])), 700);
+    G.save();
+    const fresh = G.checkAchievements();
+    if (fresh.length) onAchievements(fresh);
+  }, 650);
 }
 
 // ---------- Blood Moon ----------
@@ -2287,7 +2366,7 @@ window.addEventListener('pagehide', () => { if (started) G.save(); });
 
 // Test hook: only with ?debug in the URL.
 if (new URLSearchParams(location.search).has('debug')) {
-  window.__fc = { lotusNow: () => { lotusTimer = 0; }, draculaNow: () => { draculaTimer = 0; }, chatNow: () => { chatTimer = 0; } };
+  window.__fc = { lotusNow: () => { lotusTimer = 0; }, draculaNow: () => { draculaTimer = 0; }, chatNow: () => { chatTimer = 0; }, awaySeconds: (n) => { awayOverride = n; } };
 }
 
 // ---------- boot ----------

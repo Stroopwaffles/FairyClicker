@@ -289,6 +289,21 @@ export function chirp(pitch = 1) {
   tone({ freq: f * 1.12, to: f * 1.5, glide: 0.06, start: 0.1, decay: 0.12, peak: 0.06, wet: 0.3 });
 }
 
+// A familiar storming off: quick footsteps fading away.
+export function runAway() {
+  if (!ready()) return;
+  for (let i = 0; i < 6; i++) noise({ start: i * 0.09, dur: 0.05, peak: 0.08 * (1 - i / 7), type: 'bandpass', freq: i % 2 ? 900 : 700, q: 3 });
+  tone({ freq: 700, to: 300, glide: 0.4, decay: 0.45, peak: 0.05, wet: 0.4 });
+}
+
+// The Conspiracy Gnome exploding: a comic boom and a fizzy puff of spores.
+export function boom() {
+  if (!ready()) return;
+  tone({ freq: 160, to: 40, glide: 0.4, type: 'sine', decay: 0.6, peak: 0.45 });
+  noise({ dur: 0.7, peak: 0.3, type: 'lowpass', freq: 2400, to: 200, wet: 0.5 });
+  for (let i = 0; i < 8; i++) tone({ freq: rnd(1200, 2400), start: 0.15 + i * 0.05, decay: 0.15, peak: 0.03, wet: 0.7, pan: rnd(-0.8, 0.8) });
+}
+
 export function starCatch() {
   if (!ready()) return;
   [88, 91, 95, 100].forEach((m, i) => tone({ freq: mtof(m), start: i * 0.04, decay: 0.35, peak: 0.08, wet: 0.7, pan: rnd(-0.5, 0.5) }));

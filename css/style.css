@@ -557,6 +557,19 @@ body.blood .topbar { background: linear-gradient(180deg, #2a0a16, var(--bg-2)); 
 .familiar .pet-wing.r { transform-origin: left center; }
 .my-pet.hop .familiar { animation: petHop .5s ease-out; }
 @keyframes petHop { 0%, 100% { transform: translateY(0) scale(1); } 30% { transform: translateY(-26%) scale(1.05, .95); } 60% { transform: translateY(0) scale(1.08, .92); } }
+.my-pet.grumpy .familiar { animation: petShake .4s ease-in-out; filter: drop-shadow(0 0 6px rgba(255, 80, 80, .7)); }
+@keyframes petShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8%) rotate(-6deg); } 40%, 80% { transform: translateX(8%) rotate(6deg); } }
+.my-pet.run .familiar { animation: petRun .9s ease-in forwards; }
+@keyframes petRun { 0% { transform: translate(0, 0); } 15% { transform: translate(8%, -18%) scaleX(-1); } 100% { transform: translate(-900%, 0) scaleX(-1); opacity: 0; } }
+.my-pet.return .familiar { animation: petReturn .6s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes petReturn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.my-pet.boom .familiar { animation: petBoom .65s ease-in forwards; }
+@keyframes petBoom { 0% { transform: scale(1); } 50% { transform: scale(1.35, 1.25); filter: brightness(1.4) hue-rotate(-20deg); } 75% { transform: scale(1.6); } 100% { transform: scale(0); opacity: 0; } }
+.pet-boom { position: absolute; z-index: 7; width: 0; height: 0; pointer-events: none; }
+.pet-boom .flash { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, #fff6c8, #ffb35a 40%, rgba(255, 90, 60, 0) 70%); animation: boomFlash .7s ease-out forwards; animation-delay: .4s; opacity: 0; }
+.pet-boom i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; animation: boomBit 1s ease-out forwards; animation-delay: .45s; opacity: 0; }
+@keyframes boomFlash { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes boomBit { 0% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
 .pet-bubble { position: absolute; z-index: 6; max-width: min(260px, 70%); padding: 9px 13px; border-radius: 16px; background: #fffaf2; color: #3a2a4a; font-size: .92rem; font-weight: 600; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); pointer-events: none; }
 .pet-bubble::after { content: ''; position: absolute; left: calc(var(--tail, 50%) - 8px); bottom: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: #fffaf2; }
 .pet-bubble.below::after { bottom: auto; top: -8px; border-top: 0; border-bottom: 8px solid #fffaf2; }
